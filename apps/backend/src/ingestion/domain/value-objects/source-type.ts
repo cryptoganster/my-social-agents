@@ -1,3 +1,5 @@
+import { ValueObject } from '@/shared/kernel';
+
 /**
  * SourceType Value Object
  *
@@ -15,11 +17,21 @@ export enum SourceTypeEnum {
   WIKIPEDIA = 'WIKIPEDIA',
 }
 
-export class SourceType {
-  private readonly type: SourceTypeEnum;
+export interface SourceTypeProps {
+  type: SourceTypeEnum;
+}
 
+export class SourceType extends ValueObject<SourceTypeProps> {
   private constructor(type: SourceTypeEnum) {
-    this.type = type;
+    super({ type });
+    this.validate();
+  }
+
+  /**
+   * Validates the source type
+   */
+  protected validate(): void {
+    // Validation is implicit through TypeScript enum type
   }
 
   /**
@@ -46,7 +58,7 @@ export class SourceType {
    * Validates if the source type is valid
    */
   isValid(): boolean {
-    return Object.values(SourceTypeEnum).includes(this.type);
+    return Object.values(SourceTypeEnum).includes(this.props.type);
   }
 
   /**
@@ -57,27 +69,20 @@ export class SourceType {
       SourceTypeEnum.SOCIAL_MEDIA,
       SourceTypeEnum.WIKIPEDIA, // API key recommended for higher rate limits
     ];
-    return authRequiredTypes.includes(this.type);
+    return authRequiredTypes.includes(this.props.type);
   }
 
   /**
    * Returns the enum value
    */
   getValue(): SourceTypeEnum {
-    return this.type;
+    return this.props.type;
   }
 
   /**
    * Returns the string representation
    */
   toString(): string {
-    return this.type;
-  }
-
-  /**
-   * Checks equality with another SourceType
-   */
-  equals(other: SourceType): boolean {
-    return this.type === other.type;
+    return this.props.type;
   }
 }
