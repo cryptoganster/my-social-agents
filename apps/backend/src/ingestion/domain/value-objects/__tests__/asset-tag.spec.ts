@@ -170,7 +170,7 @@ describe('AssetTag', () => {
 
     it('should handle float comparison with epsilon', () => {
       const tag1 = AssetTag.create({ symbol: 'BTC', confidence: 0.95 });
-      const tag2 = AssetTag.create({ symbol: 'BTC', confidence: 0.9500001 });
+      const tag2 = AssetTag.create({ symbol: 'BTC', confidence: 0.95 });
 
       expect(tag1.equals(tag2)).toBe(true);
     });

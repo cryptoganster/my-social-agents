@@ -1,3 +1,5 @@
+import { ValueObject } from '@/shared/kernel';
+
 /**
  * JobMetrics Value Object
  *
@@ -14,20 +16,9 @@ export interface JobMetricsProps {
   durationMs: number;
 }
 
-export class JobMetrics {
-  private readonly _itemsCollected: number;
-  private readonly _duplicatesDetected: number;
-  private readonly _errorsEncountered: number;
-  private readonly _bytesProcessed: number;
-  private readonly _durationMs: number;
-
+export class JobMetrics extends ValueObject<JobMetricsProps> {
   private constructor(props: JobMetricsProps) {
-    this._itemsCollected = props.itemsCollected;
-    this._duplicatesDetected = props.duplicatesDetected;
-    this._errorsEncountered = props.errorsEncountered;
-    this._bytesProcessed = props.bytesProcessed;
-    this._durationMs = props.durationMs;
-
+    super(props);
     this.validate();
   }
 
@@ -54,25 +45,25 @@ export class JobMetrics {
   /**
    * Validates the metrics
    */
-  private validate(): void {
-    if (this._itemsCollected < 0) {
+  protected validate(): void {
+    if (this.props.itemsCollected < 0) {
       throw new Error('Items collected cannot be negative');
     }
-    if (this._duplicatesDetected < 0) {
+    if (this.props.duplicatesDetected < 0) {
       throw new Error('Duplicates detected cannot be negative');
     }
-    if (this._errorsEncountered < 0) {
+    if (this.props.errorsEncountered < 0) {
       throw new Error('Errors encountered cannot be negative');
     }
-    if (this._bytesProcessed < 0) {
+    if (this.props.bytesProcessed < 0) {
       throw new Error('Bytes processed cannot be negative');
     }
-    if (this._durationMs < 0) {
+    if (this.props.durationMs < 0) {
       throw new Error('Duration cannot be negative');
     }
 
     // Duplicates cannot exceed items collected
-    if (this._duplicatesDetected > this._itemsCollected) {
+    if (this.props.duplicatesDetected > this.props.itemsCollected) {
       throw new Error('Duplicates detected cannot exceed items collected');
     }
   }
@@ -81,77 +72,52 @@ export class JobMetrics {
    * Calculates success rate (items collected - errors) / items collected
    */
   getSuccessRate(): number {
-    if (this._itemsCollected === 0) {
+    if (this.props.itemsCollected === 0) {
       return 1.0; // No items means 100% success
     }
-    const successfulItems = this._itemsCollected - this._errorsEncountered;
-    return Math.max(0, successfulItems / this._itemsCollected);
+    const successfulItems =
+      this.props.itemsCollected - this.props.errorsEncountered;
+    return Math.max(0, successfulItems / this.props.itemsCollected);
   }
 
   /**
    * Calculates duplicate rate
    */
   getDuplicateRate(): number {
-    if (this._itemsCollected === 0) {
+    if (this.props.itemsCollected === 0) {
       return 0;
     }
-    return this._duplicatesDetected / this._itemsCollected;
+    return this.props.duplicatesDetected / this.props.itemsCollected;
   }
 
   /**
    * Calculates throughput (bytes per second)
    */
   getThroughput(): number {
-    if (this._durationMs === 0) {
+    if (this.props.durationMs === 0) {
       return 0;
     }
-    return (this._bytesProcessed / this._durationMs) * 1000;
+    return (this.props.bytesProcessed / this.props.durationMs) * 1000;
   }
 
   // Getters
   get itemsCollected(): number {
-    return this._itemsCollected;
+    return this.props.itemsCollected;
   }
 
   get duplicatesDetected(): number {
-    return this._duplicatesDetected;
+    return this.props.duplicatesDetected;
   }
 
   get errorsEncountered(): number {
-    return this._errorsEncountered;
+    return this.props.errorsEncountered;
   }
 
   get bytesProcessed(): number {
-    return this._bytesProcessed;
+    return this.props.bytesProcessed;
   }
 
   get durationMs(): number {
-    return this._durationMs;
-  }
-
-  /**
-   * Returns a plain object representation
-   */
-  toObject(): JobMetricsProps {
-    return {
-      itemsCollected: this._itemsCollected,
-      duplicatesDetected: this._duplicatesDetected,
-      errorsEncountered: this._errorsEncountered,
-      bytesProcessed: this._bytesProcessed,
-      durationMs: this._durationMs,
-    };
-  }
-
-  /**
-   * Checks equality with another JobMetrics
-   */
-  equals(other: JobMetrics): boolean {
-    return (
-      this._itemsCollected === other._itemsCollected &&
-      this._duplicatesDetected === other._duplicatesDetected &&
-      this._errorsEncountered === other._errorsEncountered &&
-      this._bytesProcessed === other._bytesProcessed &&
-      this._durationMs === other._durationMs
-    );
+    return this.props.durationMs;
   }
 }

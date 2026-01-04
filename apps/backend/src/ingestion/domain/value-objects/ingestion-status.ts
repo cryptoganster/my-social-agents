@@ -1,3 +1,5 @@
+import { ValueObject } from '@/shared/kernel';
+
 /**
  * IngestionStatus Value Object
  *
@@ -14,11 +16,21 @@ export enum IngestionStatusEnum {
   RETRYING = 'RETRYING',
 }
 
-export class IngestionStatus {
-  private readonly status: IngestionStatusEnum;
+export interface IngestionStatusProps {
+  status: IngestionStatusEnum;
+}
 
+export class IngestionStatus extends ValueObject<IngestionStatusProps> {
   private constructor(status: IngestionStatusEnum) {
-    this.status = status;
+    super({ status });
+    this.validate();
+  }
+
+  /**
+   * Validates the status
+   */
+  protected validate(): void {
+    // Validation is implicit through TypeScript enum type
   }
 
   /**
@@ -112,41 +124,34 @@ export class IngestionStatus {
         ],
       };
 
-    return validTransitions[this.status].includes(newStatus.status);
+    return validTransitions[this.props.status].includes(newStatus.props.status);
   }
 
   /**
    * Checks if this is a terminal state
    */
   isTerminal(): boolean {
-    return this.status === IngestionStatusEnum.COMPLETED;
+    return this.props.status === IngestionStatusEnum.COMPLETED;
   }
 
   /**
    * Checks if this is a failure state
    */
   isFailed(): boolean {
-    return this.status === IngestionStatusEnum.FAILED;
+    return this.props.status === IngestionStatusEnum.FAILED;
   }
 
   /**
    * Returns the enum value
    */
   getValue(): IngestionStatusEnum {
-    return this.status;
+    return this.props.status;
   }
 
   /**
    * Returns the string representation
    */
   toString(): string {
-    return this.status;
-  }
-
-  /**
-   * Checks equality with another IngestionStatus
-   */
-  equals(other: IngestionStatus): boolean {
-    return this.status === other.status;
+    return this.props.status;
   }
 }
