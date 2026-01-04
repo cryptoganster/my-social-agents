@@ -5,12 +5,9 @@
  * They have no conceptual identity and are defined by their attributes.
  */
 
-// Export value objects here as they are implemented
-// export * from './content-hash.vo';
-// export * from './source-type.vo';
-// export * from './ingestion-status.vo';
-// export * from './content-metadata.vo';
-// export * from './job-metrics.vo';
-// export * from './asset-tag.vo';
-
-export {};
+export * from './content-hash';
+export * from './source-type';
+export * from './ingestion-status';
+export * from './content-metadata';
+export * from './job-metrics';
+export * from './asset-tag';

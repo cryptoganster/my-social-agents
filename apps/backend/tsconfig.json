@@ -7,7 +7,11 @@
     "incremental": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
-    "removeComments": true
+    "removeComments": true,
+    "paths": {
+      "@/ingestion/*": ["src/ingestion/*"],
+      "@/shared/*": ["src/shared/*"]
+    }
   },
   "include": ["src/**/*", "test/**/*"],
   "exclude": ["node_modules", "dist"]
