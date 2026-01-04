@@ -6,8 +6,7 @@
  */
 
 export { ContentHashGenerator } from './content-hash-generator';
-
-// Export domain services here as they are implemented
-// export * from './content-normalization';
-// export * from './duplicate-detection';
-// export * from './content-validation';
+export { ContentNormalizationService } from './content-normalization';
+export { DuplicateDetectionService } from './duplicate-detection';
+export { ContentValidationService } from './content-validation';
+export type { ValidationResult } from './content-validation';
