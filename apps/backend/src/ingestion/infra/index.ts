@@ -2,16 +2,11 @@
  * Infrastructure Layer - Content Ingestion Bounded Context
  *
  * This layer contains infrastructure implementations:
- * - Repositories: TypeOrmIngestionJobRepository, TypeOrmContentItemRepository, TypeOrmSourceConfigurationRepository
- * - Services: CredentialEncryptionService, EventPublisherService, JobSchedulerService, RetryService, CircuitBreakerService
- * - Adapters: WebScraperAdapter, RssFeedAdapter, SocialMediaAdapter, PdfAdapter, OcrAdapter, WikipediaAdapter
+ * - External: NodeHash (cryptographic hashing)
+ * - Repositories: TypeOrmIngestionJobRepository, TypeOrmContentItemRepository, TypeOrmSourceConfigurationRepository (to be implemented)
+ * - Services: CredentialEncryptionService, EventPublisherService, JobSchedulerService, RetryService, CircuitBreakerService (to be implemented)
+ * - Adapters: WebScraperAdapter, RssFeedAdapter, SocialMediaAdapter, PdfAdapter, OcrAdapter, WikipediaAdapter (to be implemented)
  */
 
-// Repositories
-export * from './repositories';
-
-// Services
-export * from './services';
-
-// Adapters
-export * from './adapters';
+// External services
+export * from './external';

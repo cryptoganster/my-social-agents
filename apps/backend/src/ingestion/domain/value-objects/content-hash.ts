@@ -1,56 +1,69 @@
-import { createHash } from 'crypto';
+import { ValueObject } from '@/shared/kernel';
+
+/**
+ * Properties for ContentHash Value Object
+ */
+export interface ContentHashProps {
+  hash: string;
+}
 
 /**
  * ContentHash Value Object
  *
- * Immutable hash derived from content using SHA-256.
- * Used for duplicate detection and content identification.
+ * Pure, immutable value representing a content hash.
+ * Contains ONLY validation logic - no computation, no dependencies.
+ *
+ * A ContentHash is defined as a 64-character hexadecimal string.
+ * HOW it's computed is not the VO's concern - that's a domain service responsibility.
  *
  * Requirements: 2.4, 3.1
  */
-export class ContentHash {
-  private readonly hash: string;
-
-  private constructor(hash: string) {
-    this.hash = hash;
+export class ContentHash extends ValueObject<ContentHashProps> {
+  private constructor(props: ContentHashProps) {
+    super(props);
+    this.validate();
   }
 
   /**
-   * Creates a ContentHash from raw content by computing SHA-256 hash
+   * Validates the hash property
+   * This is the ONLY logic a VO should have - validation of its invariants
    */
-  static fromContent(content: string): ContentHash {
-    const hash = createHash('sha256').update(content, 'utf8').digest('hex');
-    return new ContentHash(hash);
-  }
-
-  /**
-   * Creates a ContentHash from an existing hash string
-   */
-  static fromHash(hash: string): ContentHash {
-    if (!hash || hash.length !== 64) {
+  protected validate(): void {
+    if (!this.props.hash || this.props.hash.length !== 64) {
       throw new Error('Invalid hash: must be 64-character hex string');
     }
-    return new ContentHash(hash);
+
+    if (!/^[0-9a-f]{64}$/.test(this.props.hash)) {
+      throw new Error('Invalid hash: must contain only hexadecimal characters');
+    }
+  }
+
+  /**
+   * Creates a ContentHash from a validated hash string
+   * This is the ONLY factory method - it just wraps a value
+   */
+  static create(hash: string): ContentHash {
+    return new ContentHash({ hash });
   }
 
   /**
    * Checks equality with another ContentHash
    */
   equals(other: ContentHash): boolean {
-    return this.hash === other.hash;
+    return super.equals(other);
   }
 
   /**
    * Returns the hash as a string
    */
   toString(): string {
-    return this.hash;
+    return this.props.hash;
   }
 
   /**
    * Returns the hash value (for serialization)
    */
   getValue(): string {
-    return this.hash;
+    return this.props.hash;
   }
 }

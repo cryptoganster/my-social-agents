@@ -5,9 +5,9 @@
  * They are stateless and operate on domain objects.
  */
 
-// Export domain services here as they are implemented
-// export * from './content-normalization.service';
-// export * from './duplicate-detection.service';
-// export * from './content-validation.service';
+export { ContentHashGenerator } from './content-hash-generator';
 
-export {};
+// Export domain services here as they are implemented
+// export * from './content-normalization';
+// export * from './duplicate-detection';
+// export * from './content-validation';
