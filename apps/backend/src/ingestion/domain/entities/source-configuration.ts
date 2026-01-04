@@ -20,7 +20,7 @@ export interface SourceConfigurationProps {
   updatedAt: Date;
 }
 
-export interface ValidationResult {
+export interface SourceConfigurationValidationResult {
   isValid: boolean;
   errors: string[];
 }
@@ -115,7 +115,7 @@ export class SourceConfiguration {
    * Validates the source configuration
    * Requirements: 4.1, 5.1
    */
-  validateConfig(): ValidationResult {
+  validateConfig(): SourceConfigurationValidationResult {
     const errors: string[] = [];
 
     // Validate name
