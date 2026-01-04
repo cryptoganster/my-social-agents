@@ -59,7 +59,13 @@ export abstract class ValueObject<T> {
 
     // Handle Date objects
     if (a instanceof Date && b instanceof Date) {
-      return a.getTime() === b.getTime();
+      const timeA = a.getTime();
+      const timeB = b.getTime();
+      // Handle NaN dates (invalid dates)
+      if (Number.isNaN(timeA) && Number.isNaN(timeB)) {
+        return true;
+      }
+      return timeA === timeB;
     }
 
     // Handle arrays

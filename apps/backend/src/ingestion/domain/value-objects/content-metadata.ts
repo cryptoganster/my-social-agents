@@ -132,10 +132,25 @@ export class ContentMetadata {
    * Checks equality with another ContentMetadata
    */
   equals(other: ContentMetadata): boolean {
+    // Handle publishedAt comparison (including NaN dates)
+    let datesEqual = false;
+    if (this._publishedAt === null && other._publishedAt === null) {
+      datesEqual = true;
+    } else if (this._publishedAt !== null && other._publishedAt !== null) {
+      const timeA = this._publishedAt.getTime();
+      const timeB = other._publishedAt.getTime();
+      // Both are NaN (invalid dates)
+      if (Number.isNaN(timeA) && Number.isNaN(timeB)) {
+        datesEqual = true;
+      } else {
+        datesEqual = timeA === timeB;
+      }
+    }
+
     return (
       this._title === other._title &&
       this._author === other._author &&
-      this._publishedAt?.getTime() === other._publishedAt?.getTime() &&
+      datesEqual &&
       this._language === other._language &&
       this._sourceUrl === other._sourceUrl
     );
