@@ -22,4 +22,3 @@
 export * from './domain';
 export * from './app';
 export * from './infra';
-export * from './api';
