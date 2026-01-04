@@ -1,0 +1,5 @@
+# Run lint-staged for incremental checks
+npx lint-staged
+
+# Run TypeScript type checking
+npm run typecheck
