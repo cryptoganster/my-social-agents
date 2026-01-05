@@ -4,8 +4,10 @@
  * This layer contains infrastructure implementations:
  * - Persistence: TypeORM repositories, factories, and entities
  * - External: NodeHash (cryptographic hashing)
- * - Services: CredentialEncryptionService, EventPublisherService, JobSchedulerService, RetryService, CircuitBreakerService (to be implemented)
+ * - Services: CredentialEncryptionService, EventPublisherService, RetryService, CircuitBreakerService (to be implemented)
  * - Adapters: WebScraperAdapter, RssFeedAdapter, SocialMediaAdapter, PdfAdapter, OcrAdapter, WikipediaAdapter (to be implemented)
+ *
+ * Note: JobSchedulerService has been moved to shared infrastructure (@/shared/infra/scheduling)
  */
 
 // Persistence layer

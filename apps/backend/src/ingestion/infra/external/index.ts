@@ -5,7 +5,5 @@
  */
 export { HashService } from './hash';
 export { CredentialEncryptionService } from './credential-encryption';
-export { JobSchedulerService } from './job-scheduler';
 export { RetryService } from './retry';
 export { CircuitBreakerService } from './circuit-breaker';
-export type { ScheduledJob } from './job-scheduler';

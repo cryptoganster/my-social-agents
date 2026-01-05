@@ -6,7 +6,6 @@
  */
 export type { IHashService } from './hash';
 export type { ICredentialEncryption } from './credential-encryption';
-export type { IJobScheduler, JobCallback } from './job-scheduler';
 export type { IRetryService, RetryOptions, RetryResult } from './retry';
 export type {
   ICircuitBreaker,
