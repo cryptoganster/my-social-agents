@@ -1,10 +1,22 @@
+import { Test, TestingModule } from '@nestjs/testing';
+import { SchedulerRegistry } from '@nestjs/schedule';
 import { JobSchedulerService } from '../job-scheduler';
 
 describe('JobSchedulerService', () => {
   let service: JobSchedulerService;
 
-  beforeEach(() => {
-    service = new JobSchedulerService();
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        JobSchedulerService,
+        {
+          provide: SchedulerRegistry,
+          useValue: new SchedulerRegistry(),
+        },
+      ],
+    }).compile();
+
+    service = module.get<JobSchedulerService>(JobSchedulerService);
   });
 
   afterEach(() => {

@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { SchedulerRegistry } from '@nestjs/schedule';
 import {
   IJobScheduler,
   JobCallback,
@@ -17,15 +18,69 @@ export interface ScheduledJob {
 /**
  * JobSchedulerService
  *
- * Concrete implementation of IJobScheduler interface using Node.js timers.
- * Handles timed job execution for ingestion jobs.
+ * Concrete implementation of IJobScheduler interface using NestJS SchedulerRegistry.
+ * Handles timed job execution for ingestion jobs with improved error handling
+ * and framework integration.
  *
- * Requirements: 4.2
+ * Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 4.1, 4.2, 4.3, 4.4
  */
 @Injectable()
 export class JobSchedulerService implements IJobScheduler {
-  private scheduledJobs: Map<string, NodeJS.Timeout> = new Map();
-  private recurringJobs: Map<string, NodeJS.Timeout> = new Map();
+  private readonly logger = new Logger(JobSchedulerService.name);
+
+  constructor(private readonly schedulerRegistry: SchedulerRegistry) {}
+
+  /**
+   * Wraps a callback with error handling to prevent crashes
+   * Logs errors with job context but doesn't rethrow
+   *
+   * @param jobId - Job identifier for logging
+   * @param callback - Original callback to wrap
+   * @returns Wrapped callback with error handling
+   */
+  private wrapCallback(
+    jobId: string,
+    callback: JobCallback,
+  ): () => Promise<void> {
+    return async (): Promise<void> => {
+      try {
+        await callback();
+      } catch (error) {
+        this.logger.error(
+          `Job ${jobId} failed: ${error instanceof Error ? error.message : String(error)}`,
+          error instanceof Error ? error.stack : undefined,
+        );
+      }
+    };
+  }
+
+  /**
+   * Wraps a callback with error handling and cleanup for one-time jobs
+   *
+   * @param jobId - Job identifier for logging and cleanup
+   * @param callback - Original callback to wrap
+   * @returns Wrapped callback with error handling and cleanup
+   */
+  private wrapCallbackWithCleanup(
+    jobId: string,
+    callback: JobCallback,
+  ): () => Promise<void> {
+    return async (): Promise<void> => {
+      try {
+        await callback();
+      } catch (error) {
+        this.logger.error(
+          `Job ${jobId} failed: ${error instanceof Error ? error.message : String(error)}`,
+          error instanceof Error ? error.stack : undefined,
+        );
+      } finally {
+        // Clean up one-time jobs after execution
+        if (this.schedulerRegistry.doesExist('timeout', jobId)) {
+          this.schedulerRegistry.deleteTimeout(jobId);
+        }
+      }
+    };
+  }
 
   /**
    * Schedule a one-time job to execute at a specific time
@@ -36,7 +91,11 @@ export class JobSchedulerService implements IJobScheduler {
    * @throws Error if job with same ID already exists
    */
   scheduleOnce(jobId: string, callback: JobCallback, scheduledAt: Date): void {
-    if (this.scheduledJobs.has(jobId) || this.recurringJobs.has(jobId)) {
+    // Check if job already exists
+    if (
+      this.schedulerRegistry.doesExist('timeout', jobId) ||
+      this.schedulerRegistry.doesExist('interval', jobId)
+    ) {
       throw new Error(`Job with ID ${jobId} is already scheduled`);
     }
 
@@ -44,21 +103,16 @@ export class JobSchedulerService implements IJobScheduler {
     const scheduledTime = scheduledAt.getTime();
     const delay = Math.max(0, scheduledTime - now);
 
+    // Wrap callback with error handling and cleanup
+    const wrappedCallback = this.wrapCallbackWithCleanup(jobId, callback);
+
+    // Create timeout
     const timeout = setTimeout((): void => {
-      void (async (): Promise<void> => {
-        try {
-          await callback();
-        } catch (error) {
-          // Log error but don't throw - job has executed
-          console.error(`Job ${jobId} failed:`, error);
-        } finally {
-          // Clean up after execution
-          this.scheduledJobs.delete(jobId);
-        }
-      })();
+      void wrappedCallback();
     }, delay);
 
-    this.scheduledJobs.set(jobId, timeout);
+    // Register with SchedulerRegistry
+    this.schedulerRegistry.addTimeout(jobId, timeout);
   }
 
   /**
@@ -74,7 +128,11 @@ export class JobSchedulerService implements IJobScheduler {
     callback: JobCallback,
     intervalMs: number,
   ): void {
-    if (this.scheduledJobs.has(jobId) || this.recurringJobs.has(jobId)) {
+    // Check if job already exists
+    if (
+      this.schedulerRegistry.doesExist('timeout', jobId) ||
+      this.schedulerRegistry.doesExist('interval', jobId)
+    ) {
       throw new Error(`Job with ID ${jobId} is already scheduled`);
     }
 
@@ -82,18 +140,16 @@ export class JobSchedulerService implements IJobScheduler {
       throw new Error('Interval must be positive');
     }
 
+    // Wrap callback with error handling
+    const wrappedCallback = this.wrapCallback(jobId, callback);
+
+    // Create interval
     const interval = setInterval((): void => {
-      void (async (): Promise<void> => {
-        try {
-          await callback();
-        } catch (error) {
-          // Log error but continue recurring execution
-          console.error(`Recurring job ${jobId} failed:`, error);
-        }
-      })();
+      void wrappedCallback();
     }, intervalMs);
 
-    this.recurringJobs.set(jobId, interval);
+    // Register with SchedulerRegistry
+    this.schedulerRegistry.addInterval(jobId, interval);
   }
 
   /**
@@ -103,19 +159,15 @@ export class JobSchedulerService implements IJobScheduler {
    * @returns true if job was cancelled, false if job not found
    */
   cancel(jobId: string): boolean {
-    // Check one-time jobs
-    const oneTimeTimeout = this.scheduledJobs.get(jobId);
-    if (oneTimeTimeout) {
-      clearTimeout(oneTimeTimeout);
-      this.scheduledJobs.delete(jobId);
+    // Check if timeout exists
+    if (this.schedulerRegistry.doesExist('timeout', jobId)) {
+      this.schedulerRegistry.deleteTimeout(jobId);
       return true;
     }
 
-    // Check recurring jobs
-    const recurringInterval = this.recurringJobs.get(jobId);
-    if (recurringInterval) {
-      clearInterval(recurringInterval);
-      this.recurringJobs.delete(jobId);
+    // Check if interval exists
+    if (this.schedulerRegistry.doesExist('interval', jobId)) {
+      this.schedulerRegistry.deleteInterval(jobId);
       return true;
     }
 
@@ -129,7 +181,10 @@ export class JobSchedulerService implements IJobScheduler {
    * @returns true if job is scheduled (one-time or recurring)
    */
   isScheduled(jobId: string): boolean {
-    return this.scheduledJobs.has(jobId) || this.recurringJobs.has(jobId);
+    return (
+      this.schedulerRegistry.doesExist('timeout', jobId) ||
+      this.schedulerRegistry.doesExist('interval', jobId)
+    );
   }
 
   /**
@@ -138,9 +193,12 @@ export class JobSchedulerService implements IJobScheduler {
    * @returns Object with counts of one-time and recurring jobs
    */
   getJobCounts(): { oneTime: number; recurring: number } {
+    const timeouts = this.schedulerRegistry.getTimeouts();
+    const intervals = this.schedulerRegistry.getIntervals();
+
     return {
-      oneTime: this.scheduledJobs.size,
-      recurring: this.recurringJobs.size,
+      oneTime: timeouts.length,
+      recurring: intervals.length,
     };
   }
 
@@ -149,16 +207,16 @@ export class JobSchedulerService implements IJobScheduler {
    * Useful for cleanup during shutdown
    */
   cancelAll(): void {
-    // Cancel all one-time jobs
-    for (const timeout of this.scheduledJobs.values()) {
-      clearTimeout(timeout);
+    // Get all timeouts and delete them
+    const timeouts = this.schedulerRegistry.getTimeouts();
+    for (const jobId of timeouts) {
+      this.schedulerRegistry.deleteTimeout(jobId);
     }
-    this.scheduledJobs.clear();
 
-    // Cancel all recurring jobs
-    for (const interval of this.recurringJobs.values()) {
-      clearInterval(interval);
+    // Get all intervals and delete them
+    const intervals = this.schedulerRegistry.getIntervals();
+    for (const jobId of intervals) {
+      this.schedulerRegistry.deleteInterval(jobId);
     }
-    this.recurringJobs.clear();
   }
 }
