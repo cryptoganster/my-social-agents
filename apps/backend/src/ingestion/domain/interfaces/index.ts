@@ -11,12 +11,10 @@
  */
 
 // Write repository interfaces (1 per aggregate)
-// export * from './repositories/ingestion-job-write';
-// export * from './repositories/content-item-write';
+export * from './repositories';
 
 // Factory interfaces (for aggregate reconstitution)
-// export * from './factories/ingestion-job-factory';
-// export * from './factories/content-item-factory';
+export * from './factories';
 
 // Provider interfaces
 export * from './source-adapter';
