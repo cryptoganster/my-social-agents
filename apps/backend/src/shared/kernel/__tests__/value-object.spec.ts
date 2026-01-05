@@ -271,7 +271,7 @@ describe('ValueObject', () => {
           booleanField: true,
         });
 
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
         expect(vo.equals(null as any)).toBe(false);
       });
 
@@ -282,7 +282,7 @@ describe('ValueObject', () => {
           booleanField: true,
         });
 
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
         expect(vo.equals(undefined as any)).toBe(false);
       });
 
@@ -297,7 +297,7 @@ describe('ValueObject', () => {
           field: 'test',
         });
 
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
         expect(testVO.equals(differentVO as any)).toBe(false);
       });
 
@@ -338,7 +338,7 @@ describe('ValueObject', () => {
 
         // Attempting to add a new property should throw in strict mode
         expect(() => {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
           (vo as any).newProperty = 'value';
         }).toThrow(TypeError);
       });

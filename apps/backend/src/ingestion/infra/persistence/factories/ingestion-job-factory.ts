@@ -28,7 +28,7 @@ export class TypeOrmIngestionJobFactory implements IngestionJobFactory {
   async load(jobId: string): Promise<IngestionJob | null> {
     // Load data from read repository
     const data = await this.readRepo.findById(jobId);
-    if (!data) return null;
+    if (data === null) return null;
 
     // Reconstitute source configuration from stored data
     const sourceConfig = SourceConfiguration.reconstitute({
@@ -50,7 +50,7 @@ export class TypeOrmIngestionJobFactory implements IngestionJobFactory {
         timestamp: e.timestamp,
         errorType: e.errorType as ErrorType,
         message: e.message,
-        stackTrace: e.stackTrace || undefined,
+        stackTrace: e.stackTrace ?? undefined,
         retryCount: e.retryCount,
       }),
     );

@@ -162,7 +162,7 @@ export abstract class ValueObject<T> {
    * @returns true if values are deeply equal
    */
 
-  private deepEquals(a: any, b: any): boolean {
+  private deepEquals(a: unknown, b: unknown): boolean {
     // Handle null/undefined
     if (a === b) return true;
     if (a == null || b == null) return false;
@@ -194,8 +194,9 @@ export abstract class ValueObject<T> {
 
       if (keysA.length !== keysB.length) return false;
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      return keysA.every((key) => this.deepEquals(a[key], b[key]));
+      const objA = a as Record<string, unknown>;
+      const objB = b as Record<string, unknown>;
+      return keysA.every((key) => this.deepEquals(objA[key], objB[key]));
     }
 
     // Handle primitives (including number comparison with epsilon for floats)

@@ -228,7 +228,7 @@ export class ContentNormalizationService {
     const englishWords = /\b(the|and|is|in|to|of|a|for|on|with)\b/gi;
     const englishMatches = content.match(englishWords);
 
-    if (englishMatches !== null && englishMatches.length > 5) {
+    if (englishMatches && englishMatches.length > 5) {
       return 'en';
     }
 
@@ -297,8 +297,11 @@ export class ContentNormalizationService {
         }
 
         // Store the highest confidence for this symbol
-        const existingConfidence = detectedAssets.get(symbol) || 0;
-        detectedAssets.set(symbol, Math.max(existingConfidence, confidence));
+        const existingConfidence = detectedAssets.get(symbol);
+        detectedAssets.set(
+          symbol,
+          Math.max(existingConfidence ?? 0, confidence),
+        );
       }
     }
 
