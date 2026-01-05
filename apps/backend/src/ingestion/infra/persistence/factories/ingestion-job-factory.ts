@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/strict-boolean-expressions */
 import { Injectable } from '@nestjs/common';
 import {
   IngestionJob,

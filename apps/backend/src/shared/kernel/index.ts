@@ -10,3 +10,4 @@ export {
   AggregateVersion,
   ConcurrencyException,
 } from './aggregate';
+export type { DomainEvent, EventPublisher } from './domain-event';
