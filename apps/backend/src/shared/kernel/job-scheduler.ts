@@ -6,10 +6,32 @@ export type JobCallback = () => Promise<void>;
 /**
  * IJobScheduler Interface
  *
- * Interface for scheduling and managing timed job execution.
- * Used by use cases to schedule ingestion jobs at specific times or intervals.
+ * Domain abstraction for scheduling and managing timed job execution.
+ * This is a cross-cutting concern shared across all bounded contexts.
  *
- * Requirements: 4.2
+ * This interface represents a domain abstraction (not infrastructure).
+ * Multiple bounded contexts need scheduling capabilities (ingestion,
+ * processing, indexing, analytics), so this abstraction lives in the
+ * shared kernel following the Dependency Inversion Principle.
+ *
+ * The domain defines WHAT it needs (this interface), and infrastructure
+ * provides HOW it works (JobSchedulerService implementation).
+ *
+ * @example
+ * ```typescript
+ * // In a use case
+ * class ScheduleIngestionJobUseCase {
+ *   constructor(private readonly scheduler: IJobScheduler) {}
+ *
+ *   async execute(jobId: string, scheduledAt: Date): Promise<void> {
+ *     await this.scheduler.scheduleOnce(
+ *       jobId,
+ *       async () => { /* job logic *\/ },
+ *       scheduledAt
+ *     );
+ *   }
+ * }
+ * ```
  */
 export interface IJobScheduler {
   /**

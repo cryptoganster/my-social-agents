@@ -11,3 +11,4 @@ export {
   ConcurrencyException,
 } from './aggregate';
 export type { DomainEvent, EventPublisher } from './domain-event';
+export type { IJobScheduler, JobCallback } from './job-scheduler';

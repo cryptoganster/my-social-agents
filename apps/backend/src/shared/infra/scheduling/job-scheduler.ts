@@ -1,28 +1,41 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { SchedulerRegistry } from '@nestjs/schedule';
-import {
-  IJobScheduler,
-  JobCallback,
-} from '@/ingestion/domain/interfaces/external';
-
-/**
- * Scheduled job configuration
- */
-export interface ScheduledJob {
-  jobId: string;
-  callback: JobCallback;
-  scheduledAt: Date;
-  interval?: number; // milliseconds for recurring jobs
-}
+import { IJobScheduler, JobCallback } from '@/shared/kernel';
 
 /**
  * JobSchedulerService
  *
- * Concrete implementation of IJobScheduler interface using NestJS SchedulerRegistry.
- * Handles timed job execution for ingestion jobs with improved error handling
- * and framework integration.
+ * Shared infrastructure implementation of IJobScheduler interface using NestJS SchedulerRegistry.
+ * This service can be used across all bounded contexts for scheduling timed job execution.
  *
- * Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 4.1, 4.2, 4.3, 4.4
+ * Features:
+ * - One-time job scheduling with automatic cleanup
+ * - Recurring job scheduling at fixed intervals
+ * - Centralized job management through SchedulerRegistry
+ * - Robust error handling that prevents application crashes
+ * - Proper integration with NestJS lifecycle
+ *
+ * The service wraps all job callbacks with error handling to ensure that failures
+ * in job execution are logged but don't crash the application.
+ *
+ * @example
+ * ```typescript
+ * // In a use case
+ * class ProcessDocumentUseCase {
+ *   constructor(private readonly scheduler: IJobScheduler) {}
+ *
+ *   async execute(documentId: string): Promise<void> {
+ *     // Schedule document processing in 5 seconds
+ *     this.scheduler.scheduleOnce(
+ *       `process-${documentId}`,
+ *       async () => { await this.processDocument(documentId); },
+ *       new Date(Date.now() + 5000)
+ *     );
+ *   }
+ * }
+ * ```
+ *
+ * Requirements: 3.1, 3.2, 3.3, 3.4, 3.5
  */
 @Injectable()
 export class JobSchedulerService implements IJobScheduler {
@@ -185,21 +198,6 @@ export class JobSchedulerService implements IJobScheduler {
       this.schedulerRegistry.doesExist('timeout', jobId) ||
       this.schedulerRegistry.doesExist('interval', jobId)
     );
-  }
-
-  /**
-   * Get count of scheduled jobs
-   *
-   * @returns Object with counts of one-time and recurring jobs
-   */
-  getJobCounts(): { oneTime: number; recurring: number } {
-    const timeouts = this.schedulerRegistry.getTimeouts();
-    const intervals = this.schedulerRegistry.getIntervals();
-
-    return {
-      oneTime: timeouts.length,
-      recurring: intervals.length,
-    };
   }
 
   /**
