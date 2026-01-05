@@ -3,14 +3,16 @@ import {
   IngestionStatusEnum,
   JobMetrics,
 } from '../value-objects';
-import { SourceConfiguration } from '../entities/source-configuration';
+import { SourceConfiguration } from './source-configuration';
 import { ErrorRecord, ErrorType } from '../entities/error-record';
+import { AggregateRoot, AggregateVersion } from '@/shared/kernel';
 
 /**
  * IngestionJob Aggregate Root
  *
  * Manages the lifecycle of a content collection task.
  * Enforces business rules for job execution and tracks status, metrics, and errors.
+ * Uses optimistic locking to prevent concurrent modifications.
  *
  * Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6
  */
@@ -26,8 +28,7 @@ export interface IngestionJobProps {
   errors: ErrorRecord[];
 }
 
-export class IngestionJob {
-  private readonly _jobId: string;
+export class IngestionJob extends AggregateRoot<string> {
   private readonly _sourceConfig: SourceConfiguration;
   private _status: IngestionStatus;
   private readonly _scheduledAt: Date;
@@ -36,8 +37,12 @@ export class IngestionJob {
   private _metrics: JobMetrics;
   private _errors: ErrorRecord[];
 
-  private constructor(props: IngestionJobProps) {
-    this._jobId = props.jobId;
+  private constructor(
+    id: string,
+    version: AggregateVersion,
+    props: Omit<IngestionJobProps, 'jobId'>,
+  ) {
+    super(id, version);
     this._sourceConfig = props.sourceConfig;
     this._status = props.status;
     this._scheduledAt = props.scheduledAt;
@@ -49,6 +54,7 @@ export class IngestionJob {
 
   /**
    * Creates a new IngestionJob in PENDING state
+   * New aggregates start at version 0
    * Requirements: 4.1, 4.2
    */
   static create(
@@ -64,8 +70,7 @@ export class IngestionJob {
       );
     }
 
-    return new IngestionJob({
-      jobId,
+    return new IngestionJob(jobId, AggregateVersion.initial(), {
       sourceConfig,
       status: IngestionStatus.pending(),
       scheduledAt,
@@ -78,9 +83,24 @@ export class IngestionJob {
 
   /**
    * Reconstitutes an IngestionJob from persistence
+   * Loads existing version from database
    */
-  static reconstitute(props: IngestionJobProps): IngestionJob {
-    return new IngestionJob(props);
+  static reconstitute(
+    props: IngestionJobProps & { version: number },
+  ): IngestionJob {
+    return new IngestionJob(
+      props.jobId,
+      AggregateVersion.fromNumber(props.version),
+      {
+        sourceConfig: props.sourceConfig,
+        status: props.status,
+        scheduledAt: props.scheduledAt,
+        executedAt: props.executedAt,
+        completedAt: props.completedAt,
+        metrics: props.metrics,
+        errors: props.errors,
+      },
+    );
   }
 
   /**
@@ -94,6 +114,7 @@ export class IngestionJob {
 
     this._status = IngestionStatus.running();
     this._executedAt = new Date();
+    this.incrementVersion(); // CRITICAL: Increment version on state change
   }
 
   /**
@@ -110,6 +131,7 @@ export class IngestionJob {
     this._status = IngestionStatus.completed();
     this._metrics = metrics;
     this._completedAt = new Date();
+    this.incrementVersion(); // CRITICAL: Increment version on state change
   }
 
   /**
@@ -124,6 +146,7 @@ export class IngestionJob {
     this._status = IngestionStatus.failed();
     this._errors.push(error);
     this._completedAt = new Date();
+    this.incrementVersion(); // CRITICAL: Increment version on state change
   }
 
   /**
@@ -136,6 +159,7 @@ export class IngestionJob {
     }
 
     this._status = IngestionStatus.retrying();
+    this.incrementVersion(); // CRITICAL: Increment version on state change
   }
 
   /**
@@ -177,6 +201,7 @@ export class IngestionJob {
    */
   addError(error: ErrorRecord): void {
     this._errors.push(error);
+    this.incrementVersion(); // CRITICAL: Increment version on state change
   }
 
   /**
@@ -219,7 +244,7 @@ export class IngestionJob {
 
   // Getters
   get jobId(): string {
-    return this._jobId;
+    return this.id; // Use inherited id property
   }
 
   get sourceConfig(): SourceConfiguration {
@@ -253,9 +278,9 @@ export class IngestionJob {
   /**
    * Returns a plain object representation
    */
-  toObject(): IngestionJobProps {
+  toObject(): IngestionJobProps & { version: number } {
     return {
-      jobId: this._jobId,
+      jobId: this.id,
       sourceConfig: this._sourceConfig,
       status: this._status,
       scheduledAt: this._scheduledAt,
@@ -263,6 +288,7 @@ export class IngestionJob {
       completedAt: this._completedAt,
       metrics: this._metrics,
       errors: [...this._errors],
+      version: this.version.value,
     };
   }
 }

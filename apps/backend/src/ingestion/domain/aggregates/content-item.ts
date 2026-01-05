@@ -1,10 +1,12 @@
 import { ContentHash, ContentMetadata, AssetTag } from '../value-objects';
+import { AggregateRoot, AggregateVersion } from '@/shared/kernel';
 
 /**
  * ContentItem Aggregate Root
  *
  * Represents normalized content with metadata.
  * Enforces content quality invariants and manages duplicate detection.
+ * Uses optimistic locking to prevent concurrent modifications.
  *
  * Requirements: 2.1, 2.2, 2.3, 2.4, 3.2
  */
@@ -25,8 +27,7 @@ export interface ContentItemValidationResult {
   errors: string[];
 }
 
-export class ContentItem {
-  private readonly _contentId: string;
+export class ContentItem extends AggregateRoot<string> {
   private readonly _sourceId: string;
   private readonly _contentHash: ContentHash;
   private readonly _rawContent: string;
@@ -35,8 +36,12 @@ export class ContentItem {
   private _assetTags: AssetTag[];
   private readonly _collectedAt: Date;
 
-  private constructor(props: ContentItemProps) {
-    this._contentId = props.contentId;
+  private constructor(
+    id: string,
+    version: AggregateVersion,
+    props: Omit<ContentItemProps, 'contentId'>,
+  ) {
+    super(id, version);
     this._sourceId = props.sourceId;
     this._contentHash = props.contentHash;
     this._rawContent = props.rawContent;
@@ -48,10 +53,19 @@ export class ContentItem {
 
   /**
    * Creates a new ContentItem
+   * New aggregates start at version 0
    * Requirements: 2.1, 2.2
    */
   static create(props: ContentItemProps): ContentItem {
-    const item = new ContentItem(props);
+    const item = new ContentItem(props.contentId, AggregateVersion.initial(), {
+      sourceId: props.sourceId,
+      contentHash: props.contentHash,
+      rawContent: props.rawContent,
+      normalizedContent: props.normalizedContent,
+      metadata: props.metadata,
+      assetTags: props.assetTags,
+      collectedAt: props.collectedAt,
+    });
 
     // Validate on creation
     const validation = item.validate();
@@ -64,9 +78,24 @@ export class ContentItem {
 
   /**
    * Reconstitutes a ContentItem from persistence
+   * Loads existing version from database
    */
-  static reconstitute(props: ContentItemProps): ContentItem {
-    return new ContentItem(props);
+  static reconstitute(
+    props: ContentItemProps & { version: number },
+  ): ContentItem {
+    return new ContentItem(
+      props.contentId,
+      AggregateVersion.fromNumber(props.version),
+      {
+        sourceId: props.sourceId,
+        contentHash: props.contentHash,
+        rawContent: props.rawContent,
+        normalizedContent: props.normalizedContent,
+        metadata: props.metadata,
+        assetTags: props.assetTags,
+        collectedAt: props.collectedAt,
+      },
+    );
   }
 
   /**
@@ -77,7 +106,7 @@ export class ContentItem {
     const errors: string[] = [];
 
     // Validate contentId
-    if (!this._contentId || this._contentId.trim().length === 0) {
+    if (!this.id || this.id.trim().length === 0) {
       errors.push('Content ID is required');
     }
 
@@ -145,6 +174,7 @@ export class ContentItem {
 
     if (!exists) {
       this._assetTags.push(tag);
+      this.incrementVersion(); // CRITICAL: Increment version on state change
     }
   }
 
@@ -152,9 +182,15 @@ export class ContentItem {
    * Removes an asset tag by symbol
    */
   removeAssetTag(symbol: string): void {
+    const initialLength = this._assetTags.length;
     this._assetTags = this._assetTags.filter(
       (tag) => tag.symbol !== symbol.toUpperCase(),
     );
+
+    // Only increment version if something was actually removed
+    if (this._assetTags.length !== initialLength) {
+      this.incrementVersion(); // CRITICAL: Increment version on state change
+    }
   }
 
   /**
@@ -173,7 +209,7 @@ export class ContentItem {
 
   // Getters
   get contentId(): string {
-    return this._contentId;
+    return this.id; // Use inherited id property
   }
 
   get sourceId(): string {
@@ -207,9 +243,9 @@ export class ContentItem {
   /**
    * Returns a plain object representation
    */
-  toObject(): ContentItemProps {
+  toObject(): ContentItemProps & { version: number } {
     return {
-      contentId: this._contentId,
+      contentId: this.id,
       sourceId: this._sourceId,
       contentHash: this._contentHash,
       rawContent: this._rawContent,
@@ -217,6 +253,7 @@ export class ContentItem {
       metadata: this._metadata,
       assetTags: [...this._assetTags],
       collectedAt: this._collectedAt,
+      version: this.version.value,
     };
   }
 }

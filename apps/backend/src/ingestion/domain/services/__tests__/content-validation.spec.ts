@@ -101,6 +101,7 @@ describe('ContentValidationService', () => {
         metadata: ContentMetadata.create({ title: 'Test' }),
         assetTags: [],
         collectedAt: new Date(),
+        version: 0,
       });
 
       const result = service.validate(item);
@@ -118,6 +119,7 @@ describe('ContentValidationService', () => {
         metadata: ContentMetadata.empty(),
         assetTags: [],
         collectedAt: new Date(),
+        version: 0,
       });
 
       const result = service.validate(item);
@@ -349,6 +351,7 @@ describe('ContentValidationService', () => {
               metadata: ContentMetadata.create({ title: testCase.title }),
               assetTags: [],
               collectedAt: new Date(),
+              version: 0,
             });
 
             const result = service.validate(item);

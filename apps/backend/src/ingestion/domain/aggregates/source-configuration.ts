@@ -1,10 +1,12 @@
 import { SourceType, SourceTypeEnum } from '../value-objects/source-type';
+import { AggregateRoot, AggregateVersion } from '@/shared/kernel';
 
 /**
- * SourceConfiguration Entity
+ * SourceConfiguration Aggregate Root
  *
  * Represents a configured content source with its settings and credentials.
- * Unlike Value Objects, entities have identity and lifecycle.
+ * Manages its own lifecycle and enforces configuration validation rules.
+ * Uses optimistic locking to prevent concurrent modifications.
  *
  * Requirements: 5.1, 5.2, 5.3
  */
@@ -25,8 +27,7 @@ export interface SourceConfigurationValidationResult {
   errors: string[];
 }
 
-export class SourceConfiguration {
-  private readonly _sourceId: string;
+export class SourceConfiguration extends AggregateRoot<string> {
   private _sourceType: SourceType;
   private _name: string;
   private _config: Record<string, unknown>;
@@ -35,8 +36,12 @@ export class SourceConfiguration {
   private readonly _createdAt: Date;
   private _updatedAt: Date;
 
-  private constructor(props: SourceConfigurationProps) {
-    this._sourceId = props.sourceId;
+  private constructor(
+    id: string,
+    version: AggregateVersion,
+    props: Omit<SourceConfigurationProps, 'sourceId'>,
+  ) {
+    super(id, version);
     this._sourceType = props.sourceType;
     this._name = props.name;
     this._config = props.config;
@@ -48,13 +53,21 @@ export class SourceConfiguration {
 
   /**
    * Creates a new SourceConfiguration
+   * New aggregates start at version 0
    */
   static create(
-    props: Omit<SourceConfigurationProps, 'createdAt' | 'updatedAt'>,
+    props: Omit<
+      SourceConfigurationProps,
+      'createdAt' | 'updatedAt' | 'isActive'
+    > & { isActive?: boolean },
   ): SourceConfiguration {
     const now = new Date();
-    return new SourceConfiguration({
-      ...props,
+    return new SourceConfiguration(props.sourceId, AggregateVersion.initial(), {
+      sourceType: props.sourceType,
+      name: props.name,
+      config: props.config,
+      credentials: props.credentials,
+      isActive: props.isActive ?? true,
       createdAt: now,
       updatedAt: now,
     });
@@ -62,9 +75,24 @@ export class SourceConfiguration {
 
   /**
    * Reconstitutes a SourceConfiguration from persistence
+   * Loads existing version from database
    */
-  static reconstitute(props: SourceConfigurationProps): SourceConfiguration {
-    return new SourceConfiguration(props);
+  static reconstitute(
+    props: SourceConfigurationProps & { version: number },
+  ): SourceConfiguration {
+    return new SourceConfiguration(
+      props.sourceId,
+      AggregateVersion.fromNumber(props.version),
+      {
+        sourceType: props.sourceType,
+        name: props.name,
+        config: props.config,
+        credentials: props.credentials,
+        isActive: props.isActive,
+        createdAt: props.createdAt,
+        updatedAt: props.updatedAt,
+      },
+    );
   }
 
   /**
@@ -79,19 +107,32 @@ export class SourceConfiguration {
       >
     >,
   ): void {
-    if (updates.name !== undefined) {
+    let hasChanges = false;
+
+    if (updates.name !== undefined && updates.name !== this._name) {
       this._name = updates.name;
+      hasChanges = true;
     }
     if (updates.config !== undefined) {
       this._config = updates.config;
+      hasChanges = true;
     }
     if (updates.credentials !== undefined) {
       this._credentials = updates.credentials;
+      hasChanges = true;
     }
-    if (updates.sourceType !== undefined) {
+    if (
+      updates.sourceType !== undefined &&
+      !updates.sourceType.equals(this._sourceType)
+    ) {
       this._sourceType = updates.sourceType;
+      hasChanges = true;
     }
-    this._updatedAt = new Date();
+
+    if (hasChanges) {
+      this._updatedAt = new Date();
+      this.incrementVersion(); // CRITICAL: Increment version on state change
+    }
   }
 
   /**
@@ -99,16 +140,22 @@ export class SourceConfiguration {
    * Requirements: 5.3
    */
   deactivate(): void {
-    this._isActive = false;
-    this._updatedAt = new Date();
+    if (this._isActive) {
+      this._isActive = false;
+      this._updatedAt = new Date();
+      this.incrementVersion(); // CRITICAL: Increment version on state change
+    }
   }
 
   /**
    * Activates the source configuration
    */
   activate(): void {
-    this._isActive = true;
-    this._updatedAt = new Date();
+    if (!this._isActive) {
+      this._isActive = true;
+      this._updatedAt = new Date();
+      this.incrementVersion(); // CRITICAL: Increment version on state change
+    }
   }
 
   /**
@@ -212,7 +259,7 @@ export class SourceConfiguration {
 
   // Getters
   get sourceId(): string {
-    return this._sourceId;
+    return this.id; // Use inherited id property
   }
 
   get sourceType(): SourceType {
@@ -246,9 +293,9 @@ export class SourceConfiguration {
   /**
    * Returns a plain object representation
    */
-  toObject(): SourceConfigurationProps {
+  toObject(): SourceConfigurationProps & { version: number } {
     return {
-      sourceId: this._sourceId,
+      sourceId: this.id,
       sourceType: this._sourceType,
       name: this._name,
       config: { ...this._config },
@@ -256,6 +303,7 @@ export class SourceConfiguration {
       isActive: this._isActive,
       createdAt: this._createdAt,
       updatedAt: this._updatedAt,
+      version: this.version.value,
     };
   }
 }

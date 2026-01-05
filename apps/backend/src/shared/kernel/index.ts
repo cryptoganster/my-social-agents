@@ -5,3 +5,8 @@
  * all bounded contexts in the system.
  */
 export { ValueObject } from './value-object';
+export {
+  AggregateRoot,
+  AggregateVersion,
+  ConcurrencyException,
+} from './aggregate';
