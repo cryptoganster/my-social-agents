@@ -1,10 +1,10 @@
 /**
- * Hash computation abstraction
+ * IHashService Interface
  *
  * Domain interface for cryptographic hashing operations.
  * The domain defines WHAT it needs, infrastructure provides HOW.
  */
-export interface Hash {
+export interface IHashService {
   /**
    * Computes a SHA-256 hash of the given content
    *

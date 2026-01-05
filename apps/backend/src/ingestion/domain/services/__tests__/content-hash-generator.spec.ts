@@ -1,10 +1,10 @@
 import * as fc from 'fast-check';
 import { ContentHashGenerator } from '../content-hash-generator';
 import { ContentHash } from '../../value-objects/content-hash';
-import { Hash } from '../../interfaces/external';
+import { IHashService } from '../../interfaces/external';
 
 describe('ContentHashGenerator', () => {
-  let mockHash: Hash;
+  let mockHash: IHashService;
   let generator: ContentHashGenerator;
 
   beforeEach(() => {
@@ -200,20 +200,21 @@ describe('ContentHashGenerator', () => {
     describe('Integration with Hash implementation', () => {
       it('should work with different Hash implementations', () => {
         // Create a different mock implementation
-        const alternativeHash: Hash = {
-          sha256: jest.fn(() => '1'.repeat(64)),
+        const sha256Mock = jest.fn(() => '1'.repeat(64));
+        const alternativeHash: IHashService = {
+          sha256: sha256Mock,
         };
 
         const alternativeGenerator = new ContentHashGenerator(alternativeHash);
         const hash = alternativeGenerator.generate('test');
 
         expect(hash.toString()).toBe('1'.repeat(64));
-        // eslint-disable-next-line @typescript-eslint/unbound-method
-        expect(alternativeHash.sha256).toHaveBeenCalledWith('test');
+
+        expect(sha256Mock).toHaveBeenCalledWith('test');
       });
 
       it('should propagate errors from hash implementation', () => {
-        const errorHash: Hash = {
+        const errorHash: IHashService = {
           sha256: jest.fn(() => {
             throw new Error('Hash computation failed');
           }),
@@ -227,8 +228,9 @@ describe('ContentHashGenerator', () => {
       });
 
       it('should handle hash implementation returning invalid format', () => {
-        const invalidHash: Hash = {
-          sha256: jest.fn(() => 'invalid'),
+        const sha256Mock = jest.fn(() => 'invalid');
+        const invalidHash: IHashService = {
+          sha256: sha256Mock,
         };
 
         const invalidGenerator = new ContentHashGenerator(invalidHash);
@@ -258,22 +260,23 @@ describe('ContentHashGenerator', () => {
 
         // Each call should be independent
         expect(hash).toBeInstanceOf(ContentHash);
+
         // eslint-disable-next-line @typescript-eslint/unbound-method
         expect(mockHash.sha256).toHaveBeenCalledTimes(3);
       });
 
       it('should delegate all hash computation to infrastructure', () => {
-        const spy = jest.spyOn(mockHash, 'sha256');
+        const sha256Spy = jest.spyOn(mockHash, 'sha256');
 
         generator.generate('test1');
         generator.generate('test2');
         generator.generate('test3');
 
         // Verify all calls went through the infrastructure
-        expect(spy).toHaveBeenCalledTimes(3);
-        expect(spy).toHaveBeenNthCalledWith(1, 'test1');
-        expect(spy).toHaveBeenNthCalledWith(2, 'test2');
-        expect(spy).toHaveBeenNthCalledWith(3, 'test3');
+        expect(sha256Spy).toHaveBeenCalledTimes(3);
+        expect(sha256Spy).toHaveBeenNthCalledWith(1, 'test1');
+        expect(sha256Spy).toHaveBeenNthCalledWith(2, 'test2');
+        expect(sha256Spy).toHaveBeenNthCalledWith(3, 'test3');
       });
     });
   });

@@ -2,7 +2,7 @@ import { describe, it, expect } from '@jest/globals';
 import * as fc from 'fast-check';
 import { IngestionJob } from '../ingestion-job';
 import { JobMetrics, SourceType, SourceTypeEnum } from '../../value-objects';
-import { SourceConfiguration } from '../../entities/source-configuration';
+import { SourceConfiguration } from '../source-configuration';
 import { ErrorRecord, ErrorType } from '../../entities/error-record';
 
 describe('IngestionJob', () => {

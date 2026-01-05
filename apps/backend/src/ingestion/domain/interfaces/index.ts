@@ -1,17 +1,21 @@
 /**
  * Domain Interfaces
  *
- * Interfaces define contracts for repositories and external providers.
+ * Interfaces define contracts for repositories, factories, and external providers.
  * They allow the domain layer to remain independent of infrastructure concerns.
+ *
+ * Following CQRS principles:
+ * - Write repositories are linked to aggregates (1:1 relationship)
+ * - Read operations use read models and read repositories (in infra layer)
+ * - Factories handle aggregate reconstitution from persistence
  */
 
-// Export repository interfaces here as they are implemented
-// export * from './ingestion-job.repository.interface';
-// export * from './content-item.repository.interface';
-// export * from './source-configuration.repository.interface';
+// Write repository interfaces (1 per aggregate)
+export * from './repositories';
 
-// Export provider interfaces here as they are implemented
-// export * from './source-adapter.interface';
-// export * from './event-publisher.interface';
+// Factory interfaces (for aggregate reconstitution)
+export * from './factories';
 
-export {};
+// Provider interfaces
+export * from './source-adapter';
+export * from './event-publisher';

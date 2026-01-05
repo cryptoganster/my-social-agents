@@ -161,8 +161,8 @@ export abstract class ValueObject<T> {
    * @param b - Second value to compare
    * @returns true if values are deeply equal
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private deepEquals(a: any, b: any): boolean {
+
+  private deepEquals(a: unknown, b: unknown): boolean {
     // Handle null/undefined
     if (a === b) return true;
     if (a == null || b == null) return false;
@@ -181,7 +181,7 @@ export abstract class ValueObject<T> {
     // Handle arrays
     if (Array.isArray(a) && Array.isArray(b)) {
       if (a.length !== b.length) return false;
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+
       return a.every((val, idx) => this.deepEquals(val, b[idx]));
     }
 
@@ -194,8 +194,9 @@ export abstract class ValueObject<T> {
 
       if (keysA.length !== keysB.length) return false;
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument
-      return keysA.every((key) => this.deepEquals(a[key], b[key]));
+      const objA = a as Record<string, unknown>;
+      const objB = b as Record<string, unknown>;
+      return keysA.every((key) => this.deepEquals(objA[key], objB[key]));
     }
 
     // Handle primitives (including number comparison with epsilon for floats)

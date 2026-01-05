@@ -7,3 +7,4 @@
 
 export * from './content-item';
 export * from './ingestion-job';
+export * from './source-configuration';

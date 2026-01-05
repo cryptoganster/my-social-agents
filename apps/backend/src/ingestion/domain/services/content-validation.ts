@@ -1,3 +1,4 @@
+/* eslint-disable no-control-regex */
 import { ContentItem } from '../aggregates';
 import { ContentMetadata } from '../value-objects';
 
@@ -104,6 +105,7 @@ export class ContentValidationService {
       }
 
       // Check for excessive control characters (excluding common ones like \n, \t)
+
       const controlCharCount = (
         content.match(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g) || []
       ).length;
@@ -119,7 +121,7 @@ export class ContentValidationService {
       const decoded = encoded.toString('utf8');
 
       return content === decoded;
-    } catch (error) {
+    } catch {
       // If any encoding operation fails, content has invalid encoding
       return false;
     }

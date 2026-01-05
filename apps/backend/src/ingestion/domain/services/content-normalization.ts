@@ -52,6 +52,7 @@ export class ContentNormalizationService {
     let normalized = rawContent;
 
     // Remove control characters except newlines and tabs
+    // eslint-disable-next-line no-control-regex
     normalized = normalized.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
 
     // Normalize line endings to \n
@@ -227,7 +228,7 @@ export class ContentNormalizationService {
     const englishWords = /\b(the|and|is|in|to|of|a|for|on|with)\b/gi;
     const englishMatches = content.match(englishWords);
 
-    if (englishMatches !== null && englishMatches.length > 5) {
+    if (englishMatches && englishMatches.length > 5) {
       return 'en';
     }
 
@@ -296,8 +297,11 @@ export class ContentNormalizationService {
         }
 
         // Store the highest confidence for this symbol
-        const existingConfidence = detectedAssets.get(symbol) || 0;
-        detectedAssets.set(symbol, Math.max(existingConfidence, confidence));
+        const existingConfidence = detectedAssets.get(symbol);
+        detectedAssets.set(
+          symbol,
+          Math.max(existingConfidence ?? 0, confidence),
+        );
       }
     }
 

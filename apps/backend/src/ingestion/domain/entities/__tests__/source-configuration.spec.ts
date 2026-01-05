@@ -1,5 +1,5 @@
 import * as fc from 'fast-check';
-import { SourceConfiguration } from '../source-configuration';
+import { SourceConfiguration } from '../../aggregates/source-configuration';
 import { SourceType, SourceTypeEnum } from '../../value-objects/source-type';
 
 describe('SourceConfiguration', () => {
@@ -353,6 +353,7 @@ describe('SourceConfiguration', () => {
         isActive: true,
         createdAt: now,
         updatedAt: now,
+        version: 0,
       });
 
       expect(config.sourceId).toBe('test-id');

@@ -1,5 +1,14 @@
 # Run lint-staged for incremental checks
 npx lint-staged
 
+# Run lint check (will fail if there are errors)
+npm run lint:check
+
 # Run TypeScript type checking
 npm run typecheck
+
+# Run format (auto-fix formatting issues)
+npm run format
+
+# Run format check (will fail if files are not formatted)
+npm run format:check
