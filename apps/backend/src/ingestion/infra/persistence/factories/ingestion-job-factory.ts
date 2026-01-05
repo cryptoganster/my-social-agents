@@ -31,17 +31,17 @@ export class TypeOrmIngestionJobFactory implements IngestionJobFactory {
     const data = await this.readRepo.findById(jobId);
     if (!data) return null;
 
-    // Reconstitute source configuration (this would ideally use SourceConfigurationFactory)
-    // For now, we'll create it from the stored data
+    // Reconstitute source configuration from stored data
     const sourceConfig = SourceConfiguration.reconstitute({
-      sourceId: data.sourceId,
-      sourceType: SourceType.fromString(data.status), // This needs proper mapping
-      name: 'temp', // This needs proper data
-      config: {},
-      isActive: true,
-      createdAt: data.createdAt,
-      updatedAt: data.updatedAt,
-      version: 0,
+      sourceId: data.sourceConfig.sourceId,
+      sourceType: SourceType.fromString(data.sourceConfig.sourceType),
+      name: data.sourceConfig.name,
+      config: data.sourceConfig.config,
+      credentials: data.sourceConfig.credentials,
+      isActive: data.sourceConfig.isActive,
+      createdAt: data.sourceConfig.createdAt,
+      updatedAt: data.sourceConfig.updatedAt,
+      version: 0, // Source config version is separate from job version
     });
 
     // Reconstitute errors

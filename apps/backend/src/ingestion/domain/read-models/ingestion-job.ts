@@ -32,6 +32,18 @@ export interface IngestionJobReadModel {
     retryCount: number;
   }>;
 
+  // Source configuration (as JSON)
+  sourceConfig: {
+    sourceId: string;
+    sourceType: string;
+    name: string;
+    config: Record<string, unknown>;
+    credentials?: string;
+    isActive: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+  };
+
   // Version for optimistic locking
   version: number;
 

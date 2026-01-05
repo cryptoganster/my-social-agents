@@ -53,6 +53,7 @@ export class TypeOrmIngestionJobReadRepository {
       bytesProcessed: entity.bytesProcessed,
       durationMs: entity.durationMs,
       errors: entity.errors,
+      sourceConfig: entity.sourceConfig,
       version: entity.version,
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
