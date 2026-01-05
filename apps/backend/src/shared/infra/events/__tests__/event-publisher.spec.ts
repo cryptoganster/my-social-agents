@@ -52,13 +52,13 @@ describe('EventPublisherService', () => {
       expect(published).toEqual(events);
     });
 
-    it('should throw error for null event', async () => {
-      await expect(service.publish(null as unknown as DomainEvent)).rejects.toThrow(
+    it('should throw error for null event', () => {
+      expect(() => service.publish(null as unknown as DomainEvent)).toThrow(
         'Cannot publish null or undefined event',
       );
     });
 
-    it('should throw error for event without eventId', async () => {
+    it('should throw error for event without eventId', () => {
       const invalidEvent = {
         eventType: 'Test',
         occurredAt: new Date(),
@@ -66,12 +66,12 @@ describe('EventPublisherService', () => {
         payload: {},
       } as unknown as DomainEvent;
 
-      await expect(service.publish(invalidEvent)).rejects.toThrow(
+      expect(() => service.publish(invalidEvent)).toThrow(
         'Invalid event: must have eventId, eventType, and aggregateId',
       );
     });
 
-    it('should throw error for event without eventType', async () => {
+    it('should throw error for event without eventType', () => {
       const invalidEvent = {
         eventId: 'evt-1',
         occurredAt: new Date(),
@@ -79,12 +79,12 @@ describe('EventPublisherService', () => {
         payload: {},
       } as unknown as DomainEvent;
 
-      await expect(service.publish(invalidEvent)).rejects.toThrow(
+      expect(() => service.publish(invalidEvent)).toThrow(
         'Invalid event: must have eventId, eventType, and aggregateId',
       );
     });
 
-    it('should throw error for event without aggregateId', async () => {
+    it('should throw error for event without aggregateId', () => {
       const invalidEvent = {
         eventId: 'evt-1',
         eventType: 'Test',
@@ -92,7 +92,7 @@ describe('EventPublisherService', () => {
         payload: {},
       } as unknown as DomainEvent;
 
-      await expect(service.publish(invalidEvent)).rejects.toThrow(
+      expect(() => service.publish(invalidEvent)).toThrow(
         'Invalid event: must have eventId, eventType, and aggregateId',
       );
     });

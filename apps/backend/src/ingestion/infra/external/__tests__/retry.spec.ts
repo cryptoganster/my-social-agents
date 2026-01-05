@@ -116,7 +116,7 @@ describe('RetryService', () => {
       });
 
       expect(result.success).toBe(true);
-      expect(result.totalTimeMs).toBeGreaterThan(50); // At least one retry delay
+      expect(result.totalTimeMs).toBeGreaterThanOrEqual(50); // At least one retry delay
     });
 
     it('should use default options when not provided', async () => {

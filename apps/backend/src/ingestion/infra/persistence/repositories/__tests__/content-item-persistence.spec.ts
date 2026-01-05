@@ -410,6 +410,7 @@ describe('ContentItem Persistence Properties', () => {
           expect(retrieved).toBeNull();
 
           // Verify that insert was called (attempted)
+          // eslint-disable-next-line @typescript-eslint/unbound-method
           expect(mockRepository.insert).toHaveBeenCalled();
 
           // Verify that no partial data exists

@@ -1,5 +1,5 @@
 import * as fc from 'fast-check';
-import { Repository, InsertResult } from 'typeorm';
+import { Repository, InsertResult, SelectQueryBuilder } from 'typeorm';
 import {
   SourceConfiguration,
   SourceType,
@@ -214,7 +214,7 @@ describe('Referential Integrity Properties', () => {
             execute: jest.fn().mockResolvedValue({ affected: 1 }),
           };
           mockSourceRepository.createQueryBuilder.mockReturnValue(
-            mockQueryBuilder as any,
+            mockQueryBuilder as unknown as SelectQueryBuilder<SourceConfigurationEntity>,
           );
 
           await sourceWriteRepo.save(sourceToDelete!);
@@ -420,7 +420,7 @@ describe('Referential Integrity Properties', () => {
             execute: jest.fn().mockResolvedValue({ affected: 1 }),
           };
           mockSourceRepository.createQueryBuilder.mockReturnValue(
-            mockQueryBuilder as any,
+            mockQueryBuilder as unknown as SelectQueryBuilder<SourceConfigurationEntity>,
           );
 
           await sourceWriteRepo.save(sourceToDelete!);

@@ -261,21 +261,22 @@ describe('ContentHashGenerator', () => {
         // Each call should be independent
         expect(hash).toBeInstanceOf(ContentHash);
 
+        // eslint-disable-next-line @typescript-eslint/unbound-method
         expect(mockHash.sha256).toHaveBeenCalledTimes(3);
       });
 
       it('should delegate all hash computation to infrastructure', () => {
-        const spy = jest.spyOn(mockHash, 'sha256');
+        const sha256Spy = jest.spyOn(mockHash, 'sha256');
 
         generator.generate('test1');
         generator.generate('test2');
         generator.generate('test3');
 
         // Verify all calls went through the infrastructure
-        expect(spy).toHaveBeenCalledTimes(3);
-        expect(spy).toHaveBeenNthCalledWith(1, 'test1');
-        expect(spy).toHaveBeenNthCalledWith(2, 'test2');
-        expect(spy).toHaveBeenNthCalledWith(3, 'test3');
+        expect(sha256Spy).toHaveBeenCalledTimes(3);
+        expect(sha256Spy).toHaveBeenNthCalledWith(1, 'test1');
+        expect(sha256Spy).toHaveBeenNthCalledWith(2, 'test2');
+        expect(sha256Spy).toHaveBeenNthCalledWith(3, 'test3');
       });
     });
   });

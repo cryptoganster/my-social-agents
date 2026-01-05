@@ -1,5 +1,5 @@
 import * as fc from 'fast-check';
-import { Repository, InsertResult } from 'typeorm';
+import { Repository, InsertResult, SelectQueryBuilder } from 'typeorm';
 import {
   SourceConfiguration,
   SourceType,
@@ -156,7 +156,7 @@ describe('SourceConfiguration Deletion Properties', () => {
             execute: jest.fn().mockResolvedValue({ affected: 1 }),
           };
           mockSourceRepository.createQueryBuilder.mockReturnValue(
-            mockQueryBuilder as any,
+            mockQueryBuilder as unknown as SelectQueryBuilder<SourceConfigurationEntity>,
           );
 
           // Persist deactivation
@@ -254,7 +254,7 @@ describe('SourceConfiguration Deletion Properties', () => {
             execute: jest.fn().mockResolvedValue({ affected: 1 }),
           };
           mockSourceRepository.createQueryBuilder.mockReturnValue(
-            mockQueryBuilder as any,
+            mockQueryBuilder as unknown as SelectQueryBuilder<SourceConfigurationEntity>,
           );
 
           await writeRepo.save(loadedSource!);

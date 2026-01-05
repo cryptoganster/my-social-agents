@@ -1,5 +1,5 @@
 import * as fc from 'fast-check';
-import { Repository, InsertResult } from 'typeorm';
+import { Repository, InsertResult, SelectQueryBuilder } from 'typeorm';
 import {
   SourceConfiguration,
   SourceType,
@@ -124,7 +124,7 @@ describe('SourceConfiguration Updates Properties', () => {
             execute: jest.fn().mockResolvedValue({ affected: 1 }),
           };
           mockRepository.createQueryBuilder.mockReturnValue(
-            mockQueryBuilder as any,
+            mockQueryBuilder as unknown as SelectQueryBuilder<SourceConfigurationEntity>,
           );
 
           // Persist the update
@@ -234,7 +234,7 @@ describe('SourceConfiguration Updates Properties', () => {
             execute: jest.fn().mockResolvedValue({ affected: 1 }),
           };
           mockRepository.createQueryBuilder.mockReturnValue(
-            mockQueryBuilder as any,
+            mockQueryBuilder as unknown as SelectQueryBuilder<SourceConfigurationEntity>,
           );
 
           // Persist
@@ -294,7 +294,7 @@ describe('SourceConfiguration Updates Properties', () => {
             execute: jest.fn().mockResolvedValue({ affected: 1 }),
           };
           mockRepository.createQueryBuilder.mockReturnValue(
-            mockQueryBuilder as any,
+            mockQueryBuilder as unknown as SelectQueryBuilder<SourceConfigurationEntity>,
           );
 
           // Perform multiple updates

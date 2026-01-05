@@ -25,11 +25,7 @@ export class EventPublisherService implements EventPublisher {
       throw new Error('Cannot publish null or undefined event');
     }
 
-    if (
-      !event.eventId ||
-      !event.eventType ||
-      !event.aggregateId
-    ) {
+    if (!event.eventId || !event.eventType || !event.aggregateId) {
       throw new Error(
         'Invalid event: must have eventId, eventType, and aggregateId',
       );
@@ -38,7 +34,7 @@ export class EventPublisherService implements EventPublisher {
     // TODO: Publish to actual message bus
     // For now, store in memory for testing
     this.publishedEvents.push(event);
-    
+
     return Promise.resolve();
   }
 

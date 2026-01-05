@@ -1,5 +1,5 @@
 import { ContentHash } from '../value-objects/content-hash';
-import { Hash } from '../interfaces/external';
+import { IHashService } from '../interfaces/external';
 
 /**
  * Content Hash Generator Domain Service
@@ -12,11 +12,11 @@ import { Hash } from '../interfaces/external';
  * - The operation requires external dependencies (via interfaces)
  * - The operation represents a domain concept (not just technical plumbing)
  *
- * This service depends on the Hash abstraction (technical concern),
+ * This service depends on the IHashService abstraction (technical concern),
  * but the VO remains pure and dependency-free.
  */
 export class ContentHashGenerator {
-  constructor(private readonly hash: Hash) {}
+  constructor(private readonly hash: IHashService) {}
 
   /**
    * Generates a ContentHash from raw content

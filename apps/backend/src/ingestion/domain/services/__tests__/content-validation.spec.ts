@@ -1,3 +1,4 @@
+/* eslint-disable no-control-regex */
 import * as fc from 'fast-check';
 import { ContentValidationService } from '../content-validation';
 import { ContentMetadata } from '../../value-objects';
@@ -189,6 +190,7 @@ describe('ContentValidationService', () => {
             // Must have meaningful length
             if (trimmed.length < 10) return false;
             // Must not have excessive control characters
+
             const controlCharCount = (
               s.match(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g) || []
             ).length;
@@ -269,6 +271,7 @@ describe('ContentValidationService', () => {
           if (content.includes('\uFFFD')) return;
 
           // Filter out strings with excessive control characters
+
           const controlCharCount = (
             content.match(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g) || []
           ).length;

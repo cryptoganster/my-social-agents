@@ -52,6 +52,7 @@ export class ContentNormalizationService {
     let normalized = rawContent;
 
     // Remove control characters except newlines and tabs
+    // eslint-disable-next-line no-control-regex
     normalized = normalized.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
 
     // Normalize line endings to \n
