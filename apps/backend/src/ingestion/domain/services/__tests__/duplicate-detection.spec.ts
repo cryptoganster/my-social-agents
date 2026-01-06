@@ -1,7 +1,7 @@
 import * as fc from 'fast-check';
 import { DuplicateDetectionService } from '../duplicate-detection';
 import { ContentHashGenerator } from '../content-hash-generator';
-import { HashService } from '@/ingestion/infra/external';
+import { HashService } from '@/ingestion/shared/infra/external';
 
 describe('DuplicateDetectionService', () => {
   let service: DuplicateDetectionService;

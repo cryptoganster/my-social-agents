@@ -4,7 +4,7 @@
 import * as fc from 'fast-check';
 import { ContentHash } from '../content-hash';
 import { ContentHashGenerator } from '@/ingestion/domain/services';
-import { HashService } from '@/ingestion/infra/external';
+import { HashService } from '@/ingestion/shared/infra/external';
 
 describe('ContentHash', () => {
   let generator: ContentHashGenerator;
