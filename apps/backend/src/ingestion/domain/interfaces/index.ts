@@ -16,6 +16,5 @@ export * from './repositories';
 // Factory interfaces (for aggregate reconstitution)
 export * from './factories';
 
-// Provider interfaces
-export * from './source-adapter';
-export * from './event-publisher';
+// Re-export from sub-contexts
+export * from '@/ingestion/source/domain/interfaces/source-adapter';

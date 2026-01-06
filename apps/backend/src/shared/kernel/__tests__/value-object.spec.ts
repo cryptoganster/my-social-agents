@@ -271,8 +271,9 @@ describe('ValueObject', () => {
           booleanField: true,
         });
 
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
-        expect(vo.equals(null as any)).toBe(false);
+        expect(vo.equals(null as unknown as ValueObject<TestVOProps>)).toBe(
+          false,
+        );
       });
 
       it('should return false when comparing with undefined', () => {
@@ -282,8 +283,9 @@ describe('ValueObject', () => {
           booleanField: true,
         });
 
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
-        expect(vo.equals(undefined as any)).toBe(false);
+        expect(
+          vo.equals(undefined as unknown as ValueObject<TestVOProps>),
+        ).toBe(false);
       });
 
       it('should return false when comparing different VO types', () => {
@@ -297,8 +299,9 @@ describe('ValueObject', () => {
           field: 'test',
         });
 
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
-        expect(testVO.equals(differentVO as any)).toBe(false);
+        expect(
+          testVO.equals(differentVO as unknown as ValueObject<TestVOProps>),
+        ).toBe(false);
       });
 
       it('should return false when properties differ', () => {
@@ -338,8 +341,7 @@ describe('ValueObject', () => {
 
         // Attempting to add a new property should throw in strict mode
         expect(() => {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
-          (vo as any).newProperty = 'value';
+          (vo as unknown as Record<string, unknown>).newProperty = 'value';
         }).toThrow(TypeError);
       });
     });

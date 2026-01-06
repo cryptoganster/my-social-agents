@@ -2,8 +2,11 @@ import { describe, it, expect } from '@jest/globals';
 import * as fc from 'fast-check';
 import { IngestionJob } from '../ingestion-job';
 import { JobMetrics } from '../../value-objects';
-import { SourceType, SourceTypeEnum } from '@/ingestion/domain/value-objects';
-import { SourceConfiguration } from '@/ingestion/domain/aggregates/source-configuration';
+import {
+  SourceType,
+  SourceTypeEnum,
+} from '@/ingestion/source/domain/value-objects';
+import { SourceConfiguration } from '@/ingestion/source/domain/aggregates/source-configuration';
 import {
   ErrorRecord,
   ErrorType,

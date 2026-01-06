@@ -4,8 +4,11 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { IngestionJob } from '@/ingestion/job/domain/aggregates/ingestion-job';
 import { JobMetrics } from '@/ingestion/job/domain/value-objects';
-import { SourceType, SourceTypeEnum } from '@/ingestion/domain/value-objects';
-import { SourceConfiguration } from '@/ingestion/domain/aggregates/source-configuration';
+import {
+  SourceType,
+  SourceTypeEnum,
+} from '@/ingestion/source/domain/value-objects';
+import { SourceConfiguration } from '@/ingestion/source/domain/aggregates/source-configuration';
 import { TypeOrmIngestionJobWriteRepository } from '../ingestion-job-write';
 import { TypeOrmIngestionJobReadRepository } from '../ingestion-job-read';
 import { TypeOrmIngestionJobFactory } from '../../factories/ingestion-job-factory';

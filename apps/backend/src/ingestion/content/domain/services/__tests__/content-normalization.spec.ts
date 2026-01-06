@@ -1,6 +1,12 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+
 import * as fc from 'fast-check';
 import { ContentNormalizationService } from '../content-normalization';
-import { SourceType, SourceTypeEnum } from '../../value-objects';
+import {
+  SourceType,
+  SourceTypeEnum,
+} from '@/ingestion/source/domain/value-objects';
 
 describe('ContentNormalizationService', () => {
   let service: ContentNormalizationService;
@@ -252,15 +258,15 @@ describe('ContentNormalizationService', () => {
 
             if (jsonMatch) {
               const extractedJson = jsonMatch[0];
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
               const parsed = JSON.parse(extractedJson);
 
               // All original data should be preserved
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+
               expect(parsed.name).toBe(jsonData.name);
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+
               expect(parsed.value).toBe(jsonData.value);
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+
               expect(parsed.active).toBe(jsonData.active);
             }
           },

@@ -1,11 +1,6 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, QueryDeepPartialEntity } from 'typeorm';
 import { IngestionJob } from '@/ingestion/job/domain/aggregates/ingestion-job';
 import { IngestionJobWriteRepository } from '@/ingestion/job/domain/interfaces/repositories/ingestion-job-write';
 import { ConcurrencyException } from '@/shared/kernel';
@@ -33,7 +28,10 @@ export class TypeOrmIngestionJobWriteRepository implements IngestionJobWriteRepo
     // Check if this is a new aggregate (version = 0)
     if (jobData.version === 0) {
       // Insert new record
-      await this.repository.insert(entity as any);
+      // TypeORM insert requires QueryDeepPartialEntity type
+      await this.repository.insert(
+        entity as QueryDeepPartialEntity<IngestionJobEntity>,
+      );
       return;
     }
 
@@ -53,7 +51,7 @@ export class TypeOrmIngestionJobWriteRepository implements IngestionJobWriteRepo
         bytesProcessed: entity.bytesProcessed,
         durationMs: entity.durationMs,
         errors: entity.errors,
-        sourceConfig: entity.sourceConfig as any,
+        sourceConfig: entity.sourceConfig as Record<string, unknown>,
         version: jobData.version,
         updatedAt: new Date(),
       })
@@ -70,7 +68,9 @@ export class TypeOrmIngestionJobWriteRepository implements IngestionJobWriteRepo
     }
   }
 
-  private toEntity(jobData: any): IngestionJobEntity {
+  private toEntity(
+    jobData: ReturnType<IngestionJob['toObject']>,
+  ): IngestionJobEntity {
     const entity = new IngestionJobEntity();
     entity.jobId = jobData.jobId;
     entity.sourceId = jobData.sourceConfig.sourceId;
@@ -83,12 +83,12 @@ export class TypeOrmIngestionJobWriteRepository implements IngestionJobWriteRepo
     entity.errorsEncountered = jobData.metrics.errorsEncountered;
     entity.bytesProcessed = jobData.metrics.bytesProcessed;
     entity.durationMs = jobData.metrics.durationMs;
-    entity.errors = jobData.errors.map((e: any) => ({
+    entity.errors = jobData.errors.map((e) => ({
       errorId: e.errorId,
       timestamp: e.timestamp,
       errorType: e.errorType.toString(),
       message: e.message,
-      stackTrace: e.stackTrace,
+      stackTrace: e.stackTrace ?? null,
       retryCount: e.retryCount,
     }));
     entity.sourceConfig = {

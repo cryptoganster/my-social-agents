@@ -1,6 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import * as fc from 'fast-check';
 import { ContentHash } from '../content-hash';
 import { ContentHashGenerator } from '@/ingestion/domain/services';

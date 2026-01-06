@@ -8,14 +8,15 @@ import {
   ContentHash,
   ContentMetadata,
 } from '@/ingestion/domain';
-import { TypeOrmSourceConfigurationWriteRepository } from '../source-configuration-write';
-import { TypeOrmSourceConfigurationReadRepository } from '../source-configuration-read';
-import { TypeOrmSourceConfigurationFactory } from '../../factories/source-configuration-factory';
-import { TypeOrmContentItemWriteRepository } from '../content-item-write';
-import { TypeOrmContentItemReadRepository } from '../content-item-read';
-import { TypeOrmContentItemFactory } from '../../factories/content-item-factory';
-import { SourceConfigurationEntity } from '../../entities/source-configuration';
-import { ContentItemEntity } from '../../entities/content-item';
+import { ContentItemReadModel } from '@/ingestion/content/domain/read-models/content-item';
+import { TypeOrmSourceConfigurationWriteRepository } from '@/ingestion/source/infra/persistence/repositories/source-configuration-write';
+import { TypeOrmSourceConfigurationReadRepository } from '@/ingestion/source/infra/persistence/repositories/source-configuration-read';
+import { TypeOrmSourceConfigurationFactory } from '@/ingestion/source/infra/persistence/factories/source-configuration-factory';
+import { TypeOrmContentItemWriteRepository } from '@/ingestion/content/infra/persistence/repositories/content-item-write';
+import { TypeOrmContentItemReadRepository } from '@/ingestion/content/infra/persistence/repositories/content-item-read';
+import { TypeOrmContentItemFactory } from '@/ingestion/content/infra/persistence/factories/content-item-factory';
+import { SourceConfigurationEntity } from '@/ingestion/source/infra/persistence/entities/source-configuration';
+import { ContentItemEntity } from '@/ingestion/content/infra/persistence/entities/content-item';
 
 /**
  * Property-Based Tests for Referential Integrity
@@ -197,14 +198,17 @@ describe('Referential Integrity Properties', () => {
             10,
           );
           expect(contentBySource).toHaveLength(contentItems.length);
-          contentBySource.forEach((content) => {
+          contentBySource.forEach((content: ContentItemReadModel) => {
             expect(content.sourceId).toBe(sourceId);
           });
 
           // Now delete (deactivate) the source
           mockSourceRepository.findOne.mockResolvedValue(sourceEntity);
           const sourceToDelete = await sourceFactory.load(sourceId);
-          sourceToDelete!.deactivate();
+          if (!sourceToDelete) {
+            throw new Error('Source not found');
+          }
+          sourceToDelete.deactivate();
 
           const mockQueryBuilder = {
             update: jest.fn().mockReturnThis(),
@@ -217,7 +221,7 @@ describe('Referential Integrity Properties', () => {
             mockQueryBuilder as unknown as SelectQueryBuilder<SourceConfigurationEntity>,
           );
 
-          await sourceWriteRepo.save(sourceToDelete!);
+          await sourceWriteRepo.save(sourceToDelete);
 
           // Verify source is deactivated
           const deactivatedSourceEntity: SourceConfigurationEntity = {
@@ -242,7 +246,7 @@ describe('Referential Integrity Properties', () => {
 
           // Verify content is NOT orphaned
           expect(contentAfterDeletion).toHaveLength(contentItems.length);
-          contentAfterDeletion.forEach((content) => {
+          contentAfterDeletion.forEach((content: ContentItemReadModel) => {
             expect(content.sourceId).toBe(sourceId);
           });
 
@@ -410,7 +414,10 @@ describe('Referential Integrity Properties', () => {
           mockSourceRepository.findOne.mockResolvedValue(sourceEntity);
 
           const sourceToDelete = await sourceFactory.load(sourceId);
-          sourceToDelete!.deactivate();
+          if (!sourceToDelete) {
+            throw new Error('Source not found');
+          }
+          sourceToDelete.deactivate();
 
           const mockQueryBuilder = {
             update: jest.fn().mockReturnThis(),
@@ -423,7 +430,7 @@ describe('Referential Integrity Properties', () => {
             mockQueryBuilder as unknown as SelectQueryBuilder<SourceConfigurationEntity>,
           );
 
-          await sourceWriteRepo.save(sourceToDelete!);
+          await sourceWriteRepo.save(sourceToDelete);
 
           // Mock content retrieval after deletion
           mockContentRepository.find.mockResolvedValue(contentEntities);
@@ -439,7 +446,7 @@ describe('Referential Integrity Properties', () => {
           );
 
           // Verify content still references the deleted source
-          contentAfterDeletion.forEach((content) => {
+          contentAfterDeletion.forEach((content: ContentItemReadModel) => {
             expect(content.sourceId).toBe(sourceId);
           });
         },

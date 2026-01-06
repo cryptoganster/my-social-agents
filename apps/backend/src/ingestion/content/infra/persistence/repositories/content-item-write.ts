@@ -1,7 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -27,7 +23,7 @@ export class TypeOrmContentItemWriteRepository implements ContentItemWriteReposi
 
   async save(item: ContentItem): Promise<void> {
     const itemData = item.toObject();
-    const entity = this.toEntity(itemData);
+    const entity = this.toEntity(item);
 
     // Check if this is a new aggregate (version = 0)
     if (itemData.version === 0) {
@@ -68,7 +64,7 @@ export class TypeOrmContentItemWriteRepository implements ContentItemWriteReposi
     }
   }
 
-  private toEntity(itemData: any): ContentItemEntity {
+  private toEntity(itemData: ContentItem): ContentItemEntity {
     const entity = new ContentItemEntity();
     entity.contentId = itemData.contentId;
     entity.sourceId = itemData.sourceId;
@@ -80,12 +76,12 @@ export class TypeOrmContentItemWriteRepository implements ContentItemWriteReposi
     entity.publishedAt = itemData.metadata.publishedAt;
     entity.language = itemData.metadata.language;
     entity.sourceUrl = itemData.metadata.sourceUrl;
-    entity.assetTags = itemData.assetTags.map((tag: any) => ({
+    entity.assetTags = itemData.assetTags.map((tag) => ({
       symbol: tag.symbol,
       confidence: tag.confidence,
     }));
     entity.collectedAt = itemData.collectedAt;
-    entity.version = itemData.version;
+    entity.version = Number(itemData.version);
     return entity;
   }
 }

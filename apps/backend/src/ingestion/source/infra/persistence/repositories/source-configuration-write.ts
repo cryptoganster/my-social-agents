@@ -1,11 +1,6 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, QueryDeepPartialEntity } from 'typeorm';
 import { SourceConfiguration } from '@/ingestion/source/domain/aggregates/source-configuration';
 import { SourceConfigurationWriteRepository } from '@/ingestion/source/domain/interfaces/repositories/source-configuration-write';
 import { ConcurrencyException } from '@/shared/kernel';
@@ -33,7 +28,10 @@ export class TypeOrmSourceConfigurationWriteRepository implements SourceConfigur
     // Check if this is a new aggregate (version = 0)
     if (configData.version === 0) {
       // Insert new record
-      await this.repository.insert(entity as any);
+      // TypeORM insert requires QueryDeepPartialEntity type
+      await this.repository.insert(
+        entity as QueryDeepPartialEntity<SourceConfigurationEntity>,
+      );
       return;
     }
 
@@ -44,7 +42,9 @@ export class TypeOrmSourceConfigurationWriteRepository implements SourceConfigur
       .set({
         sourceType: entity.sourceType,
         name: entity.name,
-        config: entity.config as any,
+        config: entity.config as QueryDeepPartialEntity<
+          Record<string, unknown>
+        >,
         credentials: entity.credentials,
         isActive: entity.isActive,
         version: configData.version,
@@ -78,7 +78,9 @@ export class TypeOrmSourceConfigurationWriteRepository implements SourceConfigur
       .execute();
   }
 
-  private toEntity(configData: any): SourceConfigurationEntity {
+  private toEntity(
+    configData: ReturnType<SourceConfiguration['toObject']>,
+  ): SourceConfigurationEntity {
     const entity = new SourceConfigurationEntity();
     entity.sourceId = configData.sourceId;
     entity.sourceType = configData.sourceType.toString();

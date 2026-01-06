@@ -1,7 +1,7 @@
 import * as fc from 'fast-check';
 import { ContentHashGenerator } from '../content-hash-generator';
-import { ContentHash } from '@/ingestion/shared/value-objects/content-hash';
-import { IHashService } from '../../interfaces/external';
+import { ContentHash } from '@/ingestion/content/domain/value-objects/content-hash';
+import { IHashService } from '@/ingestion/shared/interfaces/external';
 
 describe('ContentHashGenerator', () => {
   let mockHash: IHashService;
