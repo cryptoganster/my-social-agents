@@ -187,9 +187,8 @@ export abstract class ValueObject<T> {
 
     // Handle objects
     if (typeof a === 'object' && typeof b === 'object') {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       const keysA = Object.keys(a);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+
       const keysB = Object.keys(b);
 
       if (keysA.length !== keysB.length) return false;

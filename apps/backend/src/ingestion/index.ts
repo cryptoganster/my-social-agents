@@ -12,12 +12,20 @@
  * - Manage source configurations
  *
  * Architecture:
- * - Domain Layer: Core business logic, aggregates, entities, value objects, services
+ * - Domain Layer: Core business logic, aggregates, entities, value objects, services (in sub-contexts)
  * - Application Layer: Use cases that orchestrate domain logic
- * - Infrastructure Layer: Concrete implementations of repositories, adapters, and services
+ * - Infrastructure Layer: Concrete implementations of repositories, adapters, and services (in sub-contexts)
  * - API Layer: CLI commands and REST controllers
+ *
+ * Sub-contexts:
+ * - Job: Ingestion job management
+ * - Content: Content item processing
+ * - Source: Source configuration management
+ * - Shared: Shared entities, value objects, and infrastructure
  */
 
-// Export all layers
-export * from './domain';
-export * from './infra';
+// Export sub-contexts
+export * from './job/domain';
+export * from './content/domain';
+export * from './source/domain';
+export * from './shared';
