@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ContentItemReadModel } from '@/ingestion/content/domain/read-models/content-item';
+import { ContentItemReadRepository } from '@/ingestion/content/domain/interfaces/repositories/content-item-read';
 import { ContentHash } from '@/ingestion/content/domain/value-objects/content-hash';
 import { ContentItemEntity } from '../entities/content-item';
 
@@ -15,7 +16,7 @@ import { ContentItemEntity } from '../entities/content-item';
  * Requirements: 3.2
  */
 @Injectable()
-export class TypeOrmContentItemReadRepository {
+export class TypeOrmContentItemReadRepository implements ContentItemReadRepository {
   constructor(
     @InjectRepository(ContentItemEntity)
     private readonly repository: Repository<ContentItemEntity>,

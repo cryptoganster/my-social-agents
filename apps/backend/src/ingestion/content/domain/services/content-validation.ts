@@ -1,16 +1,11 @@
 /* eslint-disable no-control-regex */
+import { Injectable } from '@nestjs/common';
 import { ContentItem } from '../aggregates';
 import { ContentMetadata } from '../value-objects';
-
-/**
- * ValidationResult
- *
- * Result of content validation with detailed error information
- */
-export interface ValidationResult {
-  isValid: boolean;
-  errors: string[];
-}
+import {
+  IContentValidationService,
+  ValidationResult,
+} from '../interfaces/services/content-validation';
 
 /**
  * ContentValidationService
@@ -20,7 +15,8 @@ export interface ValidationResult {
  *
  * Requirements: 7.1, 7.2, 7.3, 7.4, 7.5
  */
-export class ContentValidationService {
+@Injectable()
+export class ContentValidationService implements IContentValidationService {
   private readonly MIN_CONTENT_LENGTH = 10;
   private readonly MAX_CONTENT_LENGTH = 1_000_000; // 1MB of text
 

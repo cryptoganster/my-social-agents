@@ -25,4 +25,14 @@ module.exports = {
     '@typescript-eslint/no-misused-promises': 'error',
     '@typescript-eslint/strict-boolean-expressions': 'warn',
   },
+  overrides: [
+    {
+      // Disable unbound-method for test files (common Jest pattern)
+      files: ['**/*.spec.ts', '**/__tests__/**/*.ts'],
+      rules: {
+        '@typescript-eslint/unbound-method': 'off',
+        '@typescript-eslint/no-unsafe-enum-comparison': 'warn',
+      },
+    },
+  ],
 };

@@ -33,6 +33,7 @@ export default tseslint.config(
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-floating-promises': 'warn',
       '@typescript-eslint/no-unsafe-argument': 'warn',
+      '@typescript-eslint/no-unsafe-enum-comparison': 'warn',
       "prettier/prettier": ["error", { endOfLine: "auto" }],
       // Prohibir imports relativos que deberían usar path aliases
       'no-restricted-imports': [
@@ -50,6 +51,13 @@ export default tseslint.config(
           ],
         },
       ],
+    },
+  },
+  {
+    // Disable unbound-method for test files (common Jest pattern)
+    files: ['**/*.spec.ts', '**/__tests__/**/*.ts'],
+    rules: {
+      '@typescript-eslint/unbound-method': 'off',
     },
   },
 );
