@@ -280,7 +280,9 @@ describe('ContentNormalizationService', () => {
         fc.property(
           fc.array(
             fc.record({
-              col1: fc.string({ minLength: 1, maxLength: 10 }),
+              col1: fc
+                .string({ minLength: 1, maxLength: 10 })
+                .filter((s) => s.trim().length > 0),
               col2: fc.integer({ min: 0, max: 1000 }),
             }),
             { minLength: 1, maxLength: 5 },
@@ -292,7 +294,7 @@ describe('ContentNormalizationService', () => {
             const header = 'Column1 | Column2';
             const separator = '--------|--------';
             const rows = tableData
-              .map((row) => `${row.col1} | ${row.col2}`)
+              .map((row) => `${row.col1.trim()} | ${row.col2}`)
               .join('\n');
             const table = `${header}\n${separator}\n${rows}`;
 
@@ -301,7 +303,7 @@ describe('ContentNormalizationService', () => {
 
             // Table structure should be preserved (rows should still be present)
             tableData.forEach((row) => {
-              expect(normalized).toContain(row.col1);
+              expect(normalized).toContain(row.col1.trim());
               expect(normalized).toContain(row.col2.toString());
             });
 

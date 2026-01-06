@@ -1,6 +1,54 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { SchedulerRegistry } from '@nestjs/schedule';
+import { Module } from '@nestjs/common';
+import { CqrsModule } from '@nestjs/cqrs';
 import { AppModule } from './app.module';
+import { IngestionContentModule } from './ingestion/content/ingestion-content.module';
+
+// Mock IngestionContentModule with all required providers
+@Module({
+  imports: [CqrsModule],
+  providers: [
+    {
+      provide: 'SourceConfigurationFactory',
+      useValue: {
+        load: jest.fn().mockResolvedValue(null),
+      },
+    },
+    {
+      provide: 'ContentItemReadRepository',
+      useValue: {
+        findById: jest.fn(),
+        findByHash: jest.fn(),
+        findBySource: jest.fn(),
+      },
+    },
+    {
+      provide: 'ContentItemWriteRepository',
+      useValue: {
+        save: jest.fn(),
+      },
+    },
+    {
+      provide: 'SourceAdapter',
+      useValue: [],
+    },
+    {
+      provide: 'IHashService',
+      useValue: {
+        sha256: jest.fn().mockReturnValue('a'.repeat(64)),
+      },
+    },
+  ],
+  exports: [
+    'SourceConfigurationFactory',
+    'ContentItemReadRepository',
+    'ContentItemWriteRepository',
+    'SourceAdapter',
+    'IHashService',
+  ],
+})
+class MockIngestionContentModule {}
 
 describe('AppModule', () => {
   let module: TestingModule;
@@ -9,32 +57,13 @@ describe('AppModule', () => {
     module = await Test.createTestingModule({
       imports: [AppModule],
     })
-      // Override IngestionContentModule dependencies that are expected from parent
-      .overrideProvider('SourceConfigurationFactory')
-      .useValue({
-        load: jest.fn().mockResolvedValue(null),
-      })
-      .overrideProvider('ContentItemReadRepository')
-      .useValue({
-        findById: jest.fn(),
-        findByHash: jest.fn(),
-        findBySource: jest.fn(),
-      })
-      .overrideProvider('ContentItemWriteRepository')
-      .useValue({
-        save: jest.fn(),
-      })
-      .overrideProvider('SourceAdapter')
-      .useValue([])
-      .overrideProvider('IHashService')
-      .useValue({
-        sha256: jest.fn().mockReturnValue('a'.repeat(64)),
-      })
+      .overrideModule(IngestionContentModule)
+      .useModule(MockIngestionContentModule)
       .compile();
   });
 
   afterEach(async () => {
-    if (module) {
+    if (module !== null && module !== undefined) {
       await module.close();
     }
   });

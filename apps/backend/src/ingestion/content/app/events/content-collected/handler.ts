@@ -138,7 +138,7 @@ export class ContentCollectedEventHandler implements IEventHandler<ContentCollec
         contentItem.collectedAt,
       );
 
-      this.eventBus.publish(ingestedEvent);
+      await this.eventBus.publish(ingestedEvent);
 
       this.logger.debug(
         `Content item persisted and event published: ${contentItem.contentId}`,
