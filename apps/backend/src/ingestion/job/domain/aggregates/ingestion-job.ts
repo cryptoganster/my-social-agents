@@ -3,7 +3,7 @@ import {
   IngestionStatusEnum,
   JobMetrics,
 } from '../value-objects';
-import { SourceConfiguration } from './source-configuration';
+import { SourceConfiguration } from '@/ingestion/domain/aggregates/source-configuration';
 import {
   ErrorRecord,
   ErrorType,

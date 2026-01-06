@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
+import { IngestionJob } from '@/ingestion/job/domain/aggregates/ingestion-job';
+import { IngestionJobFactory } from '@/ingestion/job/domain/interfaces/factories/ingestion-job-factory';
 import {
-  IngestionJob,
-  IngestionJobFactory,
   IngestionStatus,
   JobMetrics,
-} from '@/ingestion/domain';
+} from '@/ingestion/job/domain/value-objects';
 import { SourceConfiguration } from '@/ingestion/domain/aggregates/source-configuration';
 import { SourceType } from '@/ingestion/domain/value-objects/source-type';
 import {

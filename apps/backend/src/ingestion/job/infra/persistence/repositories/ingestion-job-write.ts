@@ -6,7 +6,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { IngestionJob, IngestionJobWriteRepository } from '@/ingestion/domain';
+import { IngestionJob } from '@/ingestion/job/domain/aggregates/ingestion-job';
+import { IngestionJobWriteRepository } from '@/ingestion/job/domain/interfaces/repositories/ingestion-job-write';
 import { ConcurrencyException } from '@/shared/kernel';
 import { IngestionJobEntity } from '../entities/ingestion-job';
 

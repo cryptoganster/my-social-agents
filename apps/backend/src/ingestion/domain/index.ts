@@ -29,3 +29,6 @@ export * from './interfaces';
 
 // Read Models
 export * from './read-models';
+
+// Re-export from Job sub-context for backward compatibility
+export * from '@/ingestion/job/domain';

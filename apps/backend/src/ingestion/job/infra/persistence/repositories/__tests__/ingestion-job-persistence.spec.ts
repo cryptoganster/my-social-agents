@@ -2,12 +2,9 @@ import * as fc from 'fast-check';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import {
-  IngestionJob,
-  JobMetrics,
-  SourceType,
-  SourceTypeEnum,
-} from '@/ingestion/domain';
+import { IngestionJob } from '@/ingestion/job/domain/aggregates/ingestion-job';
+import { JobMetrics } from '@/ingestion/job/domain/value-objects';
+import { SourceType, SourceTypeEnum } from '@/ingestion/domain/value-objects';
 import { SourceConfiguration } from '@/ingestion/domain/aggregates/source-configuration';
 import { TypeOrmIngestionJobWriteRepository } from '../ingestion-job-write';
 import { TypeOrmIngestionJobReadRepository } from '../ingestion-job-read';
