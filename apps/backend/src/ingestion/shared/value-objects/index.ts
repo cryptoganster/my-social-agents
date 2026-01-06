@@ -4,4 +4,5 @@
  * Value objects that are shared across multiple sub-bounded contexts.
  */
 
-export * from './content-hash';
+// Re-export from Content sub-context for backward compatibility
+export * from '@/ingestion/content/domain/value-objects/content-hash';

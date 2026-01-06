@@ -1,4 +1,4 @@
-import { ContentHash } from '@/ingestion/shared/value-objects/content-hash';
+import { ContentHash } from '../value-objects/content-hash';
 import { ContentHashGenerator } from './content-hash-generator';
 
 /**

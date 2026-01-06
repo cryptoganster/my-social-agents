@@ -5,7 +5,6 @@
  * They have no conceptual identity and are defined by their attributes.
  */
 
-export * from '@/ingestion/shared/value-objects/content-hash';
 export * from './source-type';
 
 // Re-export from sub-contexts

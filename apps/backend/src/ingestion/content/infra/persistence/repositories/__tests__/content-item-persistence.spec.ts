@@ -4,8 +4,8 @@ import { ContentItem } from '@/ingestion/content/domain/aggregates/content-item'
 import {
   ContentMetadata,
   AssetTag,
+  ContentHash,
 } from '@/ingestion/content/domain/value-objects';
-import { ContentHash } from '@/ingestion/shared/value-objects/content-hash';
 import { TypeOrmContentItemWriteRepository } from '../content-item-write';
 import { TypeOrmContentItemReadRepository } from '../content-item-read';
 import { TypeOrmContentItemFactory } from '../../factories/content-item-factory';
