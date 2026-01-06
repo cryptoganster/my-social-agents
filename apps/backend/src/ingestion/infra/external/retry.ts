@@ -3,7 +3,7 @@ import {
   IRetryService,
   RetryOptions,
   RetryResult,
-} from '@/ingestion/domain/interfaces/external';
+} from '@/ingestion/shared/interfaces/external';
 
 /**
  * RetryService

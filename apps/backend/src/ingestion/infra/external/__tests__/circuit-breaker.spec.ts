@@ -1,6 +1,6 @@
 import * as fc from 'fast-check';
 import { CircuitBreakerService } from '../circuit-breaker';
-import { CircuitState } from '@/ingestion/domain/interfaces/external';
+import { CircuitState } from '@/ingestion/shared/interfaces/external';
 
 describe('CircuitBreakerService', () => {
   let service: CircuitBreakerService;

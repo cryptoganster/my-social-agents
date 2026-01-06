@@ -4,7 +4,7 @@ import {
   CircuitBreakerOptions,
   CircuitBreakerStats,
   CircuitState,
-} from '@/ingestion/domain/interfaces/external';
+} from '@/ingestion/shared/interfaces/external';
 
 /**
  * CircuitBreakerService

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { createHash } from 'crypto';
-import { IHashService } from '@/ingestion/domain/interfaces/external';
+import { IHashService } from '@/ingestion/shared/interfaces/external';
 
 /**
  * HashService
