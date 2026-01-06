@@ -3,7 +3,10 @@ import * as fc from 'fast-check';
 import { IngestionJob } from '../ingestion-job';
 import { JobMetrics, SourceType, SourceTypeEnum } from '../../value-objects';
 import { SourceConfiguration } from '../source-configuration';
-import { ErrorRecord, ErrorType } from '../../entities/error-record';
+import {
+  ErrorRecord,
+  ErrorType,
+} from '@/ingestion/shared/entities/error-record';
 
 describe('IngestionJob', () => {
   // Helper to create a valid source configuration
