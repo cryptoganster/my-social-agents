@@ -10,10 +10,10 @@ import {
  * CircuitBreakerService
  *
  * Concrete implementation of ICircuitBreaker interface.
- * Implements circuit breaker pattern to prevent cascading failures.
+ * Implements the circuit breaker pattern to prevent cascading failures.
  *
- * State transitions:
- * - CLOSED → OPEN: When failure threshold is reached
+ * State Transitions:
+ * - CLOSED → OPEN: When failure threshold is reached within time window
  * - OPEN → HALF_OPEN: After reset timeout expires
  * - HALF_OPEN → CLOSED: When success threshold is reached
  * - HALF_OPEN → OPEN: When any failure occurs
@@ -22,13 +22,6 @@ import {
  */
 @Injectable()
 export class CircuitBreakerService implements ICircuitBreaker {
-  private state: CircuitState = CircuitState.CLOSED;
-  private failureCount: number = 0;
-  private successCount: number = 0;
-  private openedAt: Date | undefined;
-  private totalRejected: number = 0;
-  private failureTimestamps: number[] = [];
-
   private readonly defaultOptions: Required<CircuitBreakerOptions> = {
     failureThreshold: 5,
     failureWindowMs: 60000, // 60 seconds
@@ -36,6 +29,12 @@ export class CircuitBreakerService implements ICircuitBreaker {
     successThreshold: 2,
   };
 
+  private state: CircuitState = CircuitState.CLOSED;
+  private failureCount: number = 0;
+  private successCount: number = 0;
+  private openedAt?: Date;
+  private totalRejected: number = 0;
+  private failureTimestamps: number[] = [];
   private readonly options: Required<CircuitBreakerOptions>;
 
   constructor(options?: CircuitBreakerOptions) {
@@ -46,13 +45,15 @@ export class CircuitBreakerService implements ICircuitBreaker {
    * Executes an operation through the circuit breaker
    */
   async execute<T>(operation: () => Promise<T>): Promise<T> {
-    // Check if we should transition from OPEN to HALF_OPEN
+    // Check if circuit should transition from OPEN to HALF_OPEN
     if (this.state === CircuitState.OPEN) {
       if (this.shouldAttemptReset()) {
         this.transitionToHalfOpen();
       } else {
         this.totalRejected++;
-        throw new Error('Circuit breaker is OPEN');
+        throw new Error(
+          `Circuit breaker is OPEN. Opened at ${this.openedAt?.toISOString()}`,
+        );
       }
     }
 
@@ -68,6 +69,7 @@ export class CircuitBreakerService implements ICircuitBreaker {
       // Record failure
       this.onFailure();
 
+      // Re-throw the error
       throw error;
     }
   }
@@ -97,7 +99,7 @@ export class CircuitBreakerService implements ICircuitBreaker {
   }
 
   /**
-   * Handles successful operation
+   * Handles successful operation execution
    */
   private onSuccess(): void {
     if (this.state === CircuitState.HALF_OPEN) {
@@ -108,30 +110,32 @@ export class CircuitBreakerService implements ICircuitBreaker {
         this.transitionToClosed();
       }
     }
-
     // In CLOSED state, success doesn't change anything
   }
 
   /**
-   * Handles failed operation
+   * Handles failed operation execution
    */
   private onFailure(): void {
     const now = Date.now();
 
-    // Add failure timestamp
-    this.failureTimestamps.push(now);
-
-    // Remove old failures outside the window
-    this.cleanupOldFailures(now);
-
-    // Update failure count
-    this.failureCount = this.failureTimestamps.length;
-
     if (this.state === CircuitState.HALF_OPEN) {
-      // Any failure in HALF_OPEN state opens the circuit
+      // Any failure in HALF_OPEN state reopens the circuit
       this.transitionToOpen();
-    } else if (this.state === CircuitState.CLOSED) {
-      // Check if we've reached failure threshold
+      return;
+    }
+
+    if (this.state === CircuitState.CLOSED) {
+      // Add failure timestamp
+      this.failureTimestamps.push(now);
+
+      // Remove old failures outside the time window
+      this.cleanupOldFailures(now);
+
+      // Update failure count
+      this.failureCount = this.failureTimestamps.length;
+
+      // Check if we should open the circuit
       if (this.failureCount >= this.options.failureThreshold) {
         this.transitionToOpen();
       }
@@ -139,7 +143,7 @@ export class CircuitBreakerService implements ICircuitBreaker {
   }
 
   /**
-   * Removes failure timestamps outside the failure window
+   * Removes failure timestamps outside the time window
    */
   private cleanupOldFailures(now: number): void {
     const cutoff = now - this.options.failureWindowMs;
@@ -157,20 +161,10 @@ export class CircuitBreakerService implements ICircuitBreaker {
     }
 
     const now = Date.now();
-    const timeSinceOpened = now - this.openedAt.getTime();
+    const openedTime = this.openedAt.getTime();
+    const elapsed = now - openedTime;
 
-    return timeSinceOpened >= this.options.resetTimeoutMs;
-  }
-
-  /**
-   * Transitions circuit to CLOSED state
-   */
-  private transitionToClosed(): void {
-    this.state = CircuitState.CLOSED;
-    this.failureCount = 0;
-    this.successCount = 0;
-    this.openedAt = undefined;
-    this.failureTimestamps = [];
+    return elapsed >= this.options.resetTimeoutMs;
   }
 
   /**
@@ -188,5 +182,16 @@ export class CircuitBreakerService implements ICircuitBreaker {
   private transitionToHalfOpen(): void {
     this.state = CircuitState.HALF_OPEN;
     this.successCount = 0;
+  }
+
+  /**
+   * Transitions circuit to CLOSED state
+   */
+  private transitionToClosed(): void {
+    this.state = CircuitState.CLOSED;
+    this.failureCount = 0;
+    this.successCount = 0;
+    this.openedAt = undefined;
+    this.failureTimestamps = [];
   }
 }
