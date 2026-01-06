@@ -1,4 +1,4 @@
-import { ContentHash } from '../value-objects/content-hash';
+import { ContentHash } from '@/ingestion/shared/value-objects/content-hash';
 import { IHashService } from '../interfaces/external';
 
 /**
