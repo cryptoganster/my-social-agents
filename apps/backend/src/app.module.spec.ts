@@ -8,11 +8,35 @@ describe('AppModule', () => {
   beforeEach(async () => {
     module = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      // Override IngestionContentModule dependencies that are expected from parent
+      .overrideProvider('SourceConfigurationFactory')
+      .useValue({
+        load: jest.fn().mockResolvedValue(null),
+      })
+      .overrideProvider('ContentItemReadRepository')
+      .useValue({
+        findById: jest.fn(),
+        findByHash: jest.fn(),
+        findBySource: jest.fn(),
+      })
+      .overrideProvider('ContentItemWriteRepository')
+      .useValue({
+        save: jest.fn(),
+      })
+      .overrideProvider('SourceAdapter')
+      .useValue([])
+      .overrideProvider('IHashService')
+      .useValue({
+        sha256: jest.fn().mockReturnValue('a'.repeat(64)),
+      })
+      .compile();
   });
 
   afterEach(async () => {
-    await module.close();
+    if (module) {
+      await module.close();
+    }
   });
 
   it('should be defined', () => {

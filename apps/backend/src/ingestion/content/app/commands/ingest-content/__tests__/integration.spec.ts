@@ -30,6 +30,10 @@ describe('IngestContentCommandHandler - Integration Tests', () => {
   let mockAdapter: jest.Mocked<SourceAdapter>;
 
   beforeEach(async () => {
+    // Reset all mocks before each test
+    jest.resetAllMocks();
+    jest.clearAllMocks();
+
     mockSourceConfigFactory = {
       load: jest.fn(),
     };
@@ -73,6 +77,7 @@ describe('IngestContentCommandHandler - Integration Tests', () => {
 
   afterEach(() => {
     jest.clearAllMocks();
+    jest.resetAllMocks();
   });
 
   describe('Successful Content Collection', () => {
@@ -307,6 +312,9 @@ describe('IngestContentCommandHandler - Integration Tests', () => {
 
       // All items were attempted
       expect(mockEventBus.publish).toHaveBeenCalledTimes(3);
+
+      // Reset call count for next test
+      callCount = 0;
     });
 
     it('should propagate adapter collection errors', async () => {

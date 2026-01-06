@@ -38,6 +38,10 @@ describe('ContentCollectedEventHandler - Integration Tests', () => {
   let mockEventBus: jest.Mocked<EventBus>;
 
   beforeEach(async () => {
+    // Reset all mocks before each test
+    jest.resetAllMocks();
+    jest.clearAllMocks();
+
     mockReadRepo = {
       findById: jest.fn(),
       findByHash: jest.fn(),
@@ -117,6 +121,7 @@ describe('ContentCollectedEventHandler - Integration Tests', () => {
 
   afterEach(() => {
     jest.clearAllMocks();
+    jest.resetAllMocks();
     duplicateDetectionService.clear();
   });
 

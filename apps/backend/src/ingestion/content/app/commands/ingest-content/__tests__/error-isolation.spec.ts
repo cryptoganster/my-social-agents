@@ -33,7 +33,11 @@ describe('IngestContentCommandHandler - Error Isolation Property', () => {
   let mockAdapter: jest.Mocked<SourceAdapter>;
 
   beforeEach(async () => {
-    // Create mocks
+    // Reset all mocks before each test
+    jest.resetAllMocks();
+    jest.clearAllMocks();
+
+    // Create fresh mocks
     mockSourceConfigFactory = {
       load: jest.fn(),
     };
@@ -77,6 +81,7 @@ describe('IngestContentCommandHandler - Error Isolation Property', () => {
 
   afterEach(() => {
     jest.clearAllMocks();
+    jest.resetAllMocks();
   });
 
   /**
@@ -101,6 +106,11 @@ describe('IngestContentCommandHandler - Error Isolation Property', () => {
           { minLength: 3, maxLength: 10 },
         ),
         async (contentBatch) => {
+          // Reset mocks for this iteration
+          mockEventBus.publish.mockClear();
+          mockSourceConfigFactory.load.mockClear();
+          mockAdapter.collect.mockClear();
+
           // Setup: Create source configuration
           const sourceConfig = SourceConfiguration.create({
             sourceId: 'test-source',
@@ -177,6 +187,11 @@ describe('IngestContentCommandHandler - Error Isolation Property', () => {
           maxLength: 5,
         }),
         async (contentItems) => {
+          // Reset mocks for this iteration
+          mockEventBus.publish.mockClear();
+          mockSourceConfigFactory.load.mockClear();
+          mockAdapter.collect.mockClear();
+
           // Setup
           const sourceConfig = SourceConfiguration.create({
             sourceId: 'test-source',
@@ -239,6 +254,11 @@ describe('IngestContentCommandHandler - Error Isolation Property', () => {
         fc.integer({ min: 1, max: 10 }), // Number of successful items
         fc.integer({ min: 1, max: 10 }), // Number of failing items
         async (successCount, failCount) => {
+          // Reset mocks for this iteration
+          mockEventBus.publish.mockClear();
+          mockSourceConfigFactory.load.mockClear();
+          mockAdapter.collect.mockClear();
+
           // Setup
           const sourceConfig = SourceConfiguration.create({
             sourceId: 'test-source',
