@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import * as fc from 'fast-check';
 import { ContentHash } from '../content-hash';
 import { ContentHashGenerator } from '@/ingestion/domain/services';
@@ -17,8 +20,8 @@ describe('ContentHash', () => {
     it('should compute identical hashes for identical content', () => {
       fc.assert(
         fc.property(fc.string({ minLength: 1 }), (content) => {
-          const hash1 = generator.generate(content);
-          const hash2 = generator.generate(content);
+          const hash1: ContentHash = generator.generate(content);
+          const hash2: ContentHash = generator.generate(content);
 
           expect(hash1.equals(hash2)).toBe(true);
           expect(hash1.toString()).toBe(hash2.toString());
@@ -35,8 +38,8 @@ describe('ContentHash', () => {
           (content1, content2) => {
             fc.pre(content1 !== content2); // Only test when contents differ
 
-            const hash1 = generator.generate(content1);
-            const hash2 = generator.generate(content2);
+            const hash1: ContentHash = generator.generate(content1);
+            const hash2: ContentHash = generator.generate(content2);
 
             expect(hash1.equals(hash2)).toBe(false);
           },
@@ -48,8 +51,8 @@ describe('ContentHash', () => {
     it('should produce valid 64-character hex hashes', () => {
       fc.assert(
         fc.property(fc.string(), (content) => {
-          const contentHash = generator.generate(content);
-          const hashString = contentHash.toString();
+          const contentHash: ContentHash = generator.generate(content);
+          const hashString: string = contentHash.toString();
 
           expect(hashString).toHaveLength(64);
           expect(hashString).toMatch(/^[0-9a-f]{64}$/);
@@ -62,7 +65,7 @@ describe('ContentHash', () => {
   describe('Unit Tests', () => {
     it('should create hash from content via generator', () => {
       const content = 'test content';
-      const contentHash = generator.generate(content);
+      const contentHash: ContentHash = generator.generate(content);
 
       expect(contentHash).toBeDefined();
       expect(contentHash.toString()).toHaveLength(64);
@@ -70,7 +73,7 @@ describe('ContentHash', () => {
 
     it('should create hash from existing hash string', () => {
       const hashString = 'a' + '0'.repeat(63); // Valid 64-char hex string
-      const contentHash = generator.fromString(hashString);
+      const contentHash: ContentHash = generator.fromString(hashString);
 
       expect(contentHash.toString()).toBe(hashString);
     });
@@ -93,9 +96,9 @@ describe('ContentHash', () => {
 
     it('should check equality correctly', () => {
       const content = 'test content';
-      const hash1 = generator.generate(content);
-      const hash2 = generator.generate(content);
-      const hash3 = generator.generate('different content');
+      const hash1: ContentHash = generator.generate(content);
+      const hash2: ContentHash = generator.generate(content);
+      const hash3: ContentHash = generator.generate('different content');
 
       expect(hash1.equals(hash2)).toBe(true);
       expect(hash1.equals(hash3)).toBe(false);
@@ -103,7 +106,7 @@ describe('ContentHash', () => {
 
     it('should return hash value via getValue()', () => {
       const content = 'test content';
-      const contentHash = generator.generate(content);
+      const contentHash: ContentHash = generator.generate(content);
 
       expect(contentHash.getValue()).toBe(contentHash.toString());
     });
