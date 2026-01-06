@@ -1,5 +1,5 @@
-import { SourceConfiguration } from '../aggregates/source-configuration';
-import { SourceType } from '../value-objects/source-type';
+import { SourceConfiguration } from '@/ingestion/source/domain/aggregates/source-configuration';
+import { SourceType } from '@/ingestion/source/domain/value-objects/source-type';
 
 /**
  * RawContent

@@ -33,3 +33,4 @@ export * from './read-models';
 // Re-export from sub-contexts for backward compatibility
 export * from '@/ingestion/job/domain';
 export * from '@/ingestion/content/domain';
+export * from '@/ingestion/source/domain';

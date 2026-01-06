@@ -1,9 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import {
-  SourceConfiguration,
-  SourceConfigurationFactory,
-  SourceType,
-} from '@/ingestion/domain';
+import { SourceConfiguration } from '@/ingestion/source/domain/aggregates/source-configuration';
+import { SourceConfigurationFactory } from '@/ingestion/source/domain/interfaces/factories/source-configuration-factory';
+import { SourceType } from '@/ingestion/source/domain/value-objects/source-type';
 import { TypeOrmSourceConfigurationReadRepository } from '../repositories/source-configuration-read';
 
 /**

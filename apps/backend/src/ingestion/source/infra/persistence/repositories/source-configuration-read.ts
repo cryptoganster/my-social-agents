@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { SourceConfigurationReadModel } from '@/ingestion/domain';
+import { SourceConfigurationReadModel } from '@/ingestion/source/domain/read-models/source-configuration';
 import { SourceConfigurationEntity } from '../entities/source-configuration';
 
 /**

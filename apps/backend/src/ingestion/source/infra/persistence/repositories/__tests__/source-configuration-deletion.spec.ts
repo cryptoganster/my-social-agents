@@ -1,16 +1,16 @@
 import * as fc from 'fast-check';
 import { Repository, InsertResult, SelectQueryBuilder } from 'typeorm';
+import { SourceConfiguration } from '@/ingestion/source/domain/aggregates/source-configuration';
 import {
-  SourceConfiguration,
   SourceType,
   SourceTypeEnum,
-} from '@/ingestion/domain';
+} from '@/ingestion/source/domain/value-objects';
 import { TypeOrmSourceConfigurationWriteRepository } from '../source-configuration-write';
 import { TypeOrmSourceConfigurationReadRepository } from '../source-configuration-read';
 import { TypeOrmSourceConfigurationFactory } from '../../factories/source-configuration-factory';
-import { TypeOrmContentItemReadRepository } from '../content-item-read';
+import { TypeOrmContentItemReadRepository } from '@/ingestion/content/infra/persistence/repositories/content-item-read';
 import { SourceConfigurationEntity } from '../../entities/source-configuration';
-import { ContentItemEntity } from '../../entities/content-item';
+import { ContentItemEntity } from '@/ingestion/content/infra/persistence/entities/content-item';
 
 /**
  * Property-Based Tests for SourceConfiguration Deletion

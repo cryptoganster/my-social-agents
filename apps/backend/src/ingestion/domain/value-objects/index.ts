@@ -5,8 +5,7 @@
  * They have no conceptual identity and are defined by their attributes.
  */
 
-export * from './source-type';
-
 // Re-export from sub-contexts
 export * from '@/ingestion/job/domain/value-objects';
 export * from '@/ingestion/content/domain/value-objects';
+export * from '@/ingestion/source/domain/value-objects';

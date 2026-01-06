@@ -1,10 +1,10 @@
 import * as fc from 'fast-check';
 import { Repository, InsertResult, SelectQueryBuilder } from 'typeorm';
+import { SourceConfiguration } from '@/ingestion/source/domain/aggregates/source-configuration';
 import {
-  SourceConfiguration,
   SourceType,
   SourceTypeEnum,
-} from '@/ingestion/domain';
+} from '@/ingestion/source/domain/value-objects';
 import { TypeOrmSourceConfigurationWriteRepository } from '../source-configuration-write';
 import { TypeOrmSourceConfigurationReadRepository } from '../source-configuration-read';
 import { TypeOrmSourceConfigurationFactory } from '../../factories/source-configuration-factory';

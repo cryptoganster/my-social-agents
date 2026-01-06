@@ -6,10 +6,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import {
-  SourceConfiguration,
-  SourceConfigurationWriteRepository,
-} from '@/ingestion/domain';
+import { SourceConfiguration } from '@/ingestion/source/domain/aggregates/source-configuration';
+import { SourceConfigurationWriteRepository } from '@/ingestion/source/domain/interfaces/repositories/source-configuration-write';
 import { ConcurrencyException } from '@/shared/kernel';
 import { SourceConfigurationEntity } from '../entities/source-configuration';
 

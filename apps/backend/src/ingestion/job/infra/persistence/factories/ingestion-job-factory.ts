@@ -5,8 +5,8 @@ import {
   IngestionStatus,
   JobMetrics,
 } from '@/ingestion/job/domain/value-objects';
-import { SourceConfiguration } from '@/ingestion/domain/aggregates/source-configuration';
-import { SourceType } from '@/ingestion/domain/value-objects/source-type';
+import { SourceConfiguration } from '@/ingestion/source/domain/aggregates/source-configuration';
+import { SourceType } from '@/ingestion/source/domain/value-objects/source-type';
 import {
   ErrorRecord,
   ErrorType,
