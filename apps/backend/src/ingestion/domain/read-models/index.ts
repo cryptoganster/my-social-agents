@@ -11,8 +11,8 @@
  * - No business logic, just data structures
  */
 
-export * from './content-item';
 export * from './source-configuration';
 
-// Re-export from Job sub-context
+// Re-export from sub-contexts
 export * from '@/ingestion/job/domain/read-models';
+export * from '@/ingestion/content/domain/read-models';

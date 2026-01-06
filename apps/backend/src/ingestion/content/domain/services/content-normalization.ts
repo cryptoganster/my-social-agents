@@ -1,9 +1,5 @@
-import {
-  SourceType,
-  SourceTypeEnum,
-  ContentMetadata,
-  AssetTag,
-} from '../value-objects';
+import { SourceType, SourceTypeEnum } from '@/ingestion/domain/value-objects';
+import { ContentMetadata, AssetTag } from '../value-objects';
 
 /**
  * ContentNormalizationService

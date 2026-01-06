@@ -6,8 +6,8 @@
  * with their full behavior and business logic.
  */
 
-export * from './content-item-factory';
 export * from './source-configuration-factory';
 
-// Re-export from Job sub-context
+// Re-export from sub-contexts
 export * from '@/ingestion/job/domain/interfaces/factories';
+export * from '@/ingestion/content/domain/interfaces/factories';

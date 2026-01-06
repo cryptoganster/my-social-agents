@@ -5,8 +5,8 @@
  * Each aggregate has a root entity and enforces consistency boundaries.
  */
 
-export * from './content-item';
 export * from './source-configuration';
 
-// Re-export from Job sub-context
+// Re-export from sub-contexts
 export * from '@/ingestion/job/domain/aggregates';
+export * from '@/ingestion/content/domain/aggregates';

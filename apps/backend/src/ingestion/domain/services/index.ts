@@ -5,8 +5,5 @@
  * They are stateless and operate on domain objects.
  */
 
-export { ContentHashGenerator } from './content-hash-generator';
-export { ContentNormalizationService } from './content-normalization';
-export { DuplicateDetectionService } from './duplicate-detection';
-export { ContentValidationService } from './content-validation';
-export type { ValidationResult } from './content-validation';
+// Re-export from Content sub-context
+export * from '@/ingestion/content/domain/services';

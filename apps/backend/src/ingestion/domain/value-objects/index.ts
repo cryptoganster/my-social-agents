@@ -7,8 +7,7 @@
 
 export * from '@/ingestion/shared/value-objects/content-hash';
 export * from './source-type';
-export * from './content-metadata';
-export * from './asset-tag';
 
-// Re-export from Job sub-context
+// Re-export from sub-contexts
 export * from '@/ingestion/job/domain/value-objects';
+export * from '@/ingestion/content/domain/value-objects';

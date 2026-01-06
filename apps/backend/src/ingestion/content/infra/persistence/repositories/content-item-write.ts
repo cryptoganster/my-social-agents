@@ -5,7 +5,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ContentItem, ContentItemWriteRepository } from '@/ingestion/domain';
+import { ContentItem } from '@/ingestion/content/domain/aggregates/content-item';
+import { ContentItemWriteRepository } from '@/ingestion/content/domain/interfaces/repositories/content-item-write';
 import { ConcurrencyException } from '@/shared/kernel';
 import { ContentItemEntity } from '../entities/content-item';
 

@@ -1,4 +1,5 @@
-import { ContentHash, ContentMetadata, AssetTag } from '../value-objects';
+import { ContentHash } from '@/ingestion/shared/value-objects/content-hash';
+import { ContentMetadata, AssetTag } from '../value-objects';
 import { AggregateRoot, AggregateVersion } from '@/shared/kernel';
 
 /**

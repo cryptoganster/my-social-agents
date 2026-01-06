@@ -6,8 +6,8 @@
  * Read operations are handled by read repositories in the infrastructure layer.
  */
 
-export * from './content-item-write';
 export * from './source-configuration-write';
 
-// Re-export from Job sub-context
+// Re-export from sub-contexts
 export * from '@/ingestion/job/domain/interfaces/repositories';
+export * from '@/ingestion/content/domain/interfaces/repositories';

@@ -5,13 +5,13 @@
  */
 
 // Write Repositories
-export * from './content-item-write';
 export * from './source-configuration-write';
 
 // Read Repositories
-export * from './content-item-read';
 export * from './source-configuration-read';
 
-// Re-export from Job sub-context
+// Re-export from sub-contexts
 export * from '@/ingestion/job/infra/persistence/repositories/ingestion-job-write';
 export * from '@/ingestion/job/infra/persistence/repositories/ingestion-job-read';
+export * from '@/ingestion/content/infra/persistence/repositories/content-item-write';
+export * from '@/ingestion/content/infra/persistence/repositories/content-item-read';

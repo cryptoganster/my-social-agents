@@ -1,11 +1,11 @@
 import * as fc from 'fast-check';
 import { Repository, InsertResult } from 'typeorm';
+import { ContentItem } from '@/ingestion/content/domain/aggregates/content-item';
 import {
-  ContentItem,
-  ContentHash,
   ContentMetadata,
   AssetTag,
-} from '@/ingestion/domain';
+} from '@/ingestion/content/domain/value-objects';
+import { ContentHash } from '@/ingestion/shared/value-objects/content-hash';
 import { TypeOrmContentItemWriteRepository } from '../content-item-write';
 import { TypeOrmContentItemReadRepository } from '../content-item-read';
 import { TypeOrmContentItemFactory } from '../../factories/content-item-factory';

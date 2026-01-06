@@ -1,5 +1,5 @@
 import { ContentHash } from '@/ingestion/shared/value-objects/content-hash';
-import { IHashService } from '../interfaces/external';
+import { IHashService } from '@/ingestion/shared/interfaces/external';
 
 /**
  * Content Hash Generator Domain Service

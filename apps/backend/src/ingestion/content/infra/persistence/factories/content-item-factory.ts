@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
+import { ContentItem } from '@/ingestion/content/domain/aggregates/content-item';
+import { ContentItemFactory } from '@/ingestion/content/domain/interfaces/factories/content-item-factory';
 import {
-  ContentItem,
-  ContentItemFactory,
-  ContentHash,
   ContentMetadata,
   AssetTag,
-} from '@/ingestion/domain';
+} from '@/ingestion/content/domain/value-objects';
+import { ContentHash } from '@/ingestion/shared/value-objects/content-hash';
 import { TypeOrmContentItemReadRepository } from '../repositories/content-item-read';
 
 /**
