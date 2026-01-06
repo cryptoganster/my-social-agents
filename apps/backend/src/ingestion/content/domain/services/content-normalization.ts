@@ -1,4 +1,7 @@
-import { SourceType, SourceTypeEnum } from '@/ingestion/domain/value-objects';
+import {
+  SourceType,
+  SourceTypeEnum,
+} from '@/ingestion/source/domain/value-objects';
 import { ContentMetadata, AssetTag } from '../value-objects';
 
 /**

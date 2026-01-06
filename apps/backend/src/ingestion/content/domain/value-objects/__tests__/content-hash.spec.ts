@@ -1,6 +1,6 @@
 import * as fc from 'fast-check';
 import { ContentHash } from '../content-hash';
-import { ContentHashGenerator } from '@/ingestion/domain/services';
+import { ContentHashGenerator } from '@/ingestion/content/domain/services';
 import { HashService } from '@/ingestion/shared/infra/external';
 
 describe('ContentHash', () => {
