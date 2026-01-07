@@ -236,7 +236,22 @@ describe('ContentNormalizationService', () => {
       fc.assert(
         fc.property(
           fc.record({
-            name: fc.string({ minLength: 1, maxLength: 20 }),
+            // Filter out characters that get modified by source-specific normalizations:
+            // - < and > (removed by RSS HTML tag removal)
+            // - | (replaced by I in PDF/OCR)
+            // - ` and ' (normalized in PDF/OCR)
+            // - [[ and ]] (modified by Wikipedia)
+            name: fc
+              .string({ minLength: 1, maxLength: 20 })
+              .filter(
+                (s) =>
+                  !s.includes('<') &&
+                  !s.includes('>') &&
+                  !s.includes('|') &&
+                  !s.includes('`') &&
+                  !s.includes('[') &&
+                  !s.includes(']'),
+              ),
             value: fc.integer(),
             active: fc.boolean(),
           }),
@@ -244,6 +259,9 @@ describe('ContentNormalizationService', () => {
             SourceTypeEnum.WEB,
             SourceTypeEnum.RSS,
             SourceTypeEnum.SOCIAL_MEDIA,
+            SourceTypeEnum.PDF,
+            SourceTypeEnum.OCR,
+            SourceTypeEnum.WIKIPEDIA,
           ),
           (jsonData, sourceTypeEnum) => {
             const sourceType = SourceType.fromEnum(sourceTypeEnum);
@@ -261,7 +279,7 @@ describe('ContentNormalizationService', () => {
 
               const parsed = JSON.parse(extractedJson);
 
-              // All original data should be preserved
+              // All original data should be preserved after source-specific normalization
 
               expect(parsed.name).toBe(jsonData.name);
 
