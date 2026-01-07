@@ -59,7 +59,11 @@ export class TypeOrmIngestionJobReadRepository implements IIngestionJobReadRepos
       itemsCollected: entity.itemsCollected,
       duplicatesDetected: entity.duplicatesDetected,
       errorsEncountered: entity.errorsEncountered,
-      bytesProcessed: entity.bytesProcessed,
+      // Convert bigint to number (TypeORM returns bigint as string)
+      bytesProcessed:
+        typeof entity.bytesProcessed === 'string'
+          ? parseInt(entity.bytesProcessed, 10)
+          : entity.bytesProcessed,
       durationMs: entity.durationMs,
       errors: entity.errors,
       sourceConfig: entity.sourceConfig,

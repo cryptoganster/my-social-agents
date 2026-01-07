@@ -17,6 +17,9 @@ jest.mock('ora', () => {
 describe('ingestFlow', () => {
   let mockApp: INestApplicationContext;
   let mockCommandBus: CommandBus;
+  let mockReadRepo: {
+    findActive: jest.Mock;
+  };
 
   beforeEach(() => {
     // Create mock CommandBus
@@ -24,9 +27,23 @@ describe('ingestFlow', () => {
       execute: jest.fn(),
     } as unknown as CommandBus;
 
+    // Create mock read repository
+    mockReadRepo = {
+      findActive: jest.fn().mockResolvedValue([
+        {
+          sourceId: 'test-source-123',
+          name: 'Test Source',
+          sourceType: 'WEB_SCRAPER',
+        },
+      ]),
+    };
+
     // Create mock NestJS application context
     mockApp = {
-      get: jest.fn().mockReturnValue(mockCommandBus),
+      get: jest.fn((token: unknown) => {
+        if (token === CommandBus) return mockCommandBus;
+        return mockReadRepo;
+      }),
     } as unknown as INestApplicationContext;
 
     // Clear all mocks
@@ -41,7 +58,7 @@ describe('ingestFlow', () => {
   });
 
   it('should return "main" when user cancels ingestion', async () => {
-    // Mock user input: provide source ID, then cancel
+    // Mock user input: select source, then cancel
     (inquirer.prompt as unknown as jest.Mock)
       .mockResolvedValueOnce({ sourceId: 'test-source-123' })
       .mockResolvedValueOnce({ confirm: false });
@@ -64,7 +81,7 @@ describe('ingestFlow', () => {
 
     (mockCommandBus.execute as jest.Mock).mockResolvedValue(mockResult);
 
-    // Mock user input: provide source ID, confirm, then return to main
+    // Mock user input: select source, confirm, then return to main
     (inquirer.prompt as unknown as jest.Mock)
       .mockResolvedValueOnce({ sourceId: 'test-source-123' })
       .mockResolvedValueOnce({ confirm: true })
@@ -93,9 +110,9 @@ describe('ingestFlow', () => {
 
     (mockCommandBus.execute as jest.Mock).mockResolvedValue(mockResult);
 
-    // Mock user input: provide source ID, confirm, then exit
+    // Mock user input: select source, confirm, then exit
     (inquirer.prompt as unknown as jest.Mock)
-      .mockResolvedValueOnce({ sourceId: 'test-source-456' })
+      .mockResolvedValueOnce({ sourceId: 'test-source-123' })
       .mockResolvedValueOnce({ confirm: true })
       .mockResolvedValueOnce({ next: 'exit' });
 
@@ -110,9 +127,9 @@ describe('ingestFlow', () => {
     const mockError = new Error('Ingestion failed: source not found');
     (mockCommandBus.execute as jest.Mock).mockRejectedValue(mockError);
 
-    // Mock user input: provide source ID, confirm, then return to main after error
+    // Mock user input: select source, confirm, then return to main after error
     (inquirer.prompt as unknown as jest.Mock)
-      .mockResolvedValueOnce({ sourceId: 'invalid-source' })
+      .mockResolvedValueOnce({ sourceId: 'test-source-123' })
       .mockResolvedValueOnce({ confirm: true })
       .mockResolvedValueOnce({ next: 'main' });
 
@@ -137,9 +154,9 @@ describe('ingestFlow', () => {
 
     (mockCommandBus.execute as jest.Mock).mockResolvedValue(mockResult);
 
-    // Mock user input
+    // Mock user input: select source, confirm, then return to main
     (inquirer.prompt as unknown as jest.Mock)
-      .mockResolvedValueOnce({ sourceId: 'test-source-789' })
+      .mockResolvedValueOnce({ sourceId: 'test-source-123' })
       .mockResolvedValueOnce({ confirm: true })
       .mockResolvedValueOnce({ next: 'main' });
 
@@ -149,33 +166,15 @@ describe('ingestFlow', () => {
     expect(mockCommandBus.execute).toHaveBeenCalledTimes(1);
   });
 
-  it('should validate source ID is not empty', async () => {
-    // Mock user input with validation
-    const promptMock = inquirer.prompt as unknown as jest.Mock;
-    promptMock
-      .mockResolvedValueOnce({ sourceId: 'valid-source' })
-      .mockResolvedValueOnce({ confirm: true })
-      .mockResolvedValueOnce({ next: 'main' });
+  it('should load and display available sources', async () => {
+    // Mock user input: select source, cancel
+    (inquirer.prompt as unknown as jest.Mock)
+      .mockResolvedValueOnce({ sourceId: 'test-source-123' })
+      .mockResolvedValueOnce({ confirm: false });
 
-    // Mock command execution
-    (mockCommandBus.execute as jest.Mock).mockResolvedValue({
-      itemsCollected: 1,
-      itemsPersisted: 1,
-      duplicatesDetected: 0,
-      validationErrors: 0,
-      errors: [],
-    });
-
-    // Execute flow to capture prompt calls
     await ingestFlow(mockApp);
 
-    // Get the validation function from the first prompt call
-    const firstCall = promptMock.mock.calls[0][0];
-    const validateFn = firstCall[0].validate;
-
-    // Test validation
-    expect(validateFn('')).toBe('Source ID is required');
-    expect(validateFn('   ')).toBe('Source ID is required');
-    expect(validateFn('valid-id')).toBe(true);
+    // Verify read repository was called
+    expect(mockReadRepo.findActive).toHaveBeenCalledTimes(1);
   });
 });

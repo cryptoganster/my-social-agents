@@ -75,7 +75,7 @@ describe('Bootstrap Module', () => {
       expect(result).toBe(mockApp);
       expect(NestFactory.createApplicationContext).toHaveBeenCalledWith(
         expect.anything(),
-        { logger: false },
+        { logger: ['error', 'warn', 'log', 'debug'] },
       );
     });
 
@@ -110,7 +110,7 @@ describe('Bootstrap Module', () => {
       expect(mockSpinner.stop).toHaveBeenCalled();
     });
 
-    it('should disable default logger for cleaner output', async () => {
+    it('should enable logging for debugging', async () => {
       // Arrange
       (NestFactory.createApplicationContext as jest.Mock).mockResolvedValue(
         mockApp,
@@ -122,7 +122,7 @@ describe('Bootstrap Module', () => {
       // Assert
       expect(NestFactory.createApplicationContext).toHaveBeenCalledWith(
         expect.anything(),
-        expect.objectContaining({ logger: false }),
+        expect.objectContaining({ logger: ['error', 'warn', 'log', 'debug'] }),
       );
     });
 

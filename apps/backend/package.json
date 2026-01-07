@@ -108,6 +108,7 @@
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node",
+    "maxWorkers": 1,
     "moduleNameMapper": {
       "^@/ingestion/(.*)$": "<rootDir>/ingestion/$1",
       "^@/shared/(.*)$": "<rootDir>/shared/$1",
