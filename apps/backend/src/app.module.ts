@@ -53,7 +53,9 @@ import { AppService } from './app.service';
         entities: [__dirname + '/**/infra/persistence/entities/*.{ts,js}'],
         migrations: [__dirname + '/ingestion/migrations/*.{ts,js}'],
         synchronize: false, // Never use synchronize in production
-        logging: configService.get<string>('NODE_ENV') === 'development',
+        logging:
+          configService.get<string>('NODE_ENV') === 'development' &&
+          configService.get<string>('DB_LOGGING') !== 'false',
         autoLoadEntities: true,
       }),
     }),
