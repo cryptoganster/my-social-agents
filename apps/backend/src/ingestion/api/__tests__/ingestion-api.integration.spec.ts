@@ -3,7 +3,6 @@ import { IngestionJobsController } from '../http/controllers/ingestion-jobs.cont
 import { SourcesController } from '../http/controllers/sources.controller';
 import { ScheduleJobDto } from '../http/dto/schedule-job.dto';
 import { ConfigureSourceDto } from '../http/dto/configure-source.dto';
-import { createIngestionCLI } from '../cli/ingestion-cli';
 import { IIngestionJobReadRepository } from '@/ingestion/job/domain/interfaces/repositories/ingestion-job-read';
 import { ISourceConfigurationReadRepository } from '@/ingestion/source/domain/interfaces/repositories/source-configuration-read';
 import { SourceConfigurationReadModel } from '@/ingestion/source/domain/read-models/source-configuration';
@@ -284,54 +283,6 @@ describe('Ingestion API Integration Tests', () => {
         expect(result).toEqual([]);
         expect(result).toHaveLength(0);
       });
-    });
-  });
-
-  describe('CLI Commands', () => {
-    it('should create CLI program with all commands', () => {
-      const program = createIngestionCLI();
-
-      expect(program).toBeDefined();
-      expect(program.name()).toBe('ingestion');
-      expect(program.version()).toBe('1.0.0');
-
-      // Verify commands are registered
-      const commands = program.commands;
-      const commandNames = commands.map((cmd) => cmd.name());
-
-      expect(commandNames).toContain('ingest');
-      expect(commandNames).toContain('schedule');
-      expect(commandNames).toContain('configure');
-    });
-
-    it('should have ingest command with correct configuration', () => {
-      const program = createIngestionCLI();
-      const ingestCommand = program.commands.find(
-        (cmd) => cmd.name() === 'ingest',
-      );
-
-      expect(ingestCommand).toBeDefined();
-      expect(ingestCommand?.description()).toContain('Ingest content');
-    });
-
-    it('should have schedule command with correct configuration', () => {
-      const program = createIngestionCLI();
-      const scheduleCommand = program.commands.find(
-        (cmd) => cmd.name() === 'schedule',
-      );
-
-      expect(scheduleCommand).toBeDefined();
-      expect(scheduleCommand?.description()).toContain('Schedule');
-    });
-
-    it('should have configure command with correct configuration', () => {
-      const program = createIngestionCLI();
-      const configureCommand = program.commands.find(
-        (cmd) => cmd.name() === 'configure',
-      );
-
-      expect(configureCommand).toBeDefined();
-      expect(configureCommand?.description()).toContain('Configure');
     });
   });
 

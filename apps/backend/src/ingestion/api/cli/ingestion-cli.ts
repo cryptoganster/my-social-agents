@@ -1,10 +1,10 @@
-import { Command } from 'commander';
 import { NestFactory } from '@nestjs/core';
 import { INestApplicationContext } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
 import chalk from 'chalk';
 import ora from 'ora';
 import figlet from 'figlet';
+import inquirer from 'inquirer';
 import { AppModule } from '../../../app.module';
 import { IngestContentCommand } from '@/ingestion/content/app/commands/ingest-content/command';
 import { ScheduleIngestionJobCommand } from '@/ingestion/job/app/commands/schedule-job/command';
@@ -105,16 +105,49 @@ async function bootstrap(): Promise<INestApplicationContext> {
 }
 
 /**
- * Ingest command - Trigger content ingestion from a source
+ * Interactive flow for content ingestion
  */
-async function ingestCommand(sourceId: string): Promise<void> {
-  displayBanner();
-
+async function ingestFlow(
+  app: INestApplicationContext,
+): Promise<'main' | 'exit'> {
+  console.log();
   console.log(chalk.blue.bold('📥 Content Ingestion'));
+  console.log();
+
+  // Step 1: Ask for source ID
+  const { sourceId } = await inquirer.prompt<{ sourceId: string }>([
+    {
+      type: 'input',
+      name: 'sourceId',
+      message: 'Enter the source ID to ingest from:',
+      validate: (input: string): string | boolean => {
+        if (input.trim().length === 0) {
+          return 'Source ID is required';
+        }
+        return true;
+      },
+    },
+  ]);
+
+  console.log();
   console.log(chalk.gray(`Source ID: ${sourceId}`));
   console.log();
 
-  const app = await bootstrap();
+  // Step 2: Confirm action
+  const { confirm } = await inquirer.prompt<{ confirm: boolean }>([
+    {
+      type: 'confirm',
+      name: 'confirm',
+      message: 'Start content ingestion?',
+      default: true,
+    },
+  ]);
+
+  if (!confirm) {
+    console.log(chalk.yellow('Ingestion cancelled'));
+    return 'main';
+  }
+
   const commandBus = app.get(CommandBus);
 
   const spinner = ora({
@@ -169,9 +202,22 @@ async function ingestCommand(sourceId: string): Promise<void> {
 
     console.log();
     console.log(chalk.green.bold('✨ Done!'));
+    console.log();
 
-    await app.close();
-    process.exit(0);
+    // Ask what to do next
+    const { next } = await inquirer.prompt<{ next: string }>([
+      {
+        type: 'list',
+        name: 'next',
+        message: 'What would you like to do next?',
+        choices: [
+          { name: '← Back to main menu', value: 'main' },
+          { name: '✕ Exit', value: 'exit' },
+        ],
+      },
+    ]);
+
+    return next as 'main' | 'exit';
   } catch (error) {
     spinner.fail(chalk.red('Ingestion failed'));
     console.log();
@@ -191,25 +237,104 @@ async function ingestCommand(sourceId: string): Promise<void> {
       console.log(chalk.gray(error.stack));
     }
 
-    await app.close();
-    process.exit(1);
+    console.log();
+
+    // Ask what to do next
+    const { next } = await inquirer.prompt<{ next: string }>([
+      {
+        type: 'list',
+        name: 'next',
+        message: 'What would you like to do next?',
+        choices: [
+          { name: '← Back to main menu', value: 'main' },
+          { name: '✕ Exit', value: 'exit' },
+        ],
+      },
+    ]);
+
+    return next as 'main' | 'exit';
   }
 }
 
 /**
- * Schedule command - Schedule an ingestion job
+ * Interactive flow for scheduling ingestion jobs
  */
-async function scheduleCommand(
-  sourceId: string,
-  options: { at?: string },
-): Promise<void> {
-  displayBanner();
-
+async function scheduleFlow(
+  app: INestApplicationContext,
+): Promise<'main' | 'exit'> {
+  console.log();
   console.log(chalk.blue.bold('📅 Schedule Ingestion Job'));
-  console.log(chalk.gray(`Source ID: ${sourceId}`));
   console.log();
 
-  const app = await bootstrap();
+  // Step 1: Ask for source ID
+  const { sourceId } = await inquirer.prompt<{ sourceId: string }>([
+    {
+      type: 'input',
+      name: 'sourceId',
+      message: 'Enter the source ID to schedule:',
+      validate: (input: string): string | boolean => {
+        if (input.trim().length === 0) {
+          return 'Source ID is required';
+        }
+        return true;
+      },
+    },
+  ]);
+
+  // Step 2: Ask for schedule time
+  const { scheduleOption } = await inquirer.prompt<{ scheduleOption: string }>([
+    {
+      type: 'list',
+      name: 'scheduleOption',
+      message: 'When should the job run?',
+      choices: [
+        { name: 'Now (immediately)', value: 'now' },
+        { name: 'Custom date/time', value: 'custom' },
+      ],
+    },
+  ]);
+
+  let scheduledAt = new Date();
+
+  if (scheduleOption === 'custom') {
+    const { datetime } = await inquirer.prompt<{ datetime: string }>([
+      {
+        type: 'input',
+        name: 'datetime',
+        message:
+          'Enter date/time (ISO 8601 format, e.g., 2026-01-07T10:00:00):',
+        validate: (input: string): string | boolean => {
+          const date = new Date(input);
+          if (isNaN(date.getTime())) {
+            return 'Invalid date format. Use ISO 8601 format (e.g., 2026-01-07T10:00:00)';
+          }
+          return true;
+        },
+      },
+    ]);
+    scheduledAt = new Date(datetime);
+  }
+
+  console.log();
+  console.log(chalk.gray(`Source ID: ${sourceId}`));
+  console.log(chalk.gray(`Scheduled at: ${scheduledAt.toISOString()}`));
+  console.log();
+
+  // Step 3: Confirm action
+  const { confirm } = await inquirer.prompt<{ confirm: boolean }>([
+    {
+      type: 'confirm',
+      name: 'confirm',
+      message: 'Schedule this job?',
+      default: true,
+    },
+  ]);
+
+  if (!confirm) {
+    console.log(chalk.yellow('Scheduling cancelled'));
+    return 'main';
+  }
+
   const commandBus = app.get(CommandBus);
 
   const spinner = ora({
@@ -218,11 +343,6 @@ async function scheduleCommand(
   }).start();
 
   try {
-    const scheduledAt =
-      options.at !== undefined && options.at.length > 0
-        ? new Date(options.at)
-        : new Date();
-
     const command = new ScheduleIngestionJobCommand(
       sourceId,
       scheduledAt,
@@ -252,9 +372,22 @@ async function scheduleCommand(
 
     console.log();
     console.log(chalk.green.bold('✨ Done!'));
+    console.log();
 
-    await app.close();
-    process.exit(0);
+    // Ask what to do next
+    const { next } = await inquirer.prompt<{ next: string }>([
+      {
+        type: 'list',
+        name: 'next',
+        message: 'What would you like to do next?',
+        choices: [
+          { name: '← Back to main menu', value: 'main' },
+          { name: '✕ Exit', value: 'exit' },
+        ],
+      },
+    ]);
+
+    return next as 'main' | 'exit';
   } catch (error) {
     spinner.fail(chalk.red('Scheduling failed'));
     console.log();
@@ -274,30 +407,200 @@ async function scheduleCommand(
       console.log(chalk.gray(error.stack));
     }
 
-    await app.close();
-    process.exit(1);
+    console.log();
+
+    // Ask what to do next
+    const { next } = await inquirer.prompt<{ next: string }>([
+      {
+        type: 'list',
+        name: 'next',
+        message: 'What would you like to do next?',
+        choices: [
+          { name: '← Back to main menu', value: 'main' },
+          { name: '✕ Exit', value: 'exit' },
+        ],
+      },
+    ]);
+
+    return next as 'main' | 'exit';
   }
 }
 
 /**
- * Configure command - Configure a content source
+ * Interactive flow for configuring content sources
  */
-async function configureCommand(options: {
-  sourceId?: string;
-  type: string;
-  name: string;
-  config?: string;
-  credentials?: string;
-  active?: string;
-}): Promise<void> {
-  displayBanner();
-
+async function configureFlow(
+  app: INestApplicationContext,
+): Promise<'main' | 'exit'> {
+  console.log();
   console.log(chalk.blue.bold('⚙️  Configure Content Source'));
-  console.log(chalk.gray(`Type: ${options.type}`));
-  console.log(chalk.gray(`Name: ${options.name}`));
   console.log();
 
-  const app = await bootstrap();
+  // Step 1: Ask if creating new or updating existing
+  const { action } = await inquirer.prompt<{ action: string }>([
+    {
+      type: 'list',
+      name: 'action',
+      message: 'What would you like to do?',
+      choices: [
+        { name: 'Create new source', value: 'create' },
+        { name: 'Update existing source', value: 'update' },
+        { name: '← Back to main menu', value: 'back' },
+      ],
+    },
+  ]);
+
+  if (action === 'back') {
+    return 'main';
+  }
+
+  let sourceId: string | undefined;
+
+  // Step 2: If updating, ask for source ID
+  if (action === 'update') {
+    const response = await inquirer.prompt<{ sourceId: string }>([
+      {
+        type: 'input',
+        name: 'sourceId',
+        message: 'Enter the source ID to update:',
+        validate: (input: string): string | boolean => {
+          if (input.trim().length === 0) {
+            return 'Source ID is required';
+          }
+          return true;
+        },
+      },
+    ]);
+    sourceId = response.sourceId;
+  }
+
+  // Step 3: Ask for source details
+  const { name, type } = await inquirer.prompt<{
+    name: string;
+    type: SourceTypeEnum;
+  }>([
+    {
+      type: 'input',
+      name: 'name',
+      message: 'Enter source name:',
+      validate: (input: string): string | boolean => {
+        if (input.trim().length === 0) {
+          return 'Source name is required';
+        }
+        return true;
+      },
+    },
+    {
+      type: 'list',
+      name: 'type',
+      message: 'Select source type:',
+      choices: [
+        { name: '🌐 Web Scraper', value: 'WEB_SCRAPER' },
+        { name: '📡 RSS Feed', value: 'RSS_FEED' },
+        { name: '📱 Social Media', value: 'SOCIAL_MEDIA' },
+        { name: '📄 PDF', value: 'PDF' },
+        { name: '🔍 OCR', value: 'OCR' },
+        { name: '📚 Wikipedia', value: 'WIKIPEDIA' },
+      ],
+    },
+  ]);
+
+  // Step 4: Ask for optional configuration
+  const { hasConfig } = await inquirer.prompt<{ hasConfig: boolean }>([
+    {
+      type: 'confirm',
+      name: 'hasConfig',
+      message: 'Do you want to add configuration (JSON)?',
+      default: false,
+    },
+  ]);
+
+  let config: Record<string, unknown> = {};
+  if (hasConfig) {
+    const { configJson } = await inquirer.prompt<{ configJson: string }>([
+      {
+        type: 'input',
+        name: 'configJson',
+        message: 'Enter configuration as JSON:',
+        validate: (input: string): string | boolean => {
+          if (input.trim().length === 0) {
+            return true; // Allow empty
+          }
+          try {
+            JSON.parse(input);
+            return true;
+          } catch {
+            return 'Invalid JSON format';
+          }
+        },
+      },
+    ]);
+
+    if (configJson.trim().length > 0) {
+      config = JSON.parse(configJson) as Record<string, unknown>;
+    }
+  }
+
+  // Step 5: Ask for credentials
+  const { hasCredentials } = await inquirer.prompt<{ hasCredentials: boolean }>(
+    [
+      {
+        type: 'confirm',
+        name: 'hasCredentials',
+        message: 'Do you want to add API credentials?',
+        default: false,
+      },
+    ],
+  );
+
+  let credentials: string | undefined;
+  if (hasCredentials) {
+    const response = await inquirer.prompt<{ credentials: string }>([
+      {
+        type: 'password',
+        name: 'credentials',
+        message: 'Enter API credentials (will be encrypted):',
+        mask: '*',
+      },
+    ]);
+    credentials = response.credentials;
+  }
+
+  // Step 6: Ask if source should be active
+  const { isActive } = await inquirer.prompt<{ isActive: boolean }>([
+    {
+      type: 'confirm',
+      name: 'isActive',
+      message: 'Should this source be active?',
+      default: true,
+    },
+  ]);
+
+  console.log();
+  console.log(chalk.gray(`Name: ${name}`));
+  console.log(chalk.gray(`Type: ${type}`));
+  console.log(chalk.gray(`Active: ${isActive ? 'Yes' : 'No'}`));
+  if (sourceId !== undefined) {
+    console.log(chalk.gray(`Source ID: ${sourceId}`));
+  }
+  console.log();
+
+  // Step 7: Confirm action
+  const { confirm } = await inquirer.prompt<{ confirm: boolean }>([
+    {
+      type: 'confirm',
+      name: 'confirm',
+      message:
+        action === 'create' ? 'Create this source?' : 'Update this source?',
+      default: true,
+    },
+  ]);
+
+  if (!confirm) {
+    console.log(chalk.yellow('Configuration cancelled'));
+    return 'main';
+  }
+
   const commandBus = app.get(CommandBus);
 
   const spinner = ora({
@@ -306,30 +609,13 @@ async function configureCommand(options: {
   }).start();
 
   try {
-    // Parse config JSON if provided
-    let config: Record<string, unknown> = {};
-    if (
-      options.config !== undefined &&
-      options.config !== null &&
-      options.config.length > 0
-    ) {
-      try {
-        config = JSON.parse(options.config) as Record<string, unknown>;
-      } catch {
-        spinner.fail(chalk.red('Invalid JSON in --config option'));
-        throw new Error('Invalid JSON in --config option');
-      }
-    }
-
     const command = new ConfigureSourceCommand(
-      options.sourceId, // undefined for new sources
-      options.type as SourceTypeEnum,
-      options.name,
+      sourceId,
+      type,
+      name,
       config,
-      options.credentials,
-      options.active !== undefined && options.active.length > 0
-        ? options.active === 'true'
-        : true,
+      credentials,
+      isActive,
     );
 
     const result = await commandBus.execute<
@@ -358,9 +644,22 @@ async function configureCommand(options: {
 
     console.log();
     console.log(chalk.green.bold('✨ Done!'));
+    console.log();
 
-    await app.close();
-    process.exit(0);
+    // Ask what to do next
+    const { next } = await inquirer.prompt<{ next: string }>([
+      {
+        type: 'list',
+        name: 'next',
+        message: 'What would you like to do next?',
+        choices: [
+          { name: '← Back to main menu', value: 'main' },
+          { name: '✕ Exit', value: 'exit' },
+        ],
+      },
+    ]);
+
+    return next as 'main' | 'exit';
   } catch (error) {
     spinner.fail(chalk.red('Configuration failed'));
     console.log();
@@ -380,95 +679,115 @@ async function configureCommand(options: {
       console.log(chalk.gray(error.stack));
     }
 
-    await app.close();
-    process.exit(1);
+    console.log();
+
+    // Ask what to do next
+    const { next } = await inquirer.prompt<{ next: string }>([
+      {
+        type: 'list',
+        name: 'next',
+        message: 'What would you like to do next?',
+        choices: [
+          { name: '← Back to main menu', value: 'main' },
+          { name: '✕ Exit', value: 'exit' },
+        ],
+      },
+    ]);
+
+    return next as 'main' | 'exit';
   }
 }
 
 /**
- * Main CLI program
+ * Show main menu and handle user selection
  */
-export function createIngestionCLI(): Command {
-  const program = new Command();
+async function showMainMenu(
+  app: INestApplicationContext,
+): Promise<'continue' | 'exit'> {
+  console.log();
+  console.log(
+    chalk.cyan.bold('═══════════════════════════════════════════════'),
+  );
+  console.log(chalk.white.bold('              MAIN MENU'));
+  console.log(
+    chalk.cyan.bold('═══════════════════════════════════════════════'),
+  );
+  console.log();
 
-  program
-    .name('ingestion')
-    .description(
-      chalk.cyan('CLI for content ingestion operations') +
-        '\n' +
-        chalk.gray('  Multi-source cryptocurrency content collection'),
-    )
-    .version('1.0.0', '-v, --version', 'Display version number')
-    .helpOption('-h, --help', 'Display help information');
+  const { action } = await inquirer.prompt<{ action: string }>([
+    {
+      type: 'list',
+      name: 'action',
+      message: 'What would you like to do?',
+      choices: [
+        { name: '📥 Ingest content from a source', value: 'ingest' },
+        { name: '📅 Schedule an ingestion job', value: 'schedule' },
+        { name: '⚙️  Configure a content source', value: 'configure' },
+        new inquirer.Separator(),
+        { name: '✕ Exit', value: 'exit' },
+      ],
+    },
+  ]);
 
-  // Ingest command
-  program
-    .command('ingest')
-    .description(
-      chalk.yellow('📥 Ingest content from a configured source') +
-        '\n' +
-        chalk.gray(
-          '  Collects and processes content from the specified source',
-        ),
-    )
-    .argument('<source-id>', 'ID of the source to ingest from')
-    .action(ingestCommand);
+  if (action === 'exit') {
+    return 'exit';
+  }
 
-  // Schedule command
-  program
-    .command('schedule')
-    .description(
-      chalk.blue('📅 Schedule an ingestion job') +
-        '\n' +
-        chalk.gray('  Creates a scheduled job for future content ingestion'),
-    )
-    .argument('<source-id>', 'ID of the source to schedule')
-    .option(
-      '--at <datetime>',
-      'Schedule for specific datetime (ISO 8601 format)',
-    )
-    .action(scheduleCommand);
+  let result: 'main' | 'exit';
 
-  // Configure command
-  program
-    .command('configure')
-    .description(
-      chalk.magenta('⚙️  Configure a content source') +
-        '\n' +
-        chalk.gray('  Create or update a content source configuration'),
-    )
-    .requiredOption('--name <name>', 'Name of the source')
-    .requiredOption(
-      '--type <type>',
-      'Source type (WEB_SCRAPER, RSS_FEED, SOCIAL_MEDIA, PDF, OCR, WIKIPEDIA)',
-    )
-    .option('--config <json>', 'Source configuration as JSON string')
-    .option(
-      '--credentials <credentials>',
-      'API credentials (will be encrypted)',
-    )
-    .option(
-      '--active <boolean>',
-      'Whether source is active (true/false)',
-      'true',
-    )
-    .option('--source-id <id>', 'Source ID (for updates)')
-    .action(configureCommand);
+  switch (action) {
+    case 'ingest':
+      result = await ingestFlow(app);
+      break;
+    case 'schedule':
+      result = await scheduleFlow(app);
+      break;
+    case 'configure':
+      result = await configureFlow(app);
+      break;
+    default:
+      result = 'main';
+  }
 
-  return program;
+  if (result === 'exit') {
+    return 'exit';
+  }
+
+  // Return to main menu
+  return 'continue';
+}
+
+/**
+ * Run interactive CLI
+ */
+async function runInteractiveCLI(): Promise<void> {
+  displayBanner();
+
+  const app = await bootstrap();
+
+  let shouldContinue = true;
+
+  while (shouldContinue) {
+    const result = await showMainMenu(app);
+    if (result === 'exit') {
+      shouldContinue = false;
+    }
+  }
+
+  console.log();
+  console.log(chalk.cyan('👋 Goodbye!'));
+  console.log();
+
+  await app.close();
+  process.exit(0);
 }
 
 /**
  * Run CLI if executed directly
  */
 if (require.main === module) {
-  const program = createIngestionCLI();
-
-  // If no arguments provided, show help and exit with code 0
-  if (process.argv.length === 2) {
-    displayBanner();
-    program.help();
-  }
-
-  program.parse(process.argv);
+  runInteractiveCLI().catch((error) => {
+    console.error(chalk.red.bold('Fatal error:'), error);
+    process.exit(1);
+  });
 }
