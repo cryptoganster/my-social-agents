@@ -31,13 +31,17 @@ export class SocialMediaAdapter implements SourceAdapter {
   async collect(config: SourceConfiguration): Promise<RawContent[]> {
     const platform = config.config.platform as string;
 
-    if (!platform) {
+    if (platform === null || platform === undefined || platform === '') {
       throw new Error(
         'Social media adapter requires a platform in configuration',
       );
     }
 
-    if (!config.credentials) {
+    if (
+      config.credentials === null ||
+      config.credentials === undefined ||
+      config.credentials === ''
+    ) {
       throw new Error(
         'Social media adapter requires credentials for authentication',
       );

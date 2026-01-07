@@ -118,22 +118,42 @@ export class RssFeedAdapter implements SourceAdapter {
 
       const title = this.extractTag(itemXml, 'title');
       const description = this.extractTag(itemXml, 'description');
+      const contentEncoded = this.extractTag(itemXml, 'content:encoded');
       const content =
-        this.extractTag(itemXml, 'content:encoded') || description;
+        contentEncoded !== null &&
+        contentEncoded !== undefined &&
+        contentEncoded !== ''
+          ? contentEncoded
+          : description;
       const link = this.extractTag(itemXml, 'link');
+      const authorTag = this.extractTag(itemXml, 'author');
+      const dcCreator = this.extractTag(itemXml, 'dc:creator');
       const author =
-        this.extractTag(itemXml, 'author') ||
-        this.extractTag(itemXml, 'dc:creator');
+        authorTag !== null && authorTag !== undefined && authorTag !== ''
+          ? authorTag
+          : dcCreator;
       const pubDate = this.extractTag(itemXml, 'pubDate');
 
-      if (content) {
+      if (content !== null && content !== undefined && content !== '') {
         items.push({
           content: this.cleanHtml(content),
           metadata: {
-            title: title || undefined,
-            author: author || undefined,
-            publishedAt: pubDate ? this.parseDate(pubDate) : undefined,
-            sourceUrl: link || undefined,
+            title:
+              title !== null && title !== undefined && title !== ''
+                ? title
+                : undefined,
+            author:
+              author !== null && author !== undefined && author !== ''
+                ? author
+                : undefined,
+            publishedAt:
+              pubDate !== null && pubDate !== undefined && pubDate !== ''
+                ? this.parseDate(pubDate)
+                : undefined,
+            sourceUrl:
+              link !== null && link !== undefined && link !== ''
+                ? link
+                : undefined,
           },
         });
       }
@@ -157,21 +177,42 @@ export class RssFeedAdapter implements SourceAdapter {
 
       const title = this.extractTag(entryXml, 'title');
       const summary = this.extractTag(entryXml, 'summary');
-      const content = this.extractTag(entryXml, 'content') || summary;
+      const contentTag = this.extractTag(entryXml, 'content');
+      const content =
+        contentTag !== null && contentTag !== undefined && contentTag !== ''
+          ? contentTag
+          : summary;
       const link = this.extractAtomLink(entryXml);
       const author = this.extractAtomAuthor(entryXml);
+      const publishedTag = this.extractTag(entryXml, 'published');
+      const updatedTag = this.extractTag(entryXml, 'updated');
       const published =
-        this.extractTag(entryXml, 'published') ||
-        this.extractTag(entryXml, 'updated');
+        publishedTag !== null &&
+        publishedTag !== undefined &&
+        publishedTag !== ''
+          ? publishedTag
+          : updatedTag;
 
-      if (content) {
+      if (content !== null && content !== undefined && content !== '') {
         items.push({
           content: this.cleanHtml(content),
           metadata: {
-            title: title || undefined,
-            author: author || undefined,
-            publishedAt: published ? this.parseDate(published) : undefined,
-            sourceUrl: link || undefined,
+            title:
+              title !== null && title !== undefined && title !== ''
+                ? title
+                : undefined,
+            author:
+              author !== null && author !== undefined && author !== ''
+                ? author
+                : undefined,
+            publishedAt:
+              published !== null && published !== undefined && published !== ''
+                ? this.parseDate(published)
+                : undefined,
+            sourceUrl:
+              link !== null && link !== undefined && link !== ''
+                ? link
+                : undefined,
           },
         });
       }

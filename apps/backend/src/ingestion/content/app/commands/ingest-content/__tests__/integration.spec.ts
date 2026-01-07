@@ -70,9 +70,9 @@ describe('IngestContentCommandHandler - Integration Tests', () => {
       IngestContentCommandHandler,
     );
 
-    // Inject adapters manually
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
-    (handler as any).adapters = [mockAdapter];
+    // Inject adapters manually for testing
+    // Double cast to avoid TypeScript error: first to unknown, then to Record
+    (handler as unknown as Record<string, unknown>)['adapters'] = [mockAdapter];
   });
 
   afterEach(() => {
@@ -361,8 +361,11 @@ describe('IngestContentCommandHandler - Integration Tests', () => {
         validateConfig: jest.fn(),
       } as jest.Mocked<SourceAdapter>;
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
-      (handler as any).adapters = [webAdapter, rssAdapter];
+      // Double cast to avoid TypeScript error: first to unknown, then to Record
+      (handler as unknown as Record<string, unknown>)['adapters'] = [
+        webAdapter,
+        rssAdapter,
+      ];
 
       const sourceConfig = SourceConfiguration.create({
         sourceId: 'rss-source',

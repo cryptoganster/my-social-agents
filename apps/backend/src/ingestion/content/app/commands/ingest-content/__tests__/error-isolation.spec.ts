@@ -75,8 +75,8 @@ describe('IngestContentCommandHandler - Error Isolation Property', () => {
     );
 
     // Inject adapters manually since we can't use array injection in testing
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
-    (handler as any).adapters = [mockAdapter];
+    // Double cast to avoid TypeScript error: first to unknown, then to Record
+    (handler as unknown as Record<string, unknown>)['adapters'] = [mockAdapter];
   });
 
   afterEach(() => {

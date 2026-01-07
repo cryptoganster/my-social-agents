@@ -242,7 +242,7 @@ export class OcrAdapter implements SourceAdapter {
       sourceUrl,
     };
 
-    if (fileName) {
+    if (fileName !== null && fileName !== undefined && fileName !== '') {
       metadata.title = fileName;
       metadata.fileName = fileName;
     }

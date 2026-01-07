@@ -128,9 +128,13 @@ export class WikipediaAdapter implements SourceAdapter {
       rvslots: 'main',
     });
 
-    if (title) {
+    if (title !== null && title !== undefined && title !== '') {
       params.append('titles', title);
-    } else if (articleId) {
+    } else if (
+      articleId !== null &&
+      articleId !== undefined &&
+      articleId !== ''
+    ) {
       params.append('pageids', String(articleId));
     }
 
@@ -175,33 +179,43 @@ export class WikipediaAdapter implements SourceAdapter {
     const pageKey = Object.keys(pages)[0];
     const page = pages[pageKey];
 
-    if (pageKey === '-1' || !page) {
-      throw new Error(`Wikipedia article not found: ${title || articleId}`);
+    if (pageKey === '-1' || page === null || page === undefined) {
+      throw new Error(
+        `Wikipedia article not found: ${title ?? articleId ?? 'unknown'}`,
+      );
     }
 
     // Extract content
-    const content = page.extract || '';
+    const content = page.extract ?? '';
 
-    if (!content.trim()) {
+    if (content === null || content === undefined || content.trim() === '') {
       throw new Error('Wikipedia article has no content');
     }
 
     // Extract metadata
     const metadata: RawContent['metadata'] = {
       title: page.title,
-      sourceUrl: page.fullurl || page.canonicalurl,
+      sourceUrl: page.fullurl ?? page.canonicalurl,
       pageId: page.pageid,
     };
 
     // Extract revision information if available
-    if (page.revisions && page.revisions.length > 0) {
+    if (page.revisions !== undefined && page.revisions.length > 0) {
       const revision = page.revisions[0];
 
-      if (revision.timestamp) {
+      if (
+        revision.timestamp !== null &&
+        revision.timestamp !== undefined &&
+        revision.timestamp !== ''
+      ) {
         metadata.publishedAt = new Date(revision.timestamp);
       }
 
-      if (revision.user) {
+      if (
+        revision.user !== null &&
+        revision.user !== undefined &&
+        revision.user !== ''
+      ) {
         metadata.author = revision.user;
       }
     }
