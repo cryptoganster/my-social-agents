@@ -17,19 +17,19 @@ import {
 @Index('idx_content_hash', ['contentHash'])
 @Index('idx_source_id', ['sourceId'])
 export class ContentItemEntity {
-  @PrimaryColumn('varchar', { length: 255 })
+  @PrimaryColumn('varchar', { length: 255, name: 'content_id' })
   contentId!: string;
 
-  @Column('varchar', { length: 255 })
+  @Column('varchar', { length: 255, name: 'source_id' })
   sourceId!: string;
 
-  @Column('varchar', { length: 64 })
+  @Column('varchar', { length: 64, name: 'content_hash' })
   contentHash!: string;
 
-  @Column('text')
+  @Column('text', { name: 'raw_content' })
   rawContent!: string;
 
-  @Column('text')
+  @Column('text', { name: 'normalized_content' })
   normalizedContent!: string;
 
   // Metadata (flattened)
@@ -39,32 +39,32 @@ export class ContentItemEntity {
   @Column('varchar', { length: 255, nullable: true })
   author!: string | null;
 
-  @Column('timestamp', { nullable: true })
+  @Column('timestamp', { nullable: true, name: 'published_at' })
   publishedAt!: Date | null;
 
   @Column('varchar', { length: 10, nullable: true })
   language!: string | null;
 
-  @Column('varchar', { length: 1000, nullable: true })
+  @Column('varchar', { length: 1000, nullable: true, name: 'source_url' })
   sourceUrl!: string | null;
 
   // Asset tags stored as JSON
-  @Column('jsonb', { default: [] })
+  @Column('jsonb', { default: [], name: 'asset_tags' })
   assetTags!: Array<{
     symbol: string;
     confidence: number;
   }>;
 
-  @Column('timestamp')
+  @Column('timestamp', { name: 'collected_at' })
   collectedAt!: Date;
 
   // Version for optimistic locking
   @Column('integer', { default: 0 })
   version!: number;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at' })
   updatedAt!: Date;
 }

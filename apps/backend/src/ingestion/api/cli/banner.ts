@@ -1,5 +1,9 @@
 import chalk from 'chalk';
 import figlet from 'figlet';
+import gradient from 'gradient-string';
+import center from 'center-align';
+import termSize from 'term-size';
+import { fillLine, setupTheme } from './theme';
 
 /**
  * Banner Module
@@ -7,15 +11,29 @@ import figlet from 'figlet';
  * Displays ASCII art banner with gradient colors for the CLI.
  * Pure function with no dependencies on other CLI modules.
  *
+ * Features:
+ * - Centered text
+ * - Black background with white text
+ * - Chroma gradient banner
+ *
  * Requirements: 2.1, 2.2, 2.3, 2.4, 2.5
  */
 
 /**
- * Display ASCII art banner with 3D effect and gradient colors
+ * Center a multi-line string based on terminal width
+ */
+function centerText(text: string): string {
+  const { columns } = termSize();
+  return center(text, columns);
+}
+
+/**
+ * Display ASCII art banner with 3D effect and chroma gradient colors
  *
  * Displays "CHAIN DECRYPTED" banner with:
- * - CHAIN: Blue to cyan gradient
- * - DECRYPTED: Magenta to red to yellow gradient
+ * - Centered alignment
+ * - Black background with white text
+ * - Chroma gradient (pink to purple to blue)
  * - Application name and version
  * - Description and architecture info
  *
@@ -23,6 +41,9 @@ import figlet from 'figlet';
  * No dependencies on other modules.
  */
 export function displayBanner(): void {
+  // Setup black background theme
+  setupTheme();
+
   const banner = figlet.textSync('CHAIN', {
     font: 'ANSI Shadow',
     horizontalLayout: 'default',
@@ -35,45 +56,69 @@ export function displayBanner(): void {
     verticalLayout: 'default',
   });
 
-  // Apply gradient effect: blue -> purple -> magenta -> red -> orange
-  const lines = banner.split('\n');
-  const lines2 = banner2.split('\n');
+  // Create chroma gradient (pink to purple to blue)
+  const chromaGradient = gradient([
+    '#f72585', // Pink
+    '#b5179e', // Magenta
+    '#7209b7', // Purple
+    '#560bad', // Deep purple
+    '#480ca8', // Violet
+    '#3a0ca3', // Dark blue-violet
+    '#3f37c9', // Blue-violet
+    '#4361ee', // Blue
+    '#4895ef', // Light blue
+    '#4cc9f0', // Cyan
+  ]);
 
-  console.log();
+  // Fill empty line with black background
+  console.log(fillLine());
 
-  // CHAIN with blue to cyan gradient
-  lines.forEach((line, index) => {
-    const ratio = index / Math.max(lines.length - 1, 1);
-    if (ratio < 0.5) {
-      console.log(chalk.blue.bold(line));
-    } else {
-      console.log(chalk.cyan.bold(line));
-    }
+  // Center and display banners with gradient
+  const centeredBanner = centerText(banner);
+  const centeredBanner2 = centerText(banner2);
+
+  // Split into lines and fill each line
+  centeredBanner.split('\n').forEach((line) => {
+    console.log(fillLine(chromaGradient(line)));
   });
 
-  // DECRYPTED with magenta to red to yellow gradient
-  lines2.forEach((line, index) => {
-    const ratio = index / Math.max(lines2.length - 1, 1);
-    if (ratio < 0.33) {
-      console.log(chalk.magenta.bold(line));
-    } else if (ratio < 0.66) {
-      console.log(chalk.red.bold(line));
-    } else {
-      console.log(chalk.yellow.bold(line));
-    }
+  centeredBanner2.split('\n').forEach((line) => {
+    console.log(fillLine(chromaGradient(line)));
   });
 
-  console.log();
-  console.log(
-    chalk.cyan('  ▓▒░ ') +
-      chalk.white.bold('Content Ingestion CLI') +
-      chalk.cyan(' ░▒▓  ') +
-      chalk.gray('│ ') +
-      chalk.green.bold('v1.0.0'),
+  console.log(fillLine());
+
+  // Info section centered with white text
+  const { columns } = termSize();
+  const infoLine1 = '▓▒░ Content Ingestion CLI ░▒▓  │ v1.0.0';
+  const infoLine2 = '⚡ Multi-source cryptocurrency content collection';
+  const infoLine3 = '🔗 Powered by Clean Architecture + DDD + CQRS';
+
+  const padding1 = ' '.repeat(
+    Math.max(0, Math.floor((columns - infoLine1.length) / 2)),
   );
-  console.log(
-    chalk.gray('  ⚡ Multi-source cryptocurrency content collection'),
+  const padding2 = ' '.repeat(
+    Math.max(0, Math.floor((columns - infoLine2.length) / 2)),
   );
-  console.log(chalk.gray('  🔗 Powered by Clean Architecture + DDD + CQRS'));
-  console.log();
+  const padding3 = ' '.repeat(
+    Math.max(0, Math.floor((columns - infoLine3.length) / 2)),
+  );
+
+  const line1 =
+    padding1 +
+    chalk.cyan('▓▒░ ') +
+    chalk.white.bold('Content Ingestion CLI') +
+    chalk.cyan(' ░▒▓  ') +
+    chalk.gray('│ ') +
+    chalk.green.bold('v1.0.0');
+
+  const line2 =
+    padding2 + chalk.white('⚡ Multi-source cryptocurrency content collection');
+  const line3 =
+    padding3 + chalk.white('🔗 Powered by Clean Architecture + DDD + CQRS');
+
+  console.log(fillLine(line1));
+  console.log(fillLine(line2));
+  console.log(fillLine(line3));
+  console.log(fillLine());
 }

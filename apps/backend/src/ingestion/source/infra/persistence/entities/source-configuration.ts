@@ -14,10 +14,10 @@ import {
  */
 @Entity('source_configurations')
 export class SourceConfigurationEntity {
-  @PrimaryColumn('varchar', { length: 255 })
+  @PrimaryColumn('varchar', { length: 255, name: 'source_id' })
   sourceId!: string;
 
-  @Column('varchar', { length: 50 })
+  @Column('varchar', { length: 50, name: 'source_type' })
   sourceType!: string;
 
   @Column('varchar', { length: 255 })
@@ -29,16 +29,16 @@ export class SourceConfigurationEntity {
   @Column('text', { nullable: true })
   credentials!: string | undefined;
 
-  @Column('boolean', { default: true })
+  @Column('boolean', { default: true, name: 'is_active' })
   isActive!: boolean;
 
   // Version for optimistic locking
   @Column('integer', { default: 0 })
   version!: number;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at' })
   updatedAt!: Date;
 }

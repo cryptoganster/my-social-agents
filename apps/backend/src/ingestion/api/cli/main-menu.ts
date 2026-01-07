@@ -3,6 +3,7 @@ import chalk from 'chalk';
 import inquirer from 'inquirer';
 import { MenuAction } from './types';
 import { ingestFlow, scheduleFlow, configureFlow } from './flows';
+import { fillLine, centerText } from './theme';
 
 /**
  * Show main menu and handle user selection
@@ -16,28 +17,38 @@ import { ingestFlow, scheduleFlow, configureFlow } from './flows';
 export async function showMainMenu(
   app: INestApplicationContext,
 ): Promise<MenuAction> {
-  console.log();
-  console.log(
-    chalk.cyan.bold('═══════════════════════════════════════════════'),
-  );
-  console.log(chalk.white.bold('              MAIN MENU'));
-  console.log(
-    chalk.cyan.bold('═══════════════════════════════════════════════'),
-  );
-  console.log();
+  console.log(fillLine());
+
+  const separator = '═══════════════════════════════════════════════';
+  const title = 'MAIN MENU';
+
+  console.log(fillLine(centerText(chalk.cyan.bold(separator))));
+  console.log(fillLine(centerText(chalk.white.bold(title))));
+  console.log(fillLine(centerText(chalk.cyan.bold(separator))));
+  console.log(fillLine());
 
   const { action } = await inquirer.prompt<{ action: string }>([
     {
       type: 'list',
       name: 'action',
-      message: 'What would you like to do?',
+      message: chalk.white('What would you like to do?'),
       choices: [
-        { name: '📥 Ingest content from a source', value: 'ingest' },
-        { name: '📅 Schedule an ingestion job', value: 'schedule' },
-        { name: '⚙️  Configure a content source', value: 'configure' },
-        new inquirer.Separator(),
-        { name: '✕ Exit', value: 'exit' },
+        {
+          name: chalk.white('📥 Ingest content from a source'),
+          value: 'ingest',
+        },
+        {
+          name: chalk.white('📅 Schedule an ingestion job'),
+          value: 'schedule',
+        },
+        {
+          name: chalk.white('⚙️  Configure a content source'),
+          value: 'configure',
+        },
+        new inquirer.Separator(chalk.gray('──────────────')),
+        { name: chalk.white('✕ Exit'), value: 'exit' },
       ],
+      prefix: chalk.cyan('?'),
     },
   ]);
 
