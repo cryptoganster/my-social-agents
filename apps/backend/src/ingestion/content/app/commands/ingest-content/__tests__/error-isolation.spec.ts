@@ -75,7 +75,7 @@ describe('IngestContentCommandHandler - Error Isolation Property', () => {
     );
 
     // Inject adapters manually since we can't use array injection in testing
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
     (handler as any).adapters = [mockAdapter];
   });
 

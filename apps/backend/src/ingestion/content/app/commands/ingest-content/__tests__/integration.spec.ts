@@ -71,7 +71,7 @@ describe('IngestContentCommandHandler - Integration Tests', () => {
     );
 
     // Inject adapters manually
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
     (handler as any).adapters = [mockAdapter];
   });
 
@@ -361,7 +361,7 @@ describe('IngestContentCommandHandler - Integration Tests', () => {
         validateConfig: jest.fn(),
       } as jest.Mocked<SourceAdapter>;
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
       (handler as any).adapters = [webAdapter, rssAdapter];
 
       const sourceConfig = SourceConfiguration.create({
