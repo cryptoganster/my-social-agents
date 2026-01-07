@@ -3,7 +3,7 @@ import chalk from 'chalk';
 import inquirer from 'inquirer';
 import { MenuAction } from './types';
 import { ingestFlow, scheduleFlow, configureFlow } from './flows';
-import { fillLine, centerText } from './theme';
+import { fillLine, centerText, applyLineTheme } from './theme';
 
 /**
  * Show main menu and handle user selection
@@ -17,6 +17,9 @@ import { fillLine, centerText } from './theme';
 export async function showMainMenu(
   app: INestApplicationContext,
 ): Promise<MenuAction> {
+  // Apply theme before rendering
+  applyLineTheme();
+
   console.log(fillLine());
 
   const separator = '═══════════════════════════════════════════════';

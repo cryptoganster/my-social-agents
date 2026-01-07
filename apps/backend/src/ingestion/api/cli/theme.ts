@@ -39,12 +39,24 @@ export function centerText(text: string): string {
  * Setup terminal theme
  *
  * Sets black background and white text for the entire terminal
+ * Also fills the screen to ensure consistent background
  */
 export function setupTheme(): void {
+  // Set default colors for the terminal session
   process.stdout.write('\x1b[40m'); // Black background
   process.stdout.write('\x1b[37m'); // White text
   process.stdout.write('\x1b[2J'); // Clear screen
   process.stdout.write('\x1b[H'); // Move cursor to home
+
+  // Fill the entire screen with black background
+  const { rows, columns } = termSize();
+  const emptyLine = ' '.repeat(columns);
+  for (let i = 0; i < rows; i++) {
+    process.stdout.write(emptyLine + '\n');
+  }
+
+  // Move cursor back to top
+  process.stdout.write('\x1b[H');
 }
 
 /**
@@ -54,4 +66,13 @@ export function setupTheme(): void {
  */
 export function resetTheme(): void {
   process.stdout.write('\x1b[0m'); // Reset all attributes
+}
+
+/**
+ * Apply theme to current line
+ *
+ * Ensures the current line has black background
+ */
+export function applyLineTheme(): void {
+  process.stdout.write('\x1b[40m\x1b[37m');
 }
