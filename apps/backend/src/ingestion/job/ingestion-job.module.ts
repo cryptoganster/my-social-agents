@@ -1,10 +1,15 @@
 import { Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { ScheduleModule } from '@/shared/infra/scheduling';
+import { IngestionSharedModule } from '@/ingestion/shared/ingestion-shared.module';
+import { IngestionSourceModule } from '@/ingestion/source/ingestion-source.module';
 import { ScheduleIngestionJobCommandHandler } from './app/commands/schedule-job/handler';
 import { ExecuteIngestionJobCommandHandler } from './app/commands/execute-job/handler';
 import { TypeOrmIngestionJobWriteRepository } from './infra/persistence/repositories/ingestion-job-write';
 import { TypeOrmIngestionJobFactory } from './infra/persistence/factories/ingestion-job-factory';
 import { TypeOrmIngestionJobReadRepository } from './infra/persistence/repositories/ingestion-job-read';
+import { IngestionJobEntity } from './infra/persistence/entities/ingestion-job';
 
 /**
  * IngestionJobModule
@@ -23,12 +28,18 @@ import { TypeOrmIngestionJobReadRepository } from './infra/persistence/repositor
  * - ISourceConfigurationFactory (from source sub-context)
  * - IRetryService (from shared sub-context)
  * - ICircuitBreaker (from shared sub-context)
- * - IJobScheduler (from shared kernel)
+ * - IJobScheduler (from shared kernel - ScheduleModule)
  *
  * Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6
  */
 @Module({
-  imports: [CqrsModule],
+  imports: [
+    CqrsModule,
+    ScheduleModule, // Provides IJobScheduler
+    IngestionSharedModule,
+    IngestionSourceModule,
+    TypeOrmModule.forFeature([IngestionJobEntity]),
+  ],
   providers: [
     // Command Handlers
     ScheduleIngestionJobCommandHandler,
@@ -46,10 +57,11 @@ import { TypeOrmIngestionJobReadRepository } from './infra/persistence/repositor
       useClass: TypeOrmIngestionJobFactory,
     },
 
-    // Read Repository with Interface Token
+    // Read Repository - Register both class and interface token
+    TypeOrmIngestionJobReadRepository,
     {
       provide: 'IIngestionJobReadRepository',
-      useClass: TypeOrmIngestionJobReadRepository,
+      useExisting: TypeOrmIngestionJobReadRepository,
     },
   ],
   exports: [

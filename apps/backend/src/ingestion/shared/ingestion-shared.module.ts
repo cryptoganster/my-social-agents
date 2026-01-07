@@ -33,10 +33,17 @@ import { EventPublisherService } from '@/shared/infra/events/event-publisher';
       useClass: RetryService,
     },
 
-    // Circuit Breaker with Interface Token
+    // Circuit Breaker with Interface Token and Factory
     {
       provide: 'ICircuitBreaker',
-      useClass: CircuitBreakerService,
+      useFactory: (): CircuitBreakerService => {
+        return new CircuitBreakerService({
+          failureThreshold: 5,
+          successThreshold: 2,
+          failureWindowMs: 60000,
+          resetTimeoutMs: 30000,
+        });
+      },
     },
 
     // Credential Encryption with Interface Token

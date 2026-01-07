@@ -2,16 +2,15 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { SchedulerRegistry } from '@nestjs/schedule';
 import { Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppModule } from './app.module';
-import { IngestionContentModule } from './ingestion/content/ingestion-content.module';
-import { IngestionJobModule } from './ingestion/job/ingestion-job.module';
-import { IngestionSourceModule } from './ingestion/source/ingestion-source.module';
-import { IngestionSharedModule } from './ingestion/shared/ingestion-shared.module';
-import { IngestionApiModule } from './ingestion/api/ingestion-api.module';
+import { IngestionModule } from './ingestion/ingestion.module';
 
-// Mock IngestionSharedModule with all required providers
+// Mock IngestionModule with all required providers from all sub-modules
 @Module({
+  imports: [CqrsModule],
   providers: [
+    // Shared infrastructure
     {
       provide: 'IRetryService',
       useValue: {
@@ -44,21 +43,7 @@ import { IngestionApiModule } from './ingestion/api/ingestion-api.module';
         publishBatch: jest.fn(),
       },
     },
-  ],
-  exports: [
-    'IRetryService',
-    'ICircuitBreaker',
-    'ICredentialEncryption',
-    'IHashService',
-    'IEventPublisher',
-  ],
-})
-class MockIngestionSharedModule {}
-
-// Mock IngestionSourceModule with all required providers
-@Module({
-  imports: [CqrsModule],
-  providers: [
+    // Source configuration
     {
       provide: 'ISourceConfigurationWriteRepository',
       useValue: {
@@ -83,20 +68,7 @@ class MockIngestionSharedModule {}
       provide: 'SourceAdapter',
       useValue: [],
     },
-  ],
-  exports: [
-    'ISourceConfigurationWriteRepository',
-    'ISourceConfigurationFactory',
-    'ISourceConfigurationReadRepository',
-    'SourceAdapter',
-  ],
-})
-class MockIngestionSourceModule {}
-
-// Mock IngestionJobModule with all required providers
-@Module({
-  imports: [CqrsModule],
-  providers: [
+    // Ingestion jobs
     {
       provide: 'IIngestionJobWriteRepository',
       useValue: {
@@ -117,19 +89,7 @@ class MockIngestionSourceModule {}
         findScheduledJobs: jest.fn(),
       },
     },
-  ],
-  exports: [
-    'IIngestionJobWriteRepository',
-    'IIngestionJobFactory',
-    'IIngestionJobReadRepository',
-  ],
-})
-class MockIngestionJobModule {}
-
-// Mock IngestionContentModule with all required providers
-@Module({
-  imports: [CqrsModule],
-  providers: [
+    // Content items
     {
       provide: 'IContentItemReadRepository',
       useValue: {
@@ -144,32 +104,39 @@ class MockIngestionJobModule {}
         save: jest.fn(),
       },
     },
+    {
+      provide: 'IContentItemFactory',
+      useValue: {
+        load: jest.fn().mockResolvedValue(null),
+      },
+    },
   ],
-  exports: ['IContentItemReadRepository', 'IContentItemWriteRepository'],
+  exports: [
+    'IRetryService',
+    'ICircuitBreaker',
+    'ICredentialEncryption',
+    'IHashService',
+    'IEventPublisher',
+    'ISourceConfigurationWriteRepository',
+    'ISourceConfigurationFactory',
+    'ISourceConfigurationReadRepository',
+    'SourceAdapter',
+    'IIngestionJobWriteRepository',
+    'IIngestionJobFactory',
+    'IIngestionJobReadRepository',
+    'IContentItemReadRepository',
+    'IContentItemWriteRepository',
+    'IContentItemFactory',
+  ],
 })
-class MockIngestionContentModule {}
+class MockIngestionModule {}
 
-// Mock IngestionApiModule
+// Mock TypeOrmModule
 @Module({
-  imports: [CqrsModule],
-  providers: [
-    {
-      provide: 'IIngestionJobReadRepository',
-      useValue: {
-        findById: jest.fn(),
-        findByStatus: jest.fn(),
-      },
-    },
-    {
-      provide: 'ISourceConfigurationReadRepository',
-      useValue: {
-        findById: jest.fn(),
-        findActive: jest.fn(),
-      },
-    },
-  ],
+  providers: [],
+  exports: [],
 })
-class MockIngestionApiModule {}
+class MockTypeOrmModule {}
 
 describe('AppModule', () => {
   let module: TestingModule;
@@ -178,16 +145,10 @@ describe('AppModule', () => {
     module = await Test.createTestingModule({
       imports: [AppModule],
     })
-      .overrideModule(IngestionSharedModule)
-      .useModule(MockIngestionSharedModule)
-      .overrideModule(IngestionSourceModule)
-      .useModule(MockIngestionSourceModule)
-      .overrideModule(IngestionJobModule)
-      .useModule(MockIngestionJobModule)
-      .overrideModule(IngestionContentModule)
-      .useModule(MockIngestionContentModule)
-      .overrideModule(IngestionApiModule)
-      .useModule(MockIngestionApiModule)
+      .overrideModule(TypeOrmModule)
+      .useModule(MockTypeOrmModule)
+      .overrideModule(IngestionModule)
+      .useModule(MockIngestionModule)
       .compile();
   });
 

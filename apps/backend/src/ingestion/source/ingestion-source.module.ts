@@ -1,9 +1,12 @@
 import { Module, ClassProvider } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { IngestionSharedModule } from '@/ingestion/shared/ingestion-shared.module';
 import { ConfigureSourceCommandHandler } from './app/commands/configure-source/handler';
 import { TypeOrmSourceConfigurationWriteRepository } from './infra/persistence/repositories/source-configuration-write';
 import { TypeOrmSourceConfigurationFactory } from './infra/persistence/factories/source-configuration-factory';
 import { TypeOrmSourceConfigurationReadRepository } from './infra/persistence/repositories/source-configuration-read';
+import { SourceConfigurationEntity } from './infra/persistence/entities/source-configuration';
 import { WebScraperAdapter } from './infra/adapters/web-scraper';
 import { RssFeedAdapter } from './infra/adapters/rss-feed';
 import { SocialMediaAdapter } from './infra/adapters/social-media';
@@ -30,7 +33,11 @@ import { WikipediaAdapter } from './infra/adapters/wikipedia';
  * Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 5.1, 5.2, 5.3, 5.5
  */
 @Module({
-  imports: [CqrsModule],
+  imports: [
+    CqrsModule,
+    IngestionSharedModule,
+    TypeOrmModule.forFeature([SourceConfigurationEntity]),
+  ],
   providers: [
     // Command Handlers
     ConfigureSourceCommandHandler,
@@ -47,10 +54,11 @@ import { WikipediaAdapter } from './infra/adapters/wikipedia';
       useClass: TypeOrmSourceConfigurationFactory,
     },
 
-    // Read Repository with Interface Token
+    // Read Repository - Register both class and interface token
+    TypeOrmSourceConfigurationReadRepository,
     {
       provide: 'ISourceConfigurationReadRepository',
-      useClass: TypeOrmSourceConfigurationReadRepository,
+      useExisting: TypeOrmSourceConfigurationReadRepository,
     },
 
     // Source Adapters (all registered with 'SourceAdapter' token)
