@@ -26,7 +26,7 @@ export class SourceConfigurationEntity {
   @Column('jsonb')
   config!: Record<string, unknown>;
 
-  @Column('text', { nullable: true })
+  @Column('text', { nullable: true, name: 'encrypted_credentials' })
   credentials!: string | undefined;
 
   @Column('boolean', { default: true, name: 'is_active' })

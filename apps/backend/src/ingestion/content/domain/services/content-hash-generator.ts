@@ -1,3 +1,4 @@
+import { Injectable, Inject } from '@nestjs/common';
 import { ContentHash } from '../value-objects/content-hash';
 import { IHashService } from '@/ingestion/shared/interfaces/external';
 
@@ -15,8 +16,12 @@ import { IHashService } from '@/ingestion/shared/interfaces/external';
  * This service depends on the IHashService abstraction (technical concern),
  * but the VO remains pure and dependency-free.
  */
+@Injectable()
 export class ContentHashGenerator {
-  constructor(private readonly hash: IHashService) {}
+  constructor(
+    @Inject('IHashService')
+    private readonly hash: IHashService,
+  ) {}
 
   /**
    * Generates a ContentHash from raw content

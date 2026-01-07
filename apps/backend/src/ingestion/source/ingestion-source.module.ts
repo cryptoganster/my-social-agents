@@ -61,7 +61,15 @@ import { WikipediaAdapter } from './infra/adapters/wikipedia';
       useExisting: TypeOrmSourceConfigurationReadRepository,
     },
 
-    // Source Adapters (all registered with 'SourceAdapter' token)
+    // Source Adapters (register individually for direct injection)
+    WebScraperAdapter,
+    RssFeedAdapter,
+    SocialMediaAdapter,
+    PdfAdapter,
+    OcrAdapter,
+    WikipediaAdapter,
+
+    // Also register with multi token for backward compatibility
     {
       provide: 'SourceAdapter',
       useClass: WebScraperAdapter,
@@ -102,7 +110,15 @@ import { WikipediaAdapter } from './infra/adapters/wikipedia';
     'ISourceConfigurationFactory',
     'ISourceConfigurationReadRepository',
 
-    // Export source adapters for use in other modules
+    // Export individual adapters for direct injection
+    WebScraperAdapter,
+    RssFeedAdapter,
+    SocialMediaAdapter,
+    PdfAdapter,
+    OcrAdapter,
+    WikipediaAdapter,
+
+    // Export source adapters token for backward compatibility
     'SourceAdapter',
   ],
 })

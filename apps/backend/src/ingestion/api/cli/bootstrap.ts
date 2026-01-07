@@ -20,10 +20,10 @@ export async function bootstrap(): Promise<INestApplicationContext> {
 
   try {
     const app = await NestFactory.createApplicationContext(AppModule, {
-      logger: false, // Disable default logger for cleaner output
+      logger: ['error', 'warn', 'log', 'debug'], // Enable logging for debugging
     });
 
-    spinner.succeed(chalk.green('Application context initialized'));
+    spinner.stop();
     return app;
   } catch (error) {
     spinner.fail(chalk.red('Failed to initialize application'));

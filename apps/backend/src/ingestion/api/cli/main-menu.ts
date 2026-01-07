@@ -1,9 +1,7 @@
 import { INestApplicationContext } from '@nestjs/common';
-import chalk from 'chalk';
 import inquirer from 'inquirer';
 import { MenuAction } from './types';
 import { ingestFlow, scheduleFlow, configureFlow } from './flows';
-import { fillLine, centerText, applyLineTheme } from './theme';
 
 /**
  * Show main menu and handle user selection
@@ -17,41 +15,32 @@ import { fillLine, centerText, applyLineTheme } from './theme';
 export async function showMainMenu(
   app: INestApplicationContext,
 ): Promise<MenuAction> {
-  // Apply theme before rendering
-  applyLineTheme();
-
-  console.log(fillLine());
-
-  const separator = '═══════════════════════════════════════════════';
-  const title = 'MAIN MENU';
-
-  console.log(fillLine(centerText(chalk.cyan.bold(separator))));
-  console.log(fillLine(centerText(chalk.white.bold(title))));
-  console.log(fillLine(centerText(chalk.cyan.bold(separator))));
-  console.log(fillLine());
+  console.log();
 
   const { action } = await inquirer.prompt<{ action: string }>([
     {
       type: 'list',
       name: 'action',
-      message: chalk.white('What would you like to do?'),
+      message: 'What would you like to do?',
       choices: [
         {
-          name: chalk.white('📥 Ingest content from a source'),
+          name: '📥 Ingest content from a source',
           value: 'ingest',
         },
         {
-          name: chalk.white('📅 Schedule an ingestion job'),
+          name: '📅 Schedule an ingestion job',
           value: 'schedule',
         },
         {
-          name: chalk.white('⚙️  Configure a content source'),
+          name: '⚙ Configure a content source',
           value: 'configure',
         },
-        new inquirer.Separator(chalk.gray('──────────────')),
-        { name: chalk.white('✕ Exit'), value: 'exit' },
+        new inquirer.Separator(),
+        {
+          name: '✕ Exit',
+          value: 'exit',
+        },
       ],
-      prefix: chalk.cyan('?'),
     },
   ]);
 

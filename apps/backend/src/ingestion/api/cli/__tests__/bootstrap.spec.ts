@@ -30,6 +30,7 @@ jest.mock('chalk', () => ({
 describe('Bootstrap Module', () => {
   let mockSpinner: {
     start: jest.Mock;
+    stop: jest.Mock;
     succeed: jest.Mock;
     fail: jest.Mock;
   };
@@ -42,6 +43,7 @@ describe('Bootstrap Module', () => {
     // Create mock spinner
     mockSpinner = {
       start: jest.fn().mockReturnThis(),
+      stop: jest.fn(),
       succeed: jest.fn(),
       fail: jest.fn(),
     };
@@ -94,20 +96,18 @@ describe('Bootstrap Module', () => {
       expect(mockSpinner.start).toHaveBeenCalled();
     });
 
-    it('should show success message when initialization completes', async () => {
+    it('should stop spinner when initialization completes', async () => {
       // Arrange
       (NestFactory.createApplicationContext as jest.Mock).mockResolvedValue(
         mockApp,
       );
+      mockSpinner.stop = jest.fn();
 
       // Act
       await bootstrap();
 
       // Assert
-      expect(mockSpinner.succeed).toHaveBeenCalled();
-      expect(chalk.green).toHaveBeenCalledWith(
-        'Application context initialized',
-      );
+      expect(mockSpinner.stop).toHaveBeenCalled();
     });
 
     it('should disable default logger for cleaner output', async () => {

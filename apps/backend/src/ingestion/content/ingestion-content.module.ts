@@ -52,7 +52,7 @@ import { TypeOrmContentItemFactory } from './infra/persistence/factories/content
   imports: [
     CqrsModule,
     IngestionSharedModule,
-    IngestionSourceModule,
+    IngestionSourceModule, // This exports the adapters
     TypeOrmModule.forFeature([ContentItemEntity]),
   ],
   providers: [

@@ -4,6 +4,12 @@ import { ISourceConfigurationFactory } from '@/ingestion/source/domain/interface
 import { SourceAdapter } from '@/ingestion/source/domain/interfaces/source-adapter';
 import { SourceType } from '@/ingestion/source/domain/value-objects/source-type';
 import { ContentCollectedEvent } from '@/ingestion/content/domain/events';
+import { WebScraperAdapter } from '@/ingestion/source/infra/adapters/web-scraper';
+import { RssFeedAdapter } from '@/ingestion/source/infra/adapters/rss-feed';
+import { SocialMediaAdapter } from '@/ingestion/source/infra/adapters/social-media';
+import { PdfAdapter } from '@/ingestion/source/infra/adapters/pdf';
+import { OcrAdapter } from '@/ingestion/source/infra/adapters/ocr';
+import { WikipediaAdapter } from '@/ingestion/source/infra/adapters/wikipedia';
 import { IngestContentCommand } from './command';
 import { IngestContentResult } from './result';
 
@@ -31,10 +37,36 @@ export class IngestContentCommandHandler implements ICommandHandler<
   constructor(
     @Inject('ISourceConfigurationFactory')
     private readonly sourceConfigFactory: ISourceConfigurationFactory,
-    @Inject('SourceAdapter')
-    private readonly adapters: SourceAdapter[],
+    private readonly webScraperAdapter: WebScraperAdapter,
+    private readonly rssFeedAdapter: RssFeedAdapter,
+    private readonly socialMediaAdapter: SocialMediaAdapter,
+    private readonly pdfAdapter: PdfAdapter,
+    private readonly ocrAdapter: OcrAdapter,
+    private readonly wikipediaAdapter: WikipediaAdapter,
     private readonly eventBus: EventBus,
-  ) {}
+  ) {
+    // Create adapters array from individual injections
+    this.adapters = [
+      this.webScraperAdapter,
+      this.rssFeedAdapter,
+      this.socialMediaAdapter,
+      this.pdfAdapter,
+      this.ocrAdapter,
+      this.wikipediaAdapter,
+    ];
+
+    this.logger.log('IngestContentCommandHandler initialized');
+    this.logger.log(
+      `Initialized with ${this.adapters.length} source adapter(s)`,
+    );
+
+    // Log each adapter
+    this.adapters.forEach((adapter, index) => {
+      this.logger.log(`Adapter ${index + 1}: ${adapter.constructor.name}`);
+    });
+  }
+
+  private readonly adapters: SourceAdapter[];
 
   /**
    * Executes the IngestContentCommand
@@ -129,6 +161,32 @@ export class IngestContentCommandHandler implements ICommandHandler<
    * Finds the appropriate adapter for a source type
    */
   private findAdapter(sourceType: SourceType): SourceAdapter | undefined {
-    return this.adapters.find((adapter) => adapter.supports(sourceType));
+    this.logger.debug(
+      `Finding adapter for source type: ${sourceType.getValue()}`,
+    );
+    this.logger.debug(`Available adapters: ${this.adapters?.length ?? 0}`);
+
+    if (
+      this.adapters === null ||
+      this.adapters === undefined ||
+      !Array.isArray(this.adapters)
+    ) {
+      this.logger.error(`Adapters is not an array: ${typeof this.adapters}`);
+      throw new Error('Source adapters not properly initialized');
+    }
+
+    const adapter = this.adapters.find((adapter) =>
+      adapter.supports(sourceType),
+    );
+
+    if (adapter) {
+      this.logger.debug(`Found adapter: ${adapter.constructor.name}`);
+    } else {
+      this.logger.warn(
+        `No adapter found for source type: ${sourceType.getValue()}`,
+      );
+    }
+
+    return adapter;
   }
 }

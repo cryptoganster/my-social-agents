@@ -4,17 +4,19 @@ import chalk from 'chalk';
 import ora from 'ora';
 import inquirer from 'inquirer';
 import { IngestContentCommand } from '@/ingestion/content/app/commands/ingest-content/command';
+import { TypeOrmSourceConfigurationReadRepository } from '@/ingestion/source/infra/persistence/repositories/source-configuration-read';
 import { FlowResult } from '../types';
 
 /**
  * Interactive flow for content ingestion
  *
  * Handles the complete user interaction for ingesting content from a source:
- * 1. Prompts for source ID
- * 2. Confirms action
- * 3. Executes IngestContentCommand
- * 4. Displays results with icons and colors
- * 5. Handles errors gracefully
+ * 1. Loads and displays available sources
+ * 2. Prompts for source selection
+ * 3. Confirms action
+ * 4. Executes IngestContentCommand
+ * 5. Displays results with icons and colors
+ * 6. Handles errors gracefully
  *
  * @param app - NestJS application context
  * @returns Promise<FlowResult> - 'main' to return to menu, 'exit' to quit
@@ -26,23 +28,59 @@ export async function ingestFlow(
   console.log(chalk.blue.bold('📥 Content Ingestion'));
   console.log();
 
-  // Step 1: Ask for source ID
+  // Step 1: Load available sources
+  const readRepo = app.get(TypeOrmSourceConfigurationReadRepository);
+  const spinner = ora('Loading available sources...').start();
+
+  let sources;
+  try {
+    sources = await readRepo.findActive();
+    spinner.succeed(chalk.green(`Found ${sources.length} active source(s)`));
+  } catch (error) {
+    spinner.fail(chalk.red('Failed to load sources'));
+    console.log();
+    console.log(
+      chalk.red.bold('Error: ') +
+        chalk.red(error instanceof Error ? error.message : 'Unknown error'),
+    );
+    console.log();
+    return 'main';
+  }
+
+  if (sources.length === 0) {
+    console.log();
+    console.log(chalk.yellow('⚠ No active sources found'));
+    console.log(
+      chalk.gray(
+        'Please configure a source first using the configuration menu',
+      ),
+    );
+    console.log();
+    return 'main';
+  }
+
+  console.log();
+
+  // Step 2: Ask user to select a source
+  const sourceChoices = sources.map((source) => ({
+    name: `${getSourceIcon(source.sourceType)} ${source.name} (${source.sourceType})`,
+    value: source.sourceId,
+    short: source.name,
+  }));
+
   const { sourceId } = await inquirer.prompt<{ sourceId: string }>([
     {
-      type: 'input',
+      type: 'list',
       name: 'sourceId',
-      message: 'Enter the source ID to ingest from:',
-      validate: (input: string): string | boolean => {
-        if (input.trim().length === 0) {
-          return 'Source ID is required';
-        }
-        return true;
-      },
+      message: 'Select a source to ingest from:',
+      choices: sourceChoices,
     },
   ]);
 
+  const selectedSource = sources.find((s) => s.sourceId === sourceId);
   console.log();
-  console.log(chalk.gray(`Source ID: ${sourceId}`));
+  console.log(chalk.gray(`Source: ${selectedSource?.name}`));
+  console.log(chalk.gray(`Type: ${selectedSource?.sourceType}`));
   console.log();
 
   // Step 2: Confirm action
@@ -62,7 +100,7 @@ export async function ingestFlow(
 
   const commandBus = app.get(CommandBus);
 
-  const spinner = ora({
+  const ingestionSpinner = ora({
     text: 'Collecting content from source...',
     color: 'yellow',
   }).start();
@@ -80,7 +118,7 @@ export async function ingestFlow(
       }
     >(command);
 
-    spinner.succeed(chalk.green('Content ingestion completed'));
+    ingestionSpinner.succeed(chalk.green('Content ingestion completed'));
     console.log();
 
     // Display results with icons and colors
@@ -131,7 +169,7 @@ export async function ingestFlow(
 
     return next as FlowResult;
   } catch (error) {
-    spinner.fail(chalk.red('Ingestion failed'));
+    ingestionSpinner.fail(chalk.red('Ingestion failed'));
     console.log();
     console.log(
       chalk.red.bold('Error: ') +
@@ -166,4 +204,19 @@ export async function ingestFlow(
 
     return next as FlowResult;
   }
+}
+
+/**
+ * Get icon for source type
+ */
+function getSourceIcon(sourceType: string): string {
+  const icons: Record<string, string> = {
+    RSS: '📡',
+    WEB_SCRAPER: '🌐',
+    SOCIAL_MEDIA: '📱',
+    PDF: '📄',
+    OCR: '📷',
+    WIKIPEDIA: '📚',
+  };
+  return icons[sourceType] || '📦';
 }
