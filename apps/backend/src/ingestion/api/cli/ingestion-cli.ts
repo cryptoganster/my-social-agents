@@ -426,5 +426,12 @@ export function createIngestionCLI(): Command {
  */
 if (require.main === module) {
   const program = createIngestionCLI();
+
+  // If no arguments provided, show help and exit with code 0
+  if (process.argv.length === 2) {
+    displayBanner();
+    program.help();
+  }
+
   program.parse(process.argv);
 }
