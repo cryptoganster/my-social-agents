@@ -24,24 +24,61 @@ import { SourceTypeEnum } from '@/ingestion/source/domain/value-objects/source-t
  */
 
 /**
- * Display ASCII art banner
+ * Display ASCII art banner with 3D effect and gradient colors
  */
 function displayBanner(): void {
-  const banner = figlet.textSync('ChainDecrypted', {
-    font: 'Standard',
+  const banner = figlet.textSync('CHAIN', {
+    font: 'ANSI Shadow',
     horizontalLayout: 'default',
     verticalLayout: 'default',
   });
 
-  console.log(chalk.cyan(banner));
-  console.log(chalk.gray('━'.repeat(80)));
+  const banner2 = figlet.textSync('DECRYPTED', {
+    font: 'ANSI Shadow',
+    horizontalLayout: 'default',
+    verticalLayout: 'default',
+  });
+
+  // Apply gradient effect: blue -> purple -> magenta -> red -> orange
+  const lines = banner.split('\n');
+  const lines2 = banner2.split('\n');
+
+  console.log();
+
+  // CHAIN with blue to cyan gradient
+  lines.forEach((line, index) => {
+    const ratio = index / Math.max(lines.length - 1, 1);
+    if (ratio < 0.5) {
+      console.log(chalk.blue.bold(line));
+    } else {
+      console.log(chalk.cyan.bold(line));
+    }
+  });
+
+  // DECRYPTED with magenta to red to yellow gradient
+  lines2.forEach((line, index) => {
+    const ratio = index / Math.max(lines2.length - 1, 1);
+    if (ratio < 0.33) {
+      console.log(chalk.magenta.bold(line));
+    } else if (ratio < 0.66) {
+      console.log(chalk.red.bold(line));
+    } else {
+      console.log(chalk.yellow.bold(line));
+    }
+  });
+
+  console.log();
   console.log(
-    chalk.white.bold('  Content Ingestion CLI') +
-      chalk.gray(' • ') +
-      chalk.green('v1.0.0'),
+    chalk.cyan('  ▓▒░ ') +
+      chalk.white.bold('Content Ingestion CLI') +
+      chalk.cyan(' ░▒▓  ') +
+      chalk.gray('│ ') +
+      chalk.green.bold('v1.0.0'),
   );
-  console.log(chalk.gray('  Multi-source cryptocurrency content collection'));
-  console.log(chalk.gray('━'.repeat(80)));
+  console.log(
+    chalk.gray('  ⚡ Multi-source cryptocurrency content collection'),
+  );
+  console.log(chalk.gray('  🔗 Powered by Clean Architecture + DDD + CQRS'));
   console.log();
 }
 
