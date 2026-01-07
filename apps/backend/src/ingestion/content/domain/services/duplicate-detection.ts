@@ -1,5 +1,7 @@
+import { Injectable } from '@nestjs/common';
 import { ContentHash } from '../value-objects/content-hash';
 import { ContentHashGenerator } from './content-hash-generator';
+import { IDuplicateDetectionService } from '../interfaces/services/duplicate-detection';
 
 /**
  * DuplicateDetectionService
@@ -10,7 +12,8 @@ import { ContentHashGenerator } from './content-hash-generator';
  *
  * Requirements: 2.4, 3.1, 3.2, 3.4
  */
-export class DuplicateDetectionService {
+@Injectable()
+export class DuplicateDetectionService implements IDuplicateDetectionService {
   private readonly seenHashes: Set<string> = new Set();
   private readonly duplicateEvents: Array<{
     hash: ContentHash;

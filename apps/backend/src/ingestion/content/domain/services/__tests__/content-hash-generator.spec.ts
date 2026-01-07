@@ -261,7 +261,6 @@ describe('ContentHashGenerator', () => {
         // Each call should be independent
         expect(hash).toBeInstanceOf(ContentHash);
 
-        // eslint-disable-next-line @typescript-eslint/unbound-method
         expect(mockHash.sha256).toHaveBeenCalledTimes(3);
       });
 

@@ -137,15 +137,17 @@ describe('DuplicateDetectionService', () => {
           (contents) => {
             service.clear();
 
-            // Record each content twice
-            for (const content of contents) {
+            // Deduplicate contents first to ensure we're testing unique content
+            const uniqueContents = [...new Set(contents)];
+
+            // Record each unique content twice
+            for (const content of uniqueContents) {
               const hash = service.computeHash(content);
               service.recordHash(hash);
               service.recordHash(hash);
             }
 
             // Should have one duplicate event per unique content
-            const uniqueContents = [...new Set(contents)];
             expect(service.getDuplicateCount()).toBe(uniqueContents.length);
 
             const events = service.getDuplicateEvents();

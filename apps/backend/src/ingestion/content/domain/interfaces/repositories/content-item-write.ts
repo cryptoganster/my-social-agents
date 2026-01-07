@@ -1,7 +1,7 @@
 import { ContentItem } from '../../aggregates/content-item';
 
 /**
- * ContentItemWriteRepository Interface
+ * IContentItemWriteRepository Interface
  *
  * Write-side persistence interface for ContentItem aggregate.
  * Following CQRS principles, this repository only handles write operations.
@@ -9,7 +9,7 @@ import { ContentItem } from '../../aggregates/content-item';
  *
  * Requirements: 10.1
  */
-export interface ContentItemWriteRepository {
+export interface IContentItemWriteRepository {
   /**
    * Persists or updates a ContentItem aggregate
    * Uses optimistic locking to prevent concurrent modifications

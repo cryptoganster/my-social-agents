@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { IngestionJobReadModel } from '@/ingestion/job/domain/read-models/ingestion-job';
+import { IIngestionJobReadRepository } from '@/ingestion/job/domain/interfaces/repositories/ingestion-job-read';
 import { IngestionJobEntity } from '../entities/ingestion-job';
 
 /**
@@ -13,7 +14,7 @@ import { IngestionJobEntity } from '../entities/ingestion-job';
  * Requirements: 4.2, 4.3
  */
 @Injectable()
-export class TypeOrmIngestionJobReadRepository {
+export class TypeOrmIngestionJobReadRepository implements IIngestionJobReadRepository {
   constructor(
     @InjectRepository(IngestionJobEntity)
     private readonly repository: Repository<IngestionJobEntity>,
@@ -26,6 +27,14 @@ export class TypeOrmIngestionJobReadRepository {
 
   async findByStatus(status: string): Promise<IngestionJobReadModel[]> {
     const entities = await this.repository.find({ where: { status } });
+    return entities.map((e) => this.toReadModel(e));
+  }
+
+  async findBySourceId(sourceId: string): Promise<IngestionJobReadModel[]> {
+    const entities = await this.repository.find({
+      where: { sourceId },
+      order: { scheduledAt: 'DESC' },
+    });
     return entities.map((e) => this.toReadModel(e));
   }
 

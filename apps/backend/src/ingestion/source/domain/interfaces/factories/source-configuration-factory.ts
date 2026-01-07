@@ -1,7 +1,7 @@
 import { SourceConfiguration } from '../../aggregates/source-configuration';
 
 /**
- * SourceConfigurationFactory Interface
+ * ISourceConfigurationFactory Interface
  *
  * Factory for reconstituting SourceConfiguration aggregates from persistence.
  * Uses read repositories internally to load data and reconstructs
@@ -9,7 +9,7 @@ import { SourceConfiguration } from '../../aggregates/source-configuration';
  *
  * Requirements: 5.1
  */
-export interface SourceConfigurationFactory {
+export interface ISourceConfigurationFactory {
   /**
    * Loads and reconstitutes a SourceConfiguration aggregate from persistence
    * Returns null if the source configuration does not exist

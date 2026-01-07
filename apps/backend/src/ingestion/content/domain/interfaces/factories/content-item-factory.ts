@@ -1,7 +1,7 @@
 import { ContentItem } from '../../aggregates/content-item';
 
 /**
- * ContentItemFactory Interface
+ * IContentItemFactory Interface
  *
  * Factory for reconstituting ContentItem aggregates from persistence.
  * Uses read repositories internally to load data and reconstructs
@@ -9,7 +9,7 @@ import { ContentItem } from '../../aggregates/content-item';
  *
  * Requirements: 10.1
  */
-export interface ContentItemFactory {
+export interface IContentItemFactory {
   /**
    * Loads and reconstitutes a ContentItem aggregate from persistence
    * Returns null if the content item does not exist

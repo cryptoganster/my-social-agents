@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, QueryDeepPartialEntity } from 'typeorm';
 import { SourceConfiguration } from '@/ingestion/source/domain/aggregates/source-configuration';
-import { SourceConfigurationWriteRepository } from '@/ingestion/source/domain/interfaces/repositories/source-configuration-write';
+import { ISourceConfigurationWriteRepository } from '@/ingestion/source/domain/interfaces/repositories/source-configuration-write';
 import { ConcurrencyException } from '@/shared/kernel';
 import { SourceConfigurationEntity } from '../entities/source-configuration';
 
@@ -15,7 +15,7 @@ import { SourceConfigurationEntity } from '../entities/source-configuration';
  * Requirements: 5.1, 5.3
  */
 @Injectable()
-export class TypeOrmSourceConfigurationWriteRepository implements SourceConfigurationWriteRepository {
+export class TypeOrmSourceConfigurationWriteRepository implements ISourceConfigurationWriteRepository {
   constructor(
     @InjectRepository(SourceConfigurationEntity)
     private readonly repository: Repository<SourceConfigurationEntity>,

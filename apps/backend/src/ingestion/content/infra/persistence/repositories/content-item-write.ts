@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ContentItem } from '@/ingestion/content/domain/aggregates/content-item';
-import { ContentItemWriteRepository } from '@/ingestion/content/domain/interfaces/repositories/content-item-write';
+import { IContentItemWriteRepository } from '@/ingestion/content/domain/interfaces/repositories/content-item-write';
 import { ConcurrencyException } from '@/shared/kernel';
 import { ContentItemEntity } from '../entities/content-item';
 
@@ -15,7 +15,7 @@ import { ContentItemEntity } from '../entities/content-item';
  * Requirements: 10.1
  */
 @Injectable()
-export class TypeOrmContentItemWriteRepository implements ContentItemWriteRepository {
+export class TypeOrmContentItemWriteRepository implements IContentItemWriteRepository {
   constructor(
     @InjectRepository(ContentItemEntity)
     private readonly repository: Repository<ContentItemEntity>,

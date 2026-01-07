@@ -236,7 +236,22 @@ describe('ContentNormalizationService', () => {
       fc.assert(
         fc.property(
           fc.record({
-            name: fc.string({ minLength: 1, maxLength: 20 }),
+            // Filter out characters that get modified by source-specific normalizations:
+            // - < and > (removed by RSS HTML tag removal)
+            // - | (replaced by I in PDF/OCR)
+            // - ` and ' (normalized in PDF/OCR)
+            // - [[ and ]] (modified by Wikipedia)
+            name: fc
+              .string({ minLength: 1, maxLength: 20 })
+              .filter(
+                (s) =>
+                  !s.includes('<') &&
+                  !s.includes('>') &&
+                  !s.includes('|') &&
+                  !s.includes('`') &&
+                  !s.includes('[') &&
+                  !s.includes(']'),
+              ),
             value: fc.integer(),
             active: fc.boolean(),
           }),
@@ -244,6 +259,9 @@ describe('ContentNormalizationService', () => {
             SourceTypeEnum.WEB,
             SourceTypeEnum.RSS,
             SourceTypeEnum.SOCIAL_MEDIA,
+            SourceTypeEnum.PDF,
+            SourceTypeEnum.OCR,
+            SourceTypeEnum.WIKIPEDIA,
           ),
           (jsonData, sourceTypeEnum) => {
             const sourceType = SourceType.fromEnum(sourceTypeEnum);
@@ -261,7 +279,7 @@ describe('ContentNormalizationService', () => {
 
               const parsed = JSON.parse(extractedJson);
 
-              // All original data should be preserved
+              // All original data should be preserved after source-specific normalization
 
               expect(parsed.name).toBe(jsonData.name);
 
@@ -280,7 +298,9 @@ describe('ContentNormalizationService', () => {
         fc.property(
           fc.array(
             fc.record({
-              col1: fc.string({ minLength: 1, maxLength: 10 }),
+              col1: fc
+                .string({ minLength: 1, maxLength: 10 })
+                .filter((s) => s.trim().length > 0),
               col2: fc.integer({ min: 0, max: 1000 }),
             }),
             { minLength: 1, maxLength: 5 },
@@ -292,7 +312,7 @@ describe('ContentNormalizationService', () => {
             const header = 'Column1 | Column2';
             const separator = '--------|--------';
             const rows = tableData
-              .map((row) => `${row.col1} | ${row.col2}`)
+              .map((row) => `${row.col1.trim()} | ${row.col2}`)
               .join('\n');
             const table = `${header}\n${separator}\n${rows}`;
 
@@ -301,7 +321,7 @@ describe('ContentNormalizationService', () => {
 
             // Table structure should be preserved (rows should still be present)
             tableData.forEach((row) => {
-              expect(normalized).toContain(row.col1);
+              expect(normalized).toContain(row.col1.trim());
               expect(normalized).toContain(row.col2.toString());
             });
 

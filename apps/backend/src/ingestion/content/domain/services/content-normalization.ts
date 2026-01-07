@@ -1,8 +1,10 @@
+import { Injectable } from '@nestjs/common';
 import {
   SourceType,
   SourceTypeEnum,
 } from '@/ingestion/source/domain/value-objects';
 import { ContentMetadata, AssetTag } from '../value-objects';
+import { IContentNormalizationService } from '../interfaces/services/content-normalization';
 
 /**
  * ContentNormalizationService
@@ -13,7 +15,8 @@ import { ContentMetadata, AssetTag } from '../value-objects';
  *
  * Requirements: 2.1, 2.2, 2.3
  */
-export class ContentNormalizationService {
+@Injectable()
+export class ContentNormalizationService implements IContentNormalizationService {
   /**
    * Common cryptocurrency symbols and their variations
    */
