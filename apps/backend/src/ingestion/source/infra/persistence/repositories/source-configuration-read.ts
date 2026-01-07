@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SourceConfigurationReadModel } from '@/ingestion/source/domain/read-models/source-configuration';
+import { ISourceConfigurationReadRepository } from '@/ingestion/source/domain/interfaces/repositories/source-configuration-read';
 import { SourceConfigurationEntity } from '../entities/source-configuration';
 
 /**
@@ -13,7 +14,7 @@ import { SourceConfigurationEntity } from '../entities/source-configuration';
  * Requirements: 5.2
  */
 @Injectable()
-export class TypeOrmSourceConfigurationReadRepository {
+export class TypeOrmSourceConfigurationReadRepository implements ISourceConfigurationReadRepository {
   constructor(
     @InjectRepository(SourceConfigurationEntity)
     private readonly repository: Repository<SourceConfigurationEntity>,
@@ -29,6 +30,14 @@ export class TypeOrmSourceConfigurationReadRepository {
   async findActive(): Promise<SourceConfigurationReadModel[]> {
     const entities = await this.repository.find({
       where: { isActive: true },
+      order: { createdAt: 'DESC' },
+    });
+    return entities.map((e) => this.toReadModel(e));
+  }
+
+  async findByType(type: string): Promise<SourceConfigurationReadModel[]> {
+    const entities = await this.repository.find({
+      where: { sourceType: type },
       order: { createdAt: 'DESC' },
     });
     return entities.map((e) => this.toReadModel(e));

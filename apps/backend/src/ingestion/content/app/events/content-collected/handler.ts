@@ -5,8 +5,8 @@ import {
   ContentCollectedEvent,
   ContentIngestedEvent,
 } from '@/ingestion/content/domain/events';
-import { ContentItemReadRepository } from '@/ingestion/content/domain/interfaces/repositories/content-item-read';
-import { ContentItemWriteRepository } from '@/ingestion/content/domain/interfaces/repositories/content-item-write';
+import { IContentItemReadRepository } from '@/ingestion/content/domain/interfaces/repositories/content-item-read';
+import { IContentItemWriteRepository } from '@/ingestion/content/domain/interfaces/repositories/content-item-write';
 import { IContentValidationService } from '@/ingestion/content/domain/interfaces/services/content-validation';
 import { IContentNormalizationService } from '@/ingestion/content/domain/interfaces/services/content-normalization';
 import { IDuplicateDetectionService } from '@/ingestion/content/domain/interfaces/services/duplicate-detection';
@@ -35,10 +35,10 @@ export class ContentCollectedEventHandler implements IEventHandler<ContentCollec
   private readonly logger = new Logger(ContentCollectedEventHandler.name);
 
   constructor(
-    @Inject('ContentItemReadRepository')
-    private readonly contentItemReadRepo: ContentItemReadRepository,
-    @Inject('ContentItemWriteRepository')
-    private readonly contentItemWriteRepo: ContentItemWriteRepository,
+    @Inject('IContentItemReadRepository')
+    private readonly contentItemReadRepo: IContentItemReadRepository,
+    @Inject('IContentItemWriteRepository')
+    private readonly contentItemWriteRepo: IContentItemWriteRepository,
     @Inject('IContentValidationService')
     private readonly validationService: IContentValidationService,
     @Inject('IContentNormalizationService')

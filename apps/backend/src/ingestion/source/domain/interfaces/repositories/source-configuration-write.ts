@@ -1,7 +1,7 @@
 import { SourceConfiguration } from '../../aggregates/source-configuration';
 
 /**
- * SourceConfigurationWriteRepository Interface
+ * ISourceConfigurationWriteRepository Interface
  *
  * Write-side persistence interface for SourceConfiguration aggregate.
  * Following CQRS principles, this repository only handles write operations.
@@ -9,7 +9,7 @@ import { SourceConfiguration } from '../../aggregates/source-configuration';
  *
  * Requirements: 5.1, 5.3
  */
-export interface SourceConfigurationWriteRepository {
+export interface ISourceConfigurationWriteRepository {
   /**
    * Persists or updates a SourceConfiguration aggregate
    * Uses optimistic locking to prevent concurrent modifications

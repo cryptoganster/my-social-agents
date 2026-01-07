@@ -6,8 +6,8 @@ import {
   ContentCollectedEvent,
   ContentIngestedEvent,
 } from '@/ingestion/content/domain/events';
-import { ContentItemReadRepository } from '@/ingestion/content/domain/interfaces/repositories/content-item-read';
-import { ContentItemWriteRepository } from '@/ingestion/content/domain/interfaces/repositories/content-item-write';
+import { IContentItemReadRepository } from '@/ingestion/content/domain/interfaces/repositories/content-item-read';
+import { IContentItemWriteRepository } from '@/ingestion/content/domain/interfaces/repositories/content-item-write';
 import { ContentValidationService } from '@/ingestion/content/domain/services/content-validation';
 import { ContentNormalizationService } from '@/ingestion/content/domain/services/content-normalization';
 import { DuplicateDetectionService } from '@/ingestion/content/domain/services/duplicate-detection';
@@ -19,8 +19,8 @@ import { AssetTag } from '@/ingestion/content/domain/value-objects/asset-tag';
  * Integration Test: ContentCollectedEventHandler
  *
  * Tests the complete integration of the event handler with its dependencies:
- * - ContentItemReadRepository (duplicate detection)
- * - ContentItemWriteRepository (persistence)
+ * - IContentItemReadRepository (duplicate detection)
+ * - IContentItemWriteRepository (persistence)
  * - ContentValidationService
  * - ContentNormalizationService
  * - DuplicateDetectionService
@@ -30,8 +30,8 @@ import { AssetTag } from '@/ingestion/content/domain/value-objects/asset-tag';
  */
 describe('ContentCollectedEventHandler - Integration Tests', () => {
   let handler: ContentCollectedEventHandler;
-  let mockReadRepo: jest.Mocked<ContentItemReadRepository>;
-  let mockWriteRepo: jest.Mocked<ContentItemWriteRepository>;
+  let mockReadRepo: jest.Mocked<IContentItemReadRepository>;
+  let mockWriteRepo: jest.Mocked<IContentItemWriteRepository>;
   let validationService: ContentValidationService;
   let normalizationService: ContentNormalizationService;
   let duplicateDetectionService: DuplicateDetectionService;
@@ -46,11 +46,11 @@ describe('ContentCollectedEventHandler - Integration Tests', () => {
       findById: jest.fn(),
       findByHash: jest.fn(),
       findBySource: jest.fn(),
-    } as jest.Mocked<ContentItemReadRepository>;
+    } as jest.Mocked<IContentItemReadRepository>;
 
     mockWriteRepo = {
       save: jest.fn().mockResolvedValue(undefined),
-    } as jest.Mocked<ContentItemWriteRepository>;
+    } as jest.Mocked<IContentItemWriteRepository>;
 
     mockEventBus = {
       publish: jest.fn().mockResolvedValue(undefined),
@@ -69,11 +69,11 @@ describe('ContentCollectedEventHandler - Integration Tests', () => {
       providers: [
         ContentCollectedEventHandler,
         {
-          provide: 'ContentItemReadRepository',
+          provide: 'IContentItemReadRepository',
           useValue: mockReadRepo,
         },
         {
-          provide: 'ContentItemWriteRepository',
+          provide: 'IContentItemWriteRepository',
           useValue: mockWriteRepo,
         },
         {

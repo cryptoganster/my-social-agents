@@ -26,9 +26,9 @@ import { ContentHashGenerator } from './domain/services/content-hash-generator';
  * - Easier to add new event handlers without modifying existing code
  *
  * Dependencies (to be provided by parent module or configured separately):
- * - SourceConfigurationFactory (from source bounded context)
- * - ContentItemReadRepository (infrastructure - read side)
- * - ContentItemWriteRepository (infrastructure - write side)
+ * - ISourceConfigurationFactory (from source bounded context)
+ * - IContentItemReadRepository (infrastructure - read side)
+ * - IContentItemWriteRepository (infrastructure - write side)
  * - SourceAdapter[] (infrastructure adapters)
  */
 @Module({
@@ -58,9 +58,9 @@ import { ContentHashGenerator } from './domain/services/content-hash-generator';
     ContentHashGenerator,
 
     // Note: The following dependencies need to be provided by the parent module:
-    // - SourceConfigurationFactory (token: 'SourceConfigurationFactory')
-    // - ContentItemReadRepository (token: 'ContentItemReadRepository')
-    // - ContentItemWriteRepository (token: 'ContentItemWriteRepository')
+    // - ISourceConfigurationFactory (token: 'ISourceConfigurationFactory')
+    // - IContentItemReadRepository (token: 'IContentItemReadRepository')
+    // - IContentItemWriteRepository (token: 'IContentItemWriteRepository')
     // - SourceAdapter[] (token: 'SourceAdapter')
   ],
   exports: [

@@ -1,21 +1,26 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { SourceConfiguration } from '@/ingestion/source/domain/aggregates/source-configuration';
-import { SourceConfigurationFactory } from '@/ingestion/source/domain/interfaces/factories/source-configuration-factory';
+import { ISourceConfigurationFactory } from '@/ingestion/source/domain/interfaces/factories/source-configuration-factory';
 import { SourceType } from '@/ingestion/source/domain/value-objects/source-type';
-import { TypeOrmSourceConfigurationReadRepository } from '../repositories/source-configuration-read';
+import { ISourceConfigurationReadRepository } from '@/ingestion/source/domain/interfaces/repositories/source-configuration-read';
 
 /**
  * TypeORM SourceConfigurationFactory Implementation
  *
  * Factory for reconstituting SourceConfiguration aggregates from persistence.
- * Uses TypeORM read repository to load data and reconstructs aggregates with full behavior.
+ * Uses read repository interface to load data and reconstructs aggregates with full behavior.
+ *
+ * Follows Dependency Inversion Principle:
+ * - Depends on domain interface (ISourceConfigurationReadRepository)
+ * - Not on concrete implementation (TypeOrmSourceConfigurationReadRepository)
  *
  * Requirements: 5.1
  */
 @Injectable()
-export class TypeOrmSourceConfigurationFactory implements SourceConfigurationFactory {
+export class TypeOrmSourceConfigurationFactory implements ISourceConfigurationFactory {
   constructor(
-    private readonly readRepo: TypeOrmSourceConfigurationReadRepository,
+    @Inject('ISourceConfigurationReadRepository')
+    private readonly readRepo: ISourceConfigurationReadRepository,
   ) {}
 
   async load(sourceId: string): Promise<SourceConfiguration | null> {

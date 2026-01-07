@@ -1,6 +1,6 @@
 import { CommandHandler, ICommandHandler, EventBus } from '@nestjs/cqrs';
 import { Logger, Inject } from '@nestjs/common';
-import { SourceConfigurationFactory } from '@/ingestion/source/domain/interfaces/factories/source-configuration-factory';
+import { ISourceConfigurationFactory } from '@/ingestion/source/domain/interfaces/factories/source-configuration-factory';
 import { SourceAdapter } from '@/ingestion/source/domain/interfaces/source-adapter';
 import { SourceType } from '@/ingestion/source/domain/value-objects/source-type';
 import { ContentCollectedEvent } from '@/ingestion/content/domain/events';
@@ -29,8 +29,8 @@ export class IngestContentCommandHandler implements ICommandHandler<
   private readonly logger = new Logger(IngestContentCommandHandler.name);
 
   constructor(
-    @Inject('SourceConfigurationFactory')
-    private readonly sourceConfigFactory: SourceConfigurationFactory,
+    @Inject('ISourceConfigurationFactory')
+    private readonly sourceConfigFactory: ISourceConfigurationFactory,
     @Inject('SourceAdapter')
     private readonly adapters: SourceAdapter[],
     private readonly eventBus: EventBus,

@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ScheduleIngestionJobCommandHandler } from '../handler';
 import { ScheduleIngestionJobCommand } from '../command';
-import { SourceConfigurationFactory } from '@/ingestion/source/domain/interfaces/factories/source-configuration-factory';
-import { IngestionJobWriteRepository } from '@/ingestion/job/domain/interfaces/repositories/ingestion-job-write';
+import { ISourceConfigurationFactory } from '@/ingestion/source/domain/interfaces/factories/source-configuration-factory';
+import { IIngestionJobWriteRepository } from '@/ingestion/job/domain/interfaces/repositories/ingestion-job-write';
 import { IJobScheduler } from '@/shared/kernel';
 import { SourceConfiguration } from '@/ingestion/source/domain/aggregates/source-configuration';
 import {
@@ -12,19 +12,19 @@ import {
 
 describe('ScheduleIngestionJobCommandHandler', () => {
   let handler: ScheduleIngestionJobCommandHandler;
-  let sourceConfigFactory: jest.Mocked<SourceConfigurationFactory>;
-  let jobWriteRepository: jest.Mocked<IngestionJobWriteRepository>;
+  let sourceConfigFactory: jest.Mocked<ISourceConfigurationFactory>;
+  let jobWriteRepository: jest.Mocked<IIngestionJobWriteRepository>;
   let jobScheduler: jest.Mocked<IJobScheduler>;
 
   beforeEach(async () => {
     // Create mocks
     sourceConfigFactory = {
       load: jest.fn(),
-    } as jest.Mocked<SourceConfigurationFactory>;
+    } as jest.Mocked<ISourceConfigurationFactory>;
 
     jobWriteRepository = {
       save: jest.fn(),
-    } as jest.Mocked<IngestionJobWriteRepository>;
+    } as jest.Mocked<IIngestionJobWriteRepository>;
 
     jobScheduler = {
       scheduleOnce: jest.fn(),
@@ -38,11 +38,11 @@ describe('ScheduleIngestionJobCommandHandler', () => {
       providers: [
         ScheduleIngestionJobCommandHandler,
         {
-          provide: 'SourceConfigurationFactory',
+          provide: 'ISourceConfigurationFactory',
           useValue: sourceConfigFactory,
         },
         {
-          provide: 'IngestionJobWriteRepository',
+          provide: 'IIngestionJobWriteRepository',
           useValue: jobWriteRepository,
         },
         {

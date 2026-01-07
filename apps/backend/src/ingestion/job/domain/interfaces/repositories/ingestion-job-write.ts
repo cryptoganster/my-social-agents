@@ -1,7 +1,7 @@
 import { IngestionJob } from '../../aggregates/ingestion-job';
 
 /**
- * IngestionJobWriteRepository Interface
+ * IIngestionJobWriteRepository Interface
  *
  * Write-side persistence interface for IngestionJob aggregate.
  * Following CQRS principles, this repository only handles write operations.
@@ -9,7 +9,7 @@ import { IngestionJob } from '../../aggregates/ingestion-job';
  *
  * Requirements: 4.1
  */
-export interface IngestionJobWriteRepository {
+export interface IIngestionJobWriteRepository {
   /**
    * Persists or updates an IngestionJob aggregate
    * Uses optimistic locking to prevent concurrent modifications

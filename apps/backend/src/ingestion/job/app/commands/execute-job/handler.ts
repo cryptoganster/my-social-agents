@@ -1,7 +1,7 @@
 import { CommandHandler, ICommandHandler, CommandBus } from '@nestjs/cqrs';
 import { Logger, Inject } from '@nestjs/common';
-import { IngestionJobFactory } from '@/ingestion/job/domain/interfaces/factories/ingestion-job-factory';
-import { IngestionJobWriteRepository } from '@/ingestion/job/domain/interfaces/repositories/ingestion-job-write';
+import { IIngestionJobFactory } from '@/ingestion/job/domain/interfaces/factories/ingestion-job-factory';
+import { IIngestionJobWriteRepository } from '@/ingestion/job/domain/interfaces/repositories/ingestion-job-write';
 import { JobMetrics } from '@/ingestion/job/domain/value-objects';
 import { IngestContentCommand } from '@/ingestion/content/app/commands/ingest-content/command';
 import { IngestContentResult } from '@/ingestion/content/app/commands/ingest-content/result';
@@ -36,10 +36,10 @@ export class ExecuteIngestionJobCommandHandler implements ICommandHandler<
   private readonly logger = new Logger(ExecuteIngestionJobCommandHandler.name);
 
   constructor(
-    @Inject('IngestionJobFactory')
-    private readonly jobFactory: IngestionJobFactory,
-    @Inject('IngestionJobWriteRepository')
-    private readonly jobWriteRepository: IngestionJobWriteRepository,
+    @Inject('IIngestionJobFactory')
+    private readonly jobFactory: IIngestionJobFactory,
+    @Inject('IIngestionJobWriteRepository')
+    private readonly jobWriteRepository: IIngestionJobWriteRepository,
     private readonly commandBus: CommandBus,
     @Inject('IRetryService')
     private readonly retryService: IRetryService,

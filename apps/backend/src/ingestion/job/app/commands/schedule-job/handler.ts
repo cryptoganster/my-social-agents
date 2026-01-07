@@ -1,9 +1,9 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { Logger, Inject } from '@nestjs/common';
 import { randomUUID } from 'crypto';
-import { SourceConfigurationFactory } from '@/ingestion/source/domain/interfaces/factories/source-configuration-factory';
+import { ISourceConfigurationFactory } from '@/ingestion/source/domain/interfaces/factories/source-configuration-factory';
 import { IngestionJob } from '@/ingestion/job/domain/aggregates/ingestion-job';
-import { IngestionJobWriteRepository } from '@/ingestion/job/domain/interfaces/repositories/ingestion-job-write';
+import { IIngestionJobWriteRepository } from '@/ingestion/job/domain/interfaces/repositories/ingestion-job-write';
 import { IJobScheduler } from '@/shared/kernel';
 import { ScheduleIngestionJobCommand } from './command';
 import { ScheduleIngestionJobResult } from './result';
@@ -28,10 +28,10 @@ export class ScheduleIngestionJobCommandHandler implements ICommandHandler<
   private readonly logger = new Logger(ScheduleIngestionJobCommandHandler.name);
 
   constructor(
-    @Inject('SourceConfigurationFactory')
-    private readonly sourceConfigFactory: SourceConfigurationFactory,
-    @Inject('IngestionJobWriteRepository')
-    private readonly jobWriteRepository: IngestionJobWriteRepository,
+    @Inject('ISourceConfigurationFactory')
+    private readonly sourceConfigFactory: ISourceConfigurationFactory,
+    @Inject('IIngestionJobWriteRepository')
+    private readonly jobWriteRepository: IIngestionJobWriteRepository,
     @Inject('IJobScheduler')
     private readonly jobScheduler: IJobScheduler,
   ) {}

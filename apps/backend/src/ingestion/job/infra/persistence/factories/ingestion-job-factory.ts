@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { IngestionJob } from '@/ingestion/job/domain/aggregates/ingestion-job';
-import { IngestionJobFactory } from '@/ingestion/job/domain/interfaces/factories/ingestion-job-factory';
+import { IIngestionJobFactory } from '@/ingestion/job/domain/interfaces/factories/ingestion-job-factory';
 import {
   IngestionStatus,
   JobMetrics,
@@ -11,19 +11,26 @@ import {
   ErrorRecord,
   ErrorType,
 } from '@/ingestion/shared/entities/error-record';
-import { TypeOrmIngestionJobReadRepository } from '../repositories/ingestion-job-read';
+import { IIngestionJobReadRepository } from '@/ingestion/job/domain/interfaces/repositories/ingestion-job-read';
 
 /**
  * TypeORM IngestionJobFactory Implementation
  *
  * Factory for reconstituting IngestionJob aggregates from persistence.
- * Uses TypeORM read repository to load data and reconstructs aggregates with full behavior.
+ * Uses read repository interface to load data and reconstructs aggregates with full behavior.
+ *
+ * Follows Dependency Inversion Principle:
+ * - Depends on domain interface (IIngestionJobReadRepository)
+ * - Not on concrete implementation (TypeOrmIngestionJobReadRepository)
  *
  * Requirements: 4.1
  */
 @Injectable()
-export class TypeOrmIngestionJobFactory implements IngestionJobFactory {
-  constructor(private readonly readRepo: TypeOrmIngestionJobReadRepository) {}
+export class TypeOrmIngestionJobFactory implements IIngestionJobFactory {
+  constructor(
+    @Inject('IIngestionJobReadRepository')
+    private readonly readRepo: IIngestionJobReadRepository,
+  ) {}
 
   async load(jobId: string): Promise<IngestionJob | null> {
     // Load data from read repository

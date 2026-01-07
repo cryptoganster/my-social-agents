@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, QueryDeepPartialEntity } from 'typeorm';
 import { IngestionJob } from '@/ingestion/job/domain/aggregates/ingestion-job';
-import { IngestionJobWriteRepository } from '@/ingestion/job/domain/interfaces/repositories/ingestion-job-write';
+import { IIngestionJobWriteRepository } from '@/ingestion/job/domain/interfaces/repositories/ingestion-job-write';
 import { ConcurrencyException } from '@/shared/kernel';
 import { IngestionJobEntity } from '../entities/ingestion-job';
 
@@ -15,7 +15,7 @@ import { IngestionJobEntity } from '../entities/ingestion-job';
  * Requirements: 4.1
  */
 @Injectable()
-export class TypeOrmIngestionJobWriteRepository implements IngestionJobWriteRepository {
+export class TypeOrmIngestionJobWriteRepository implements IIngestionJobWriteRepository {
   constructor(
     @InjectRepository(IngestionJobEntity)
     private readonly repository: Repository<IngestionJobEntity>,

@@ -52,7 +52,7 @@ describe('IngestContentCommandHandler - Integration Tests', () => {
       providers: [
         IngestContentCommandHandler,
         {
-          provide: 'SourceConfigurationFactory',
+          provide: 'ISourceConfigurationFactory',
           useValue: mockSourceConfigFactory,
         },
         {

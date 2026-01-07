@@ -10,13 +10,13 @@ import { IngestionContentModule } from './ingestion/content/ingestion-content.mo
   imports: [CqrsModule],
   providers: [
     {
-      provide: 'SourceConfigurationFactory',
+      provide: 'ISourceConfigurationFactory',
       useValue: {
         load: jest.fn().mockResolvedValue(null),
       },
     },
     {
-      provide: 'ContentItemReadRepository',
+      provide: 'IContentItemReadRepository',
       useValue: {
         findById: jest.fn(),
         findByHash: jest.fn(),
@@ -24,7 +24,7 @@ import { IngestionContentModule } from './ingestion/content/ingestion-content.mo
       },
     },
     {
-      provide: 'ContentItemWriteRepository',
+      provide: 'IContentItemWriteRepository',
       useValue: {
         save: jest.fn(),
       },
@@ -41,9 +41,9 @@ import { IngestionContentModule } from './ingestion/content/ingestion-content.mo
     },
   ],
   exports: [
-    'SourceConfigurationFactory',
-    'ContentItemReadRepository',
-    'ContentItemWriteRepository',
+    'ISourceConfigurationFactory',
+    'IContentItemReadRepository',
+    'IContentItemWriteRepository',
     'SourceAdapter',
     'IHashService',
   ],

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ContentItem } from '@/ingestion/content/domain/aggregates/content-item';
-import { ContentItemFactory } from '@/ingestion/content/domain/interfaces/factories/content-item-factory';
+import { IContentItemFactory } from '@/ingestion/content/domain/interfaces/factories/content-item-factory';
 import {
   ContentMetadata,
   AssetTag,
@@ -17,7 +17,7 @@ import { TypeOrmContentItemReadRepository } from '../repositories/content-item-r
  * Requirements: 10.1
  */
 @Injectable()
-export class TypeOrmContentItemFactory implements ContentItemFactory {
+export class TypeOrmContentItemFactory implements IContentItemFactory {
   constructor(private readonly readRepo: TypeOrmContentItemReadRepository) {}
 
   async load(contentId: string): Promise<ContentItem | null> {

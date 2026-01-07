@@ -74,6 +74,10 @@ describe('Property 10: Job Metrics Recording', () => {
       providers: [
         TypeOrmIngestionJobWriteRepository,
         TypeOrmIngestionJobReadRepository,
+        {
+          provide: 'IIngestionJobReadRepository',
+          useClass: TypeOrmIngestionJobReadRepository,
+        },
         TypeOrmIngestionJobFactory,
         {
           provide: getRepositoryToken(IngestionJobEntity),
@@ -109,7 +113,7 @@ describe('Property 10: Job Metrics Recording', () => {
           await writeRepo.save(job);
 
           // Verify createQueryBuilder was called for update
-          // eslint-disable-next-line @typescript-eslint/unbound-method
+
           expect(mockRepository.createQueryBuilder).toHaveBeenCalled();
 
           // Mock the read operation
@@ -192,7 +196,7 @@ describe('Property 10: Job Metrics Recording', () => {
           await writeRepo.save(job);
 
           // Verify createQueryBuilder was called for update
-          // eslint-disable-next-line @typescript-eslint/unbound-method
+
           expect(mockRepository.createQueryBuilder).toHaveBeenCalled();
         },
       ),
@@ -226,7 +230,7 @@ describe('Property 10: Job Metrics Recording', () => {
           await writeRepo.save(job);
 
           // Verify createQueryBuilder was called for update
-          // eslint-disable-next-line @typescript-eslint/unbound-method
+
           expect(mockRepository.createQueryBuilder).toHaveBeenCalled();
         },
       ),

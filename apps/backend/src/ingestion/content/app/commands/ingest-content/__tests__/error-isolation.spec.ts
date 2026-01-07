@@ -56,7 +56,7 @@ describe('IngestContentCommandHandler - Error Isolation Property', () => {
       providers: [
         IngestContentCommandHandler,
         {
-          provide: 'SourceConfigurationFactory',
+          provide: 'ISourceConfigurationFactory',
           useValue: mockSourceConfigFactory,
         },
         {

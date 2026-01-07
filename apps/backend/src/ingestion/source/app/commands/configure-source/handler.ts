@@ -1,9 +1,9 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { Logger, Inject } from '@nestjs/common';
 import { randomUUID } from 'crypto';
-import { SourceConfigurationFactory } from '@/ingestion/source/domain/interfaces/factories/source-configuration-factory';
+import { ISourceConfigurationFactory } from '@/ingestion/source/domain/interfaces/factories/source-configuration-factory';
 import { SourceConfiguration } from '@/ingestion/source/domain/aggregates/source-configuration';
-import { SourceConfigurationWriteRepository } from '@/ingestion/source/domain/interfaces/repositories/source-configuration-write';
+import { ISourceConfigurationWriteRepository } from '@/ingestion/source/domain/interfaces/repositories/source-configuration-write';
 import { ICredentialEncryption } from '@/ingestion/shared/interfaces/external';
 import { SourceType } from '@/ingestion/source/domain/value-objects/source-type';
 import { ConfigureSourceCommand } from './command';
@@ -31,10 +31,10 @@ export class ConfigureSourceCommandHandler implements ICommandHandler<
   private readonly encryptionKey: string;
 
   constructor(
-    @Inject('SourceConfigurationFactory')
-    private readonly sourceConfigFactory: SourceConfigurationFactory,
-    @Inject('SourceConfigurationWriteRepository')
-    private readonly sourceConfigWriteRepository: SourceConfigurationWriteRepository,
+    @Inject('ISourceConfigurationFactory')
+    private readonly sourceConfigFactory: ISourceConfigurationFactory,
+    @Inject('ISourceConfigurationWriteRepository')
+    private readonly sourceConfigWriteRepository: ISourceConfigurationWriteRepository,
     @Inject('ICredentialEncryption')
     private readonly credentialEncryption: ICredentialEncryption,
   ) {

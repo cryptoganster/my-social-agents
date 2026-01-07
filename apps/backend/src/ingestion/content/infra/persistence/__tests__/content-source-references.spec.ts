@@ -229,7 +229,7 @@ describe('Content Source References', () => {
           await contentWriteRepo.save(contentItem);
 
           // Verify persistence was called with correct sourceId
-          // eslint-disable-next-line @typescript-eslint/unbound-method
+
           expect(mockContentRepository.insert).toHaveBeenCalled();
 
           // Mock retrieval

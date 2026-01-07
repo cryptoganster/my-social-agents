@@ -2,7 +2,7 @@ import { ContentItemReadModel } from '../../read-models/content-item';
 import { ContentHash } from '../../value-objects/content-hash';
 
 /**
- * ContentItemReadRepository Interface
+ * IContentItemReadRepository Interface
  *
  * Read-side persistence interface for querying ContentItem data.
  * Following CQRS principles, this repository only handles read operations.
@@ -10,7 +10,7 @@ import { ContentHash } from '../../value-objects/content-hash';
  *
  * Requirements: 3.2
  */
-export interface ContentItemReadRepository {
+export interface IContentItemReadRepository {
   /**
    * Finds a content item by its unique identifier
    */

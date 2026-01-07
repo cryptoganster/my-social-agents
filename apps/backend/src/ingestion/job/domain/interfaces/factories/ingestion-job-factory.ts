@@ -1,7 +1,7 @@
 import { IngestionJob } from '../../aggregates/ingestion-job';
 
 /**
- * IngestionJobFactory Interface
+ * IIngestionJobFactory Interface
  *
  * Factory for reconstituting IngestionJob aggregates from persistence.
  * Uses read repositories internally to load data and reconstructs
@@ -9,7 +9,7 @@ import { IngestionJob } from '../../aggregates/ingestion-job';
  *
  * Requirements: 4.1, 10.1
  */
-export interface IngestionJobFactory {
+export interface IIngestionJobFactory {
   /**
    * Loads and reconstitutes an IngestionJob aggregate from persistence
    * Returns null if the job does not exist
