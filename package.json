@@ -10,7 +10,7 @@
     "start": "npm run start --workspace=apps/backend",
     "start:dev": "npm run start:dev --workspace=apps/backend",
     "lint": "eslint \"{apps,libs}/**/*.ts\" --fix",
-    "lint:check": "eslint \"{apps,libs}/**/*.ts\"",
+    "lint:check": "eslint \"{apps,libs}/**/*.ts\" --max-warnings=0",
     "format": "prettier --write \"**/*.{ts,json,md,yml,yaml}\"",
     "format:check": "prettier --check \"**/*.{ts,json,md,yml,yaml}\"",
     "typecheck": "tsc --noEmit -p apps/backend/tsconfig.json",

@@ -12,7 +12,7 @@
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
-    "cli": "ts-node -r tsconfig-paths/register src/ingestion/api/cli/ingestion-cli.ts",
+    "cli:ingestion": "ts-node -r tsconfig-paths/register src/ingestion/api/cli/ingestion-cli.ts",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "typecheck": "tsc --noEmit",
     "test": "jest",
