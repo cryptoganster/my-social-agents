@@ -88,7 +88,7 @@ describe('ScheduleJobCommandHandler', () => {
       queryBus.execute.mockResolvedValue({
         isActive: true,
         healthMetrics: {
-          successRate: 0.95,
+          successRate: 95, // 95% as a number 0-100
           consecutiveFailures: 0,
           lastSuccessAt: new Date(),
           lastFailureAt: null,
@@ -140,7 +140,7 @@ describe('ScheduleJobCommandHandler', () => {
       queryBus.execute.mockResolvedValue({
         isActive: true,
         healthMetrics: {
-          successRate: 0.95,
+          successRate: 95, // 95% as a number 0-100
           consecutiveFailures: 0,
           lastSuccessAt: new Date(),
           lastFailureAt: null,
@@ -186,7 +186,7 @@ describe('ScheduleJobCommandHandler', () => {
       queryBus.execute.mockResolvedValue({
         isActive: false, // Inactive
         healthMetrics: {
-          successRate: 0.95,
+          successRate: 95, // 95% as a number 0-100
           consecutiveFailures: 0,
           lastSuccessAt: new Date(),
           lastFailureAt: null,
@@ -210,7 +210,7 @@ describe('ScheduleJobCommandHandler', () => {
       queryBus.execute.mockResolvedValue({
         isActive: true,
         healthMetrics: {
-          successRate: 0.3, // Low success rate
+          successRate: 30, // 30% as a number 0-100 (Low success rate)
           consecutiveFailures: 5, // High consecutive failures
           lastSuccessAt: new Date(Date.now() - 86400000),
           lastFailureAt: new Date(),

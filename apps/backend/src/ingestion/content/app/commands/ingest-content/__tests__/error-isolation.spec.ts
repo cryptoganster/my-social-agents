@@ -33,6 +33,7 @@ describe('IngestContentCommandHandler - Error Isolation Property', () => {
   let mockSourceConfigFactory: jest.Mocked<{ load: jest.Mock }>;
   let mockEventBus: jest.Mocked<EventBus>;
   let mockAdapter: jest.Mocked<SourceAdapter>;
+  let mockAdapterRegistry: jest.Mocked<AdapterRegistry>;
 
   beforeEach(async () => {
     // Reset all mocks before each test
@@ -54,11 +55,15 @@ describe('IngestContentCommandHandler - Error Isolation Property', () => {
       validateConfig: jest.fn(),
     } as jest.Mocked<SourceAdapter>;
 
+    mockAdapterRegistry = {
+      getAdapter: jest.fn().mockReturnValue(mockAdapter),
+      getRegisteredTypes: jest.fn().mockReturnValue(['WEB_SCRAPER']),
+    } as unknown as jest.Mocked<AdapterRegistry>;
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         {
           provide: IngestContentCommandHandler,
-
           useFactory: (
             factory: ISourceConfigurationFactory,
             adapterRegistry: AdapterRegistry,
@@ -75,6 +80,10 @@ describe('IngestContentCommandHandler - Error Isolation Property', () => {
         {
           provide: 'ISourceConfigurationFactory',
           useValue: mockSourceConfigFactory,
+        },
+        {
+          provide: 'AdapterRegistry',
+          useValue: mockAdapterRegistry,
         },
         {
           provide: EventBus,

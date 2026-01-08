@@ -213,10 +213,10 @@ describe('UpdateSourceHealthCommandHandler', () => {
         isActive: true,
         createdAt: new Date(),
         updatedAt: new Date(),
-        consecutiveFailures: 5, // High consecutive failures
-        successRate: 40, // Low success rate
+        consecutiveFailures: 2, // Below threshold of 3
+        successRate: 55, // Above 50% threshold
         totalJobs: 10,
-        lastSuccessAt: null,
+        lastSuccessAt: new Date(Date.now() - 86400000), // 1 day ago
         lastFailureAt: new Date(),
         version: 1,
       });
@@ -232,8 +232,9 @@ describe('UpdateSourceHealthCommandHandler', () => {
       expect(sourceWriteRepository.save).toHaveBeenCalledTimes(1);
       expect(mockSourceConfig.consecutiveFailures).toBe(0); // Reset on success
       expect(mockSourceConfig.lastSuccessAt).not.toBeNull();
-      // Success rate should improve slightly
-      expect(mockSourceConfig.successRate).toBeGreaterThan(40);
+      // Success rate should improve (from 55% to ~60%)
+      expect(mockSourceConfig.successRate).toBeGreaterThan(55);
+      // Source is healthy (successRate > 50% and consecutiveFailures < 3)
       expect(eventBus.publish).not.toHaveBeenCalled(); // Success doesn't trigger unhealthy event
     });
 
