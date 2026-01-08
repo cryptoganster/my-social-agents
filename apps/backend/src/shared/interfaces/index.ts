@@ -14,3 +14,6 @@
 // Resilience service interfaces
 export * from './retry';
 export * from './circuit-breaker';
+
+// Cryptographic service interfaces
+export * from './hash';

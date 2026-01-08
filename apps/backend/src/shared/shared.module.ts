@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ResilienceModule } from './infra/resilience/resilience.module';
 import { ScheduleModule } from './infra/scheduling/schedule.module';
+import { SharedExternalModule } from './infra/external/shared-external.module';
 
 /**
  * SharedModule
@@ -11,6 +12,7 @@ import { ScheduleModule } from './infra/scheduling/schedule.module';
  * Includes:
  * - ResilienceModule: Retry and Circuit Breaker services
  * - ScheduleModule: Job scheduling infrastructure
+ * - SharedExternalModule: Cryptographic hashing and external services
  *
  * Usage:
  * ```typescript
@@ -25,7 +27,7 @@ import { ScheduleModule } from './infra/scheduling/schedule.module';
  * by bounded contexts without needing to import individual modules.
  */
 @Module({
-  imports: [ResilienceModule, ScheduleModule],
-  exports: [ResilienceModule, ScheduleModule],
+  imports: [ResilienceModule, ScheduleModule, SharedExternalModule],
+  exports: [ResilienceModule, ScheduleModule, SharedExternalModule],
 })
 export class SharedModule {}

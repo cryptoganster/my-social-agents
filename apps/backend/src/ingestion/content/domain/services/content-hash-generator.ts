@@ -1,6 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { ContentHash } from '../value-objects/content-hash';
-import { IHashService } from '@/ingestion/shared/interfaces/external';
+import { IHashService } from '@/shared/interfaces';
 
 /**
  * Content Hash Generator Domain Service

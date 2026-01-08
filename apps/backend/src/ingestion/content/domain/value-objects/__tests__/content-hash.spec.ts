@@ -1,7 +1,7 @@
 import * as fc from 'fast-check';
 import { ContentHash } from '../content-hash';
 import { ContentHashGenerator } from '@/ingestion/content/domain/services';
-import { HashService } from '@/ingestion/shared/infra/external';
+import { HashService } from '@/shared/infra/external';
 
 describe('ContentHash', () => {
   let generator: ContentHashGenerator;

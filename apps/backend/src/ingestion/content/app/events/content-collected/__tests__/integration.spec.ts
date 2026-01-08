@@ -12,7 +12,7 @@ import { ContentValidationService } from '@/ingestion/content/domain/services/co
 import { ContentNormalizationService } from '@/ingestion/content/domain/services/content-normalization';
 import { DuplicateDetectionService } from '@/ingestion/content/domain/services/duplicate-detection';
 import { ContentHashGenerator } from '@/ingestion/content/domain/services/content-hash-generator';
-import { IHashService } from '@/ingestion/shared/interfaces/external/hash';
+import { IHashService } from '@/shared/interfaces';
 import { AssetTag } from '@/ingestion/content/domain/value-objects/asset-tag';
 import { GetContentByHashQuery } from '../../../queries/get-content-by-hash/query';
 

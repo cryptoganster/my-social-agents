@@ -1,8 +1,11 @@
 /**
  * IHashService Interface
  *
- * Domain interface for cryptographic hashing operations.
+ * Shared kernel interface for cryptographic hashing operations.
  * The domain defines WHAT it needs, infrastructure provides HOW.
+ *
+ * This interface is part of the shared kernel and can be used by any bounded context
+ * that requires hashing capabilities (e.g., Ingestion, Refinement).
  */
 export interface IHashService {
   /**
