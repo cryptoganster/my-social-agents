@@ -5,5 +5,3 @@
  */
 export { HashService } from './hash';
 export { CredentialEncryptionService } from './credential-encryption';
-export { RetryService } from './retry';
-export { CircuitBreakerService } from './circuit-breaker';

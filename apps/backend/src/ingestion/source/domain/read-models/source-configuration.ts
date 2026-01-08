@@ -25,6 +25,13 @@ export interface SourceConfigurationReadModel {
   createdAt: Date;
   updatedAt: Date;
 
+  // Health tracking fields
+  consecutiveFailures: number;
+  successRate: number;
+  totalJobs: number;
+  lastSuccessAt: Date | null;
+  lastFailureAt: Date | null;
+
   // Version for optimistic locking
   version: number;
 }

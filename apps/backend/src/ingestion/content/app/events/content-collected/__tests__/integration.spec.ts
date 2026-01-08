@@ -1,12 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { EventBus } from '@nestjs/cqrs';
+import { EventBus, QueryBus } from '@nestjs/cqrs';
 import { createHash } from 'crypto';
 import { ContentCollectedEventHandler } from '../handler';
 import {
   ContentCollectedEvent,
   ContentIngestedEvent,
+  ContentValidationFailedEvent,
 } from '@/ingestion/content/domain/events';
-import { IContentItemReadRepository } from '@/ingestion/content/domain/interfaces/repositories/content-item-read';
 import { IContentItemWriteRepository } from '@/ingestion/content/domain/interfaces/repositories/content-item-write';
 import { ContentValidationService } from '@/ingestion/content/domain/services/content-validation';
 import { ContentNormalizationService } from '@/ingestion/content/domain/services/content-normalization';
@@ -14,24 +14,25 @@ import { DuplicateDetectionService } from '@/ingestion/content/domain/services/d
 import { ContentHashGenerator } from '@/ingestion/content/domain/services/content-hash-generator';
 import { IHashService } from '@/ingestion/shared/interfaces/external/hash';
 import { AssetTag } from '@/ingestion/content/domain/value-objects/asset-tag';
+import { GetContentByHashQuery } from '../../../queries/get-content-by-hash/query';
 
 /**
  * Integration Test: ContentCollectedEventHandler
  *
  * Tests the complete integration of the event handler with its dependencies:
- * - IContentItemReadRepository (duplicate detection)
+ * - QueryBus (for GetContentByHashQuery - duplicate detection)
  * - IContentItemWriteRepository (persistence)
  * - ContentValidationService
  * - ContentNormalizationService
  * - DuplicateDetectionService
- * - EventBus (publishing ContentIngestedEvent)
+ * - EventBus (publishing ContentIngestedEvent and ContentValidationFailedEvent)
  *
  * Validates end-to-end flow from event handling to content persistence.
  */
 describe('ContentCollectedEventHandler - Integration Tests', () => {
   let handler: ContentCollectedEventHandler;
-  let mockReadRepo: jest.Mocked<IContentItemReadRepository>;
   let mockWriteRepo: jest.Mocked<IContentItemWriteRepository>;
+  let mockQueryBus: jest.Mocked<QueryBus>;
   let validationService: ContentValidationService;
   let normalizationService: ContentNormalizationService;
   let duplicateDetectionService: DuplicateDetectionService;
@@ -42,15 +43,13 @@ describe('ContentCollectedEventHandler - Integration Tests', () => {
     jest.resetAllMocks();
     jest.clearAllMocks();
 
-    mockReadRepo = {
-      findById: jest.fn(),
-      findByHash: jest.fn(),
-      findBySource: jest.fn(),
-    } as jest.Mocked<IContentItemReadRepository>;
-
     mockWriteRepo = {
       save: jest.fn().mockResolvedValue(undefined),
     } as jest.Mocked<IContentItemWriteRepository>;
+
+    mockQueryBus = {
+      execute: jest.fn().mockResolvedValue(null), // Default: no duplicate found
+    } as unknown as jest.Mocked<QueryBus>;
 
     mockEventBus = {
       publish: jest.fn().mockResolvedValue(undefined),
@@ -69,12 +68,12 @@ describe('ContentCollectedEventHandler - Integration Tests', () => {
       providers: [
         ContentCollectedEventHandler,
         {
-          provide: 'IContentItemReadRepository',
-          useValue: mockReadRepo,
-        },
-        {
           provide: 'IContentItemWriteRepository',
           useValue: mockWriteRepo,
+        },
+        {
+          provide: QueryBus,
+          useValue: mockQueryBus,
         },
         {
           provide: 'IContentValidationService',
@@ -130,6 +129,7 @@ describe('ContentCollectedEventHandler - Integration Tests', () => {
       // Arrange
       const event = new ContentCollectedEvent(
         'test-source',
+        'test-job-id', // jobId
         'Bitcoin reaches new all-time high above $100,000. Ethereum also shows strong gains.',
         {
           title: 'Crypto Market Update',
@@ -142,12 +142,17 @@ describe('ContentCollectedEventHandler - Integration Tests', () => {
         new Date(),
       );
 
-      mockReadRepo.findByHash.mockResolvedValue(null); // Not a duplicate
+      mockQueryBus.execute.mockResolvedValue(null); // Not a duplicate
 
       // Act
       await handler.handle(event);
 
       // Assert
+      expect(mockQueryBus.execute).toHaveBeenCalledTimes(1);
+      expect(mockQueryBus.execute).toHaveBeenCalledWith(
+        expect.any(GetContentByHashQuery),
+      );
+
       expect(mockWriteRepo.save).toHaveBeenCalledTimes(1);
       const savedItem = mockWriteRepo.save.mock.calls[0][0];
 
@@ -169,6 +174,7 @@ describe('ContentCollectedEventHandler - Integration Tests', () => {
       // Arrange
       const event = new ContentCollectedEvent(
         'crypto-source',
+        'test-job-id', // jobId
         'Bitcoin (BTC) and Ethereum (ETH) lead the market. Solana and Cardano also perform well.',
         {
           title: 'Top Cryptocurrencies',
@@ -178,7 +184,7 @@ describe('ContentCollectedEventHandler - Integration Tests', () => {
         new Date(),
       );
 
-      mockReadRepo.findByHash.mockResolvedValue(null);
+      mockQueryBus.execute.mockResolvedValue(null);
 
       // Act
       await handler.handle(event);
@@ -196,6 +202,7 @@ describe('ContentCollectedEventHandler - Integration Tests', () => {
       // Arrange
       const event = new ContentCollectedEvent(
         'test-source',
+        'test-job-id', // jobId
         'This is a test article about cryptocurrency trends in 2024.',
         {
           title: 'Event Title', // This should take precedence
@@ -206,7 +213,7 @@ describe('ContentCollectedEventHandler - Integration Tests', () => {
         new Date(),
       );
 
-      mockReadRepo.findByHash.mockResolvedValue(null);
+      mockQueryBus.execute.mockResolvedValue(null);
 
       // Act
       await handler.handle(event);
@@ -228,13 +235,14 @@ describe('ContentCollectedEventHandler - Integration Tests', () => {
 
       const event = new ContentCollectedEvent(
         'test-source',
+        'test-job-id', // jobId
         rawContent,
         { title: 'Test' },
         'WEB',
         new Date(),
       );
 
-      mockReadRepo.findByHash.mockResolvedValue(null);
+      mockQueryBus.execute.mockResolvedValue(null);
 
       // Act
       await handler.handle(event);
@@ -248,19 +256,20 @@ describe('ContentCollectedEventHandler - Integration Tests', () => {
   });
 
   describe('Duplicate Detection', () => {
-    it('should not persist duplicate content', async () => {
+    it('should not persist duplicate content when query returns existing content', async () => {
       // Arrange
       const content = 'This is duplicate content about Bitcoin.';
       const event = new ContentCollectedEvent(
         'test-source',
+        'test-job-id', // jobId
         content,
         { title: 'Duplicate Article' },
         'WEB',
         new Date(),
       );
 
-      // Simulate existing content with same hash
-      mockReadRepo.findByHash.mockResolvedValue({
+      // Simulate existing content with same hash via query
+      mockQueryBus.execute.mockResolvedValue({
         contentId: 'existing-id',
         sourceId: 'test-source',
         contentHash: 'some-hash',
@@ -282,14 +291,16 @@ describe('ContentCollectedEventHandler - Integration Tests', () => {
       await handler.handle(event);
 
       // Assert
+      expect(mockQueryBus.execute).toHaveBeenCalledTimes(1);
       expect(mockWriteRepo.save).not.toHaveBeenCalled();
       expect(mockEventBus.publish).not.toHaveBeenCalled();
     });
 
-    it('should record duplicate hash when detected', async () => {
+    it('should record duplicate hash when detected via query', async () => {
       // Arrange
       const event = new ContentCollectedEvent(
         'test-source',
+        'test-job-id', // jobId
         'Duplicate content',
         { title: 'Test' },
         'WEB',
@@ -297,7 +308,7 @@ describe('ContentCollectedEventHandler - Integration Tests', () => {
       );
 
       // Simulate existing content with same hash - this will make it a duplicate
-      mockReadRepo.findByHash.mockResolvedValue({
+      mockQueryBus.execute.mockResolvedValue({
         contentId: 'existing-id',
         sourceId: 'test-source',
         contentHash: 'hash',
@@ -319,16 +330,11 @@ describe('ContentCollectedEventHandler - Integration Tests', () => {
       await handler.handle(event);
 
       // Assert
-      // When a duplicate is detected via findByHash (database query),
-      // the handler calls recordHash to track it in the service
+      expect(mockQueryBus.execute).toHaveBeenCalledTimes(1);
       expect(mockWriteRepo.save).not.toHaveBeenCalled();
       expect(mockEventBus.publish).not.toHaveBeenCalled();
 
       // The duplicate detection service records the hash
-      // Note: getDuplicateCount() returns duplicates detected by THIS service instance
-      // Since this is the first time this instance sees this hash (even though it exists
-      // in the database), the count is 0. The hash is recorded but not counted as a duplicate
-      // because it wasn't previously in the in-memory seenHashes set.
       expect(duplicateDetectionService.getUniqueHashCount()).toBe(1);
     });
 
@@ -336,6 +342,7 @@ describe('ContentCollectedEventHandler - Integration Tests', () => {
       // Arrange
       const event1 = new ContentCollectedEvent(
         'test-source',
+        'test-job-id', // jobId
         'Bitcoin reaches $100,000',
         { title: 'BTC News 1' },
         'WEB',
@@ -344,29 +351,32 @@ describe('ContentCollectedEventHandler - Integration Tests', () => {
 
       const event2 = new ContentCollectedEvent(
         'test-source',
+        'test-job-id', // jobId
         'Bitcoin reaches $100,001', // Slightly different
         { title: 'BTC News 2' },
         'WEB',
         new Date(),
       );
 
-      mockReadRepo.findByHash.mockResolvedValue(null);
+      mockQueryBus.execute.mockResolvedValue(null);
 
       // Act
       await handler.handle(event1);
       await handler.handle(event2);
 
       // Assert
+      expect(mockQueryBus.execute).toHaveBeenCalledTimes(2);
       expect(mockWriteRepo.save).toHaveBeenCalledTimes(2);
       expect(mockEventBus.publish).toHaveBeenCalledTimes(2);
     });
   });
 
   describe('Content Validation', () => {
-    it('should reject content that is too short', async () => {
+    it('should reject content that is too short and publish validation failed event', async () => {
       // Arrange
       const event = new ContentCollectedEvent(
         'test-source',
+        'test-job-id', // jobId
         'Short', // Less than minimum length
         { title: 'Too Short' },
         'WEB',
@@ -378,14 +388,28 @@ describe('ContentCollectedEventHandler - Integration Tests', () => {
 
       // Assert
       expect(mockWriteRepo.save).not.toHaveBeenCalled();
-      expect(mockEventBus.publish).not.toHaveBeenCalled();
+      expect(mockEventBus.publish).toHaveBeenCalledTimes(1);
+
+      const publishedEvent = mockEventBus.publish.mock.calls[0][0];
+      expect(publishedEvent).toBeInstanceOf(ContentValidationFailedEvent);
+      expect((publishedEvent as ContentValidationFailedEvent).jobId).toBe(
+        'test-job-id',
+      );
+      expect((publishedEvent as ContentValidationFailedEvent).sourceId).toBe(
+        'test-source',
+      );
+      expect(
+        (publishedEvent as ContentValidationFailedEvent).validationErrors
+          .length,
+      ).toBeGreaterThan(0);
     });
 
-    it('should reject content with invalid encoding', async () => {
+    it('should reject content with invalid encoding and publish validation failed event', async () => {
       // Arrange
       const invalidContent = 'Test\uFFFDcontent'; // Contains replacement character
       const event = new ContentCollectedEvent(
         'test-source',
+        'test-job-id', // jobId
         invalidContent,
         { title: 'Invalid Encoding' },
         'WEB',
@@ -397,16 +421,20 @@ describe('ContentCollectedEventHandler - Integration Tests', () => {
 
       // Assert
       expect(mockWriteRepo.save).not.toHaveBeenCalled();
-      expect(mockEventBus.publish).not.toHaveBeenCalled();
+      expect(mockEventBus.publish).toHaveBeenCalledTimes(1);
+
+      const publishedEvent = mockEventBus.publish.mock.calls[0][0];
+      expect(publishedEvent).toBeInstanceOf(ContentValidationFailedEvent);
     });
 
-    it('should reject content without required metadata', async () => {
+    it('should reject content without required metadata and publish validation failed event', async () => {
       // Arrange
       // Note: Even with empty metadata in the event, extractMetadata will extract
       // a title from the first line of content. To truly have no metadata,
       // we need content that won't produce a valid title (too long or empty)
       const event = new ContentCollectedEvent(
         'test-source',
+        'test-job-id', // jobId
         '', // Empty content - will fail minimum length validation
         {}, // No title or sourceUrl
         'WEB',
@@ -419,13 +447,17 @@ describe('ContentCollectedEventHandler - Integration Tests', () => {
       // Assert
       // Content is rejected due to minimum length, not metadata
       expect(mockWriteRepo.save).not.toHaveBeenCalled();
-      expect(mockEventBus.publish).not.toHaveBeenCalled();
+      expect(mockEventBus.publish).toHaveBeenCalledTimes(1);
+
+      const publishedEvent = mockEventBus.publish.mock.calls[0][0];
+      expect(publishedEvent).toBeInstanceOf(ContentValidationFailedEvent);
     });
 
     it('should accept content with minimum valid metadata', async () => {
       // Arrange
       const event = new ContentCollectedEvent(
         'test-source',
+        'test-job-id', // jobId
         'Valid content with minimum metadata requirements met.',
         {
           title: 'Valid Title', // Has title
@@ -434,7 +466,7 @@ describe('ContentCollectedEventHandler - Integration Tests', () => {
         new Date(),
       );
 
-      mockReadRepo.findByHash.mockResolvedValue(null);
+      mockQueryBus.execute.mockResolvedValue(null);
 
       // Act
       await handler.handle(event);
@@ -442,6 +474,9 @@ describe('ContentCollectedEventHandler - Integration Tests', () => {
       // Assert
       expect(mockWriteRepo.save).toHaveBeenCalledTimes(1);
       expect(mockEventBus.publish).toHaveBeenCalledTimes(1);
+
+      const publishedEvent = mockEventBus.publish.mock.calls[0][0];
+      expect(publishedEvent).toBeInstanceOf(ContentIngestedEvent);
     });
   });
 
@@ -450,6 +485,7 @@ describe('ContentCollectedEventHandler - Integration Tests', () => {
       // Arrange
       const event = new ContentCollectedEvent(
         'test-source',
+        'test-job-id', // jobId
         'Valid content',
         { title: 'Test' },
         'WEB',
@@ -472,6 +508,7 @@ describe('ContentCollectedEventHandler - Integration Tests', () => {
       // Arrange
       const event = new ContentCollectedEvent(
         'test-source',
+        'test-job-id', // jobId
         'Valid content for validation test',
         { title: 'Test' },
         'WEB',
@@ -496,13 +533,14 @@ describe('ContentCollectedEventHandler - Integration Tests', () => {
       // Arrange
       const event = new ContentCollectedEvent(
         'test-source',
+        'test-job-id', // jobId
         'Valid content that will fail to persist',
         { title: 'Test' },
         'WEB',
         new Date(),
       );
 
-      mockReadRepo.findByHash.mockResolvedValue(null);
+      mockQueryBus.execute.mockResolvedValue(null);
       mockWriteRepo.save.mockRejectedValue(new Error('Database error'));
 
       // Act
@@ -517,13 +555,14 @@ describe('ContentCollectedEventHandler - Integration Tests', () => {
       // Arrange
       const event = new ContentCollectedEvent(
         'test-source',
+        'test-job-id', // jobId
         'Valid content with event publishing error',
         { title: 'Test' },
         'WEB',
         new Date(),
       );
 
-      mockReadRepo.findByHash.mockResolvedValue(null);
+      mockQueryBus.execute.mockResolvedValue(null);
       mockEventBus.publish.mockRejectedValue(new Error('Event bus error'));
 
       // Act
@@ -543,13 +582,14 @@ describe('ContentCollectedEventHandler - Integration Tests', () => {
       for (const sourceType of sourceTypes) {
         const event = new ContentCollectedEvent(
           `${sourceType}-source`,
+          'test-job-id', // jobId
           `Content from ${sourceType} source with sufficient length for validation`,
           { title: `${sourceType} Content` },
           sourceType,
           new Date(),
         );
 
-        mockReadRepo.findByHash.mockResolvedValue(null);
+        mockQueryBus.execute.mockResolvedValue(null);
 
         // Act
         await handler.handle(event);
@@ -572,6 +612,7 @@ describe('ContentCollectedEventHandler - Integration Tests', () => {
       const collectedAt = new Date('2024-01-15T10:00:00Z');
       const event = new ContentCollectedEvent(
         'test-source',
+        'test-job-id', // jobId
         'Bitcoin and Ethereum show strong performance in the market.',
         {
           title: 'Crypto Market',
@@ -581,7 +622,7 @@ describe('ContentCollectedEventHandler - Integration Tests', () => {
         collectedAt,
       );
 
-      mockReadRepo.findByHash.mockResolvedValue(null);
+      mockQueryBus.execute.mockResolvedValue(null);
 
       // Act
       await handler.handle(event);
@@ -600,13 +641,14 @@ describe('ContentCollectedEventHandler - Integration Tests', () => {
       // Arrange
       const event = new ContentCollectedEvent(
         'test-source',
+        'test-job-id', // jobId
         'Bitcoin (BTC), Ethereum (ETH), and Solana (SOL) are trending.',
         { title: 'Trending Crypto' },
         'WEB',
         new Date(),
       );
 
-      mockReadRepo.findByHash.mockResolvedValue(null);
+      mockQueryBus.execute.mockResolvedValue(null);
 
       // Act
       await handler.handle(event);

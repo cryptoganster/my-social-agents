@@ -1,15 +1,15 @@
 /**
- * ScheduleIngestionJobCommand
+ * ScheduleJobCommand
  *
- * Command to schedule an ingestion job for a specific source.
- * Represents the intent to create and schedule a content collection task.
+ * Command to schedule a new ingestion job for a source.
+ * Represents the intent to create and schedule a job for execution.
  *
- * Requirements: 4.1, 4.2
+ * Requirements: 1.1, 1.2
+ * Design: Commands - Job Commands
  */
-export class ScheduleIngestionJobCommand {
+export class ScheduleJobCommand {
   constructor(
     public readonly sourceId: string,
-    public readonly scheduledAt?: Date, // Optional - defaults to immediate execution
-    public readonly jobId?: string, // Optional - auto-generated if not provided
+    public readonly scheduledAt?: Date,
   ) {}
 }

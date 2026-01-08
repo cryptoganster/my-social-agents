@@ -3,13 +3,19 @@ import {
   Post,
   Get,
   Body,
+  Param,
+  Query,
   HttpException,
   HttpStatus,
   Logger,
   Inject,
 } from '@nestjs/common';
-import { CommandBus } from '@nestjs/cqrs';
+import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { ConfigureSourceCommand } from '@/ingestion/source/app/commands/configure-source/command';
+import {
+  GetJobHistoryQuery,
+  GetJobHistoryResult,
+} from '@/ingestion/job/app/queries/get-job-history/query';
 import { SourceTypeEnum } from '@/ingestion/source/domain/value-objects/source-type';
 import { ISourceConfigurationReadRepository } from '@/ingestion/source/domain/interfaces/repositories/source-configuration-read';
 import { SourceConfigurationReadModel } from '@/ingestion/source/domain/read-models/source-configuration';
@@ -21,13 +27,14 @@ import { ConfigureSourceDto } from '../dto/configure-source.dto';
  * Handles HTTP requests for:
  * - Configuring sources (POST /sources)
  * - Listing active sources (GET /sources)
+ * - Retrieving job history for a source (GET /sources/:id/jobs)
  *
  * Follows Clean Architecture:
- * - Depends only on Application layer (CommandBus)
+ * - Depends only on Application layer (CommandBus, QueryBus)
  * - Uses domain interface for read operations (not concrete implementation)
  * - Maps domain errors to HTTP status codes
  *
- * Requirements: All
+ * Requirements: 6.4
  */
 @Controller('sources')
 export class SourcesController {
@@ -35,6 +42,7 @@ export class SourcesController {
 
   constructor(
     private readonly commandBus: CommandBus,
+    private readonly queryBus: QueryBus,
     @Inject('ISourceConfigurationReadRepository')
     private readonly sourceReadRepo: ISourceConfigurationReadRepository,
   ) {}
@@ -121,6 +129,43 @@ export class SourcesController {
 
       throw new HttpException(
         'Failed to list sources',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * GET /sources/:id/jobs
+   * Retrieve job execution history for a specific source
+   * Query params: limit (optional)
+   */
+  @Get(':id/jobs')
+  async getJobHistory(
+    @Param('id') sourceId: string,
+    @Query('limit') limit?: string,
+  ): Promise<GetJobHistoryResult> {
+    try {
+      this.logger.debug(`Retrieving job history for source: ${sourceId}`);
+
+      const query = new GetJobHistoryQuery(
+        sourceId,
+        limit ? parseInt(limit, 10) : undefined,
+      );
+
+      const result = await this.queryBus.execute<
+        GetJobHistoryQuery,
+        GetJobHistoryResult
+      >(query);
+
+      return result;
+    } catch (error) {
+      this.logger.error(
+        `Failed to get job history: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        error instanceof Error ? error.stack : undefined,
+      );
+
+      throw new HttpException(
+        'Failed to retrieve job history',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }

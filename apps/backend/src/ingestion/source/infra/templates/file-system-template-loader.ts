@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { promises as fs } from 'fs';
+import { promises as fs, accessSync } from 'fs';
 import { join } from 'path';
 import { ITemplateLoader } from '../../domain/interfaces/templates/template-loader';
 import { TemplateMetadata } from '../../domain/value-objects/template-metadata';
@@ -45,7 +45,7 @@ export class FileSystemTemplateLoader implements ITemplateLoader {
           templates.push(metadata);
         }
       }
-    } catch (error) {
+    } catch {
       // Directory might not exist or be readable, continue
     }
 
@@ -61,7 +61,7 @@ export class FileSystemTemplateLoader implements ITemplateLoader {
           templates.push(metadata);
         }
       }
-    } catch (error) {
+    } catch {
       // Directory might not exist or be readable, continue
     }
 
@@ -78,7 +78,7 @@ export class FileSystemTemplateLoader implements ITemplateLoader {
       const rssPath = join(this.rssSourcesDir, `${name}.json`);
       const content = await fs.readFile(rssPath, 'utf-8');
       return this.parseTemplate(content);
-    } catch (error) {
+    } catch {
       // File not found in rss-sources, try templates directory
     }
 
@@ -87,7 +87,7 @@ export class FileSystemTemplateLoader implements ITemplateLoader {
       const templatePath = join(this.templatesDir, `${name}.json`);
       const content = await fs.readFile(templatePath, 'utf-8');
       return this.parseTemplate(content);
-    } catch (error) {
+    } catch {
       // File not found in either directory
       return null;
     }
@@ -102,9 +102,7 @@ export class FileSystemTemplateLoader implements ITemplateLoader {
     const rssPath = join(this.rssSourcesDir, `${name}.json`);
     try {
       // Synchronous check if file exists
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const fsSync = require('fs') as typeof import('fs');
-      fsSync.accessSync(rssPath);
+      accessSync(rssPath);
       return rssPath;
     } catch {
       // Not in rss-sources, return templates path

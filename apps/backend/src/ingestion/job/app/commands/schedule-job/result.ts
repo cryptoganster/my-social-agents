@@ -1,14 +1,13 @@
 /**
- * ScheduleIngestionJobResult
+ * ScheduleJobResult
  *
  * Result of scheduling an ingestion job.
- * Contains the job ID and scheduled execution time.
+ * Contains the job ID and scheduled time.
  *
- * Requirements: 4.1, 4.2
+ * Requirements: 1.1, 1.2
+ * Design: Commands - Job Commands
  */
-export interface ScheduleIngestionJobResult {
+export interface ScheduleJobResult {
   jobId: string;
-  sourceId: string;
   scheduledAt: Date;
-  isScheduled: boolean;
 }

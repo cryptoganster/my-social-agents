@@ -1,15 +1,8 @@
 import { CommandHandler, ICommandHandler, EventBus } from '@nestjs/cqrs';
 import { Logger, Inject } from '@nestjs/common';
 import { ISourceConfigurationFactory } from '@/ingestion/source/domain/interfaces/factories/source-configuration-factory';
-import { SourceAdapter } from '@/ingestion/source/domain/interfaces/source-adapter';
-import { SourceType } from '@/ingestion/source/domain/value-objects/source-type';
+import { AdapterRegistry } from '@/ingestion/source/domain/services/adapter-registry';
 import { ContentCollectedEvent } from '@/ingestion/content/domain/events';
-import { WebScraperAdapter } from '@/ingestion/source/infra/adapters/web-scraper';
-import { RssFeedAdapter } from '@/ingestion/source/infra/adapters/rss-feed';
-import { SocialMediaAdapter } from '@/ingestion/source/infra/adapters/social-media';
-import { PdfAdapter } from '@/ingestion/source/infra/adapters/pdf';
-import { OcrAdapter } from '@/ingestion/source/infra/adapters/ocr';
-import { WikipediaAdapter } from '@/ingestion/source/infra/adapters/wikipedia';
 import { IngestContentCommand } from './command';
 import { IngestContentResult } from './result';
 
@@ -25,7 +18,7 @@ import { IngestContentResult } from './result';
  * The actual processing (validation, normalization, deduplication, persistence)
  * is handled by ContentCollectedEventHandler, ensuring proper separation of concerns.
  *
- * Requirements: 1.1-1.6
+ * Requirements: 1.1-1.6, 10.1, 10.2, 10.3
  */
 @CommandHandler(IngestContentCommand)
 export class IngestContentCommandHandler implements ICommandHandler<
@@ -37,36 +30,21 @@ export class IngestContentCommandHandler implements ICommandHandler<
   constructor(
     @Inject('ISourceConfigurationFactory')
     private readonly sourceConfigFactory: ISourceConfigurationFactory,
-    private readonly webScraperAdapter: WebScraperAdapter,
-    private readonly rssFeedAdapter: RssFeedAdapter,
-    private readonly socialMediaAdapter: SocialMediaAdapter,
-    private readonly pdfAdapter: PdfAdapter,
-    private readonly ocrAdapter: OcrAdapter,
-    private readonly wikipediaAdapter: WikipediaAdapter,
+    @Inject('AdapterRegistry')
+    private readonly adapterRegistry: AdapterRegistry,
     private readonly eventBus: EventBus,
   ) {
-    // Create adapters array from individual injections
-    this.adapters = [
-      this.webScraperAdapter,
-      this.rssFeedAdapter,
-      this.socialMediaAdapter,
-      this.pdfAdapter,
-      this.ocrAdapter,
-      this.wikipediaAdapter,
-    ];
-
     this.logger.log('IngestContentCommandHandler initialized');
     this.logger.log(
-      `Initialized with ${this.adapters.length} source adapter(s)`,
+      `Initialized with AdapterRegistry containing ${this.adapterRegistry.getRegisteredTypes().length} adapter(s)`,
     );
 
-    // Log each adapter
-    this.adapters.forEach((adapter, index) => {
-      this.logger.log(`Adapter ${index + 1}: ${adapter.constructor.name}`);
+    // Log registered adapters
+    const registeredTypes = this.adapterRegistry.getRegisteredTypes();
+    registeredTypes.forEach((type, index) => {
+      this.logger.log(`Adapter ${index + 1}: ${type}`);
     });
   }
-
-  private readonly adapters: SourceAdapter[];
 
   /**
    * Executes the IngestContentCommand
@@ -100,13 +78,11 @@ export class IngestContentCommandHandler implements ICommandHandler<
         );
       }
 
-      // 2. Find appropriate adapter
-      const adapter = this.findAdapter(sourceConfig.sourceType);
-      if (!adapter) {
-        throw new Error(
-          `No adapter found for source type: ${sourceConfig.sourceType.getValue()}`,
-        );
-      }
+      // 2. Get adapter from registry
+      this.logger.log(
+        `Getting adapter for source type: ${sourceConfig.sourceType.getValue()}`,
+      );
+      const adapter = this.adapterRegistry.getAdapter(sourceConfig.sourceType);
 
       // 3. Collect content from source
       this.logger.log(
@@ -123,6 +99,7 @@ export class IngestContentCommandHandler implements ICommandHandler<
         try {
           const event = new ContentCollectedEvent(
             command.sourceId,
+            '', // jobId - will be set by ExecuteJobCommand in future refactoring
             rawContent.content,
             rawContent.metadata || {},
             sourceConfig.sourceType.getValue(),
@@ -155,38 +132,5 @@ export class IngestContentCommandHandler implements ICommandHandler<
       );
       throw error;
     }
-  }
-
-  /**
-   * Finds the appropriate adapter for a source type
-   */
-  private findAdapter(sourceType: SourceType): SourceAdapter | undefined {
-    this.logger.debug(
-      `Finding adapter for source type: ${sourceType.getValue()}`,
-    );
-    this.logger.debug(`Available adapters: ${this.adapters?.length ?? 0}`);
-
-    if (
-      this.adapters === null ||
-      this.adapters === undefined ||
-      !Array.isArray(this.adapters)
-    ) {
-      this.logger.error(`Adapters is not an array: ${typeof this.adapters}`);
-      throw new Error('Source adapters not properly initialized');
-    }
-
-    const adapter = this.adapters.find((adapter) =>
-      adapter.supports(sourceType),
-    );
-
-    if (adapter) {
-      this.logger.debug(`Found adapter: ${adapter.constructor.name}`);
-    } else {
-      this.logger.warn(
-        `No adapter found for source type: ${sourceType.getValue()}`,
-      );
-    }
-
-    return adapter;
   }
 }

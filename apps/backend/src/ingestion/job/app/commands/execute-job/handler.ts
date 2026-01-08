@@ -1,16 +1,26 @@
-import { CommandHandler, ICommandHandler, CommandBus } from '@nestjs/cqrs';
+import {
+  CommandHandler,
+  ICommandHandler,
+  CommandBus,
+  EventBus,
+} from '@nestjs/cqrs';
 import { Logger, Inject } from '@nestjs/common';
 import { IIngestionJobFactory } from '@/ingestion/job/domain/interfaces/factories/ingestion-job-factory';
 import { IIngestionJobWriteRepository } from '@/ingestion/job/domain/interfaces/repositories/ingestion-job-write';
 import { JobMetrics } from '@/ingestion/job/domain/value-objects';
 import { IngestContentCommand } from '@/ingestion/content/app/commands/ingest-content/command';
 import { IngestContentResult } from '@/ingestion/content/app/commands/ingest-content/result';
-import { IRetryService } from '@/ingestion/shared/interfaces/external/retry';
-import { ICircuitBreaker } from '@/ingestion/shared/interfaces/external/circuit-breaker';
+import { IRetryService } from '@/shared/interfaces/retry';
+import { ICircuitBreaker } from '@/shared/interfaces/circuit-breaker';
 import {
   ErrorRecord,
   ErrorType,
 } from '@/ingestion/shared/entities/error-record';
+import {
+  JobStartedEvent,
+  JobCompletedEvent,
+  JobFailedEvent,
+} from '@/ingestion/job/domain/events';
 import { ExecuteIngestionJobCommand } from './command';
 import { ExecuteIngestionJobResult } from './result';
 
@@ -41,6 +51,7 @@ export class ExecuteIngestionJobCommandHandler implements ICommandHandler<
     @Inject('IIngestionJobWriteRepository')
     private readonly jobWriteRepository: IIngestionJobWriteRepository,
     private readonly commandBus: CommandBus,
+    private readonly eventBus: EventBus,
     @Inject('IRetryService')
     private readonly retryService: IRetryService,
     @Inject('ICircuitBreaker')
@@ -71,6 +82,15 @@ export class ExecuteIngestionJobCommandHandler implements ICommandHandler<
       this.logger.log(`Starting job execution: ${command.jobId}`);
       job.start();
       await this.jobWriteRepository.save(job);
+
+      // Publish JobStartedEvent
+      const jobStartedEvent = new JobStartedEvent(
+        job.id,
+        job.sourceConfig.sourceId,
+        new Date(),
+      );
+      await this.eventBus.publish(jobStartedEvent);
+      this.logger.debug(`JobStartedEvent published for job: ${command.jobId}`);
 
       // 3. Execute content ingestion with retry and circuit breaker
       let ingestResult: IngestContentResult;
@@ -121,6 +141,19 @@ export class ExecuteIngestionJobCommandHandler implements ICommandHandler<
         job.fail(errorRecord);
         await this.jobWriteRepository.save(job);
 
+        // Publish JobFailedEvent
+        const jobFailedEvent = new JobFailedEvent(
+          job.id,
+          job.sourceConfig.sourceId,
+          {
+            message: errorRecord.message,
+            type: errorRecord.errorType,
+            stack: errorRecord.stackTrace,
+          },
+          new Date(),
+        );
+        await this.eventBus.publish(jobFailedEvent);
+
         this.logger.error(
           `Job ${command.jobId} failed: ${errorRecord.message}`,
           errorRecord.stackTrace,
@@ -164,6 +197,21 @@ export class ExecuteIngestionJobCommandHandler implements ICommandHandler<
       // 6. Persist updated job
       await this.jobWriteRepository.save(job);
 
+      // Publish JobCompletedEvent
+      const jobCompletedEvent = new JobCompletedEvent(
+        job.id,
+        job.sourceConfig.sourceId,
+        {
+          itemsCollected: metrics.itemsCollected,
+          itemsPersisted: ingestResult.itemsPersisted,
+          duplicatesDetected: metrics.duplicatesDetected,
+          validationErrors: ingestResult.validationErrors,
+          duration: metrics.durationMs,
+        },
+        new Date(),
+      );
+      await this.eventBus.publish(jobCompletedEvent);
+
       this.logger.log(
         `Job ${command.jobId} completed successfully: ` +
           `${metrics.itemsCollected} items, ${metrics.duplicatesDetected} duplicates, ` +
@@ -198,6 +246,19 @@ export class ExecuteIngestionJobCommandHandler implements ICommandHandler<
           });
           job.fail(errorRecord);
           await this.jobWriteRepository.save(job);
+
+          // Publish JobFailedEvent for fatal errors
+          const jobFailedEvent = new JobFailedEvent(
+            job.id,
+            job.sourceConfig.sourceId,
+            {
+              message: errorRecord.message,
+              type: errorRecord.errorType,
+              stack: errorRecord.stackTrace,
+            },
+            new Date(),
+          );
+          await this.eventBus.publish(jobFailedEvent);
         }
       } catch (saveError) {
         this.logger.error(

@@ -38,6 +38,8 @@ export class TypeOrmIngestionJobFactory implements IIngestionJobFactory {
     if (data === null) return null;
 
     // Reconstitute source configuration from stored data
+    // Note: Health metrics are not included in job read model's sourceConfig
+    // They are tracked separately in the source configuration aggregate
     const sourceConfig = SourceConfiguration.reconstitute({
       sourceId: data.sourceConfig.sourceId,
       sourceType: SourceType.fromString(data.sourceConfig.sourceType),
@@ -47,6 +49,11 @@ export class TypeOrmIngestionJobFactory implements IIngestionJobFactory {
       isActive: data.sourceConfig.isActive,
       createdAt: data.sourceConfig.createdAt,
       updatedAt: data.sourceConfig.updatedAt,
+      consecutiveFailures: 0, // Default values - not stored in job read model
+      successRate: 100,
+      totalJobs: 0,
+      lastSuccessAt: null,
+      lastFailureAt: null,
       version: 0, // Source config version is separate from job version
     });
 

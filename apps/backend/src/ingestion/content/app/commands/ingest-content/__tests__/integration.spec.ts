@@ -13,12 +13,7 @@ import {
   SourceTypeEnum,
 } from '@/ingestion/source/domain/value-objects/source-type';
 import { ISourceConfigurationFactory } from '@/ingestion/source/domain/interfaces/factories/source-configuration-factory';
-import { WebScraperAdapter } from '@/ingestion/source/infra/adapters/web-scraper';
-import { RssFeedAdapter } from '@/ingestion/source/infra/adapters/rss-feed';
-import { SocialMediaAdapter } from '@/ingestion/source/infra/adapters/social-media';
-import { PdfAdapter } from '@/ingestion/source/infra/adapters/pdf';
-import { OcrAdapter } from '@/ingestion/source/infra/adapters/ocr';
-import { WikipediaAdapter } from '@/ingestion/source/infra/adapters/wikipedia';
+import { AdapterRegistry } from '@/ingestion/source/domain/services/adapter-registry';
 
 /**
  * Integration Test: IngestContentCommandHandler
@@ -59,30 +54,19 @@ describe('IngestContentCommandHandler - Integration Tests', () => {
       providers: [
         {
           provide: IngestContentCommandHandler,
-          // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+
           useFactory: (
             factory: ISourceConfigurationFactory,
+            adapterRegistry: AdapterRegistry,
             eventBus: EventBus,
           ) => {
             return new IngestContentCommandHandler(
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
               factory,
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-              mockAdapter as unknown as WebScraperAdapter,
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-              mockAdapter as unknown as RssFeedAdapter,
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-              mockAdapter as unknown as SocialMediaAdapter,
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-              mockAdapter as unknown as PdfAdapter,
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-              mockAdapter as unknown as OcrAdapter,
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-              mockAdapter as unknown as WikipediaAdapter,
+              adapterRegistry,
               eventBus,
             );
           },
-          inject: ['ISourceConfigurationFactory', EventBus],
+          inject: ['ISourceConfigurationFactory', 'AdapterRegistry', EventBus],
         },
         {
           provide: 'ISourceConfigurationFactory',

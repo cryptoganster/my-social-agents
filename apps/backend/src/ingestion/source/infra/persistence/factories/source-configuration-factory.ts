@@ -41,6 +41,11 @@ export class TypeOrmSourceConfigurationFactory implements ISourceConfigurationFa
       isActive: data.isActive,
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
+      consecutiveFailures: data.consecutiveFailures,
+      successRate: data.successRate,
+      totalJobs: data.totalJobs || 0, // Default to 0 for backward compatibility
+      lastSuccessAt: data.lastSuccessAt,
+      lastFailureAt: data.lastFailureAt,
       version: data.version,
     });
   }

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 import { INestApplicationContext } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
 import { scheduleFlow } from '../../flows/schedule-flow';

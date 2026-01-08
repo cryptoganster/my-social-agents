@@ -26,13 +26,22 @@ describe('Ingestion API Integration Tests', () => {
         execute: jest.fn(),
       } as unknown as jest.Mocked<CommandBus>;
 
+      const mockQueryBus = {
+        execute: jest.fn(),
+      } as any;
+
       mockJobReadRepo = {
         findById: jest.fn(),
         findByStatus: jest.fn(),
         findBySourceId: jest.fn(),
+        countByStatus: jest.fn(),
       };
 
-      controller = new IngestionJobsController(mockCommandBus, mockJobReadRepo);
+      controller = new IngestionJobsController(
+        mockCommandBus,
+        mockQueryBus,
+        mockJobReadRepo,
+      );
     });
 
     describe('POST /ingestion/jobs - scheduleJob', () => {
@@ -169,13 +178,23 @@ describe('Ingestion API Integration Tests', () => {
         execute: jest.fn(),
       } as unknown as jest.Mocked<CommandBus>;
 
+      const mockQueryBus = {
+        execute: jest.fn(),
+      } as any;
+
       mockSourceReadRepo = {
         findById: jest.fn(),
         findActive: jest.fn(),
         findByType: jest.fn(),
+        findByIdWithHealth: jest.fn(),
+        findUnhealthy: jest.fn(),
       };
 
-      controller = new SourcesController(mockCommandBus, mockSourceReadRepo);
+      controller = new SourcesController(
+        mockCommandBus,
+        mockQueryBus,
+        mockSourceReadRepo,
+      );
     });
 
     describe('POST /sources - configureSource', () => {
@@ -253,6 +272,11 @@ describe('Ingestion API Integration Tests', () => {
             createdAt: new Date(),
             updatedAt: new Date(),
             version: 0,
+            consecutiveFailures: 0,
+            successRate: 100.0,
+            totalJobs: 0,
+            lastSuccessAt: null,
+            lastFailureAt: null,
           },
           {
             sourceId: 'source-2',
@@ -263,6 +287,11 @@ describe('Ingestion API Integration Tests', () => {
             createdAt: new Date(),
             updatedAt: new Date(),
             version: 0,
+            consecutiveFailures: 0,
+            successRate: 100.0,
+            totalJobs: 0,
+            lastSuccessAt: null,
+            lastFailureAt: null,
           },
         ];
 
@@ -296,16 +325,27 @@ describe('Ingestion API Integration Tests', () => {
         execute: jest.fn(),
       } as unknown as jest.Mocked<CommandBus>;
 
-      jobsController = new IngestionJobsController(mockCommandBus, {
-        findById: jest.fn(),
-        findByStatus: jest.fn(),
-        findBySourceId: jest.fn(),
-      });
+      const mockQueryBus = {
+        execute: jest.fn(),
+      } as any;
 
-      sourcesController = new SourcesController(mockCommandBus, {
+      jobsController = new IngestionJobsController(
+        mockCommandBus,
+        mockQueryBus,
+        {
+          findById: jest.fn(),
+          findByStatus: jest.fn(),
+          findBySourceId: jest.fn(),
+          countByStatus: jest.fn(),
+        },
+      );
+
+      sourcesController = new SourcesController(mockCommandBus, mockQueryBus, {
         findById: jest.fn(),
         findActive: jest.fn(),
         findByType: jest.fn(),
+        findByIdWithHealth: jest.fn(),
+        findUnhealthy: jest.fn(),
       });
     });
 

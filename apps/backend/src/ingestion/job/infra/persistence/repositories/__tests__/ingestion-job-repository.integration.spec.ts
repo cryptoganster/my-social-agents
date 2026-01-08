@@ -16,11 +16,6 @@ import { TypeOrmIngestionJobReadRepository } from '../ingestion-job-read';
 import { TypeOrmIngestionJobFactory } from '../../factories/ingestion-job-factory';
 import { IngestionJobEntity } from '../../entities/ingestion-job';
 
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-
 /**
  * IngestionJob Repository Integration Tests
  *

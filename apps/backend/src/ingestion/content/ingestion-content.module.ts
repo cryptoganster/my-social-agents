@@ -5,6 +5,9 @@ import { IngestionSharedModule } from '@/ingestion/shared/ingestion-shared.modul
 import { IngestionSourceModule } from '@/ingestion/source/ingestion-source.module';
 import { IngestContentCommandHandler } from './app/commands/ingest-content/handler';
 import { ContentCollectedEventHandler } from './app/events/content-collected/handler';
+import { ContentIngestedEventHandler } from './app/events/content-ingested/handler';
+import { ContentValidationFailedEventHandler } from './app/events/content-validation-failed/handler';
+import { GetContentByHashQueryHandler } from './app/queries/get-content-by-hash/handler';
 import { ContentValidationService } from './domain/services/content-validation';
 import { ContentNormalizationService } from './domain/services/content-normalization';
 import { DuplicateDetectionService } from './domain/services/duplicate-detection';
@@ -61,6 +64,11 @@ import { TypeOrmContentItemFactory } from './infra/persistence/factories/content
 
     // Event Handlers
     ContentCollectedEventHandler,
+    ContentIngestedEventHandler,
+    ContentValidationFailedEventHandler,
+
+    // Query Handlers
+    GetContentByHashQueryHandler,
 
     // Domain Services with Interface Tokens
     {
@@ -100,6 +108,11 @@ import { TypeOrmContentItemFactory } from './infra/persistence/factories/content
 
     // Export event handlers for use in other modules
     ContentCollectedEventHandler,
+    ContentIngestedEventHandler,
+    ContentValidationFailedEventHandler,
+
+    // Export query handlers for use in other modules
+    GetContentByHashQueryHandler,
 
     // Export domain services for use in other bounded contexts
     'IContentValidationService',

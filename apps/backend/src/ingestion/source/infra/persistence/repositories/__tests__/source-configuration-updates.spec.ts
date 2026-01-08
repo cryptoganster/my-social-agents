@@ -9,6 +9,7 @@ import { TypeOrmSourceConfigurationWriteRepository } from '../source-configurati
 import { TypeOrmSourceConfigurationReadRepository } from '../source-configuration-read';
 import { TypeOrmSourceConfigurationFactory } from '../../factories/source-configuration-factory';
 import { SourceConfigurationEntity } from '../../entities/source-configuration';
+import { IngestionJobEntity } from '@/ingestion/job/infra/persistence/entities/ingestion-job';
 
 /**
  * Property-Based Tests for SourceConfiguration Updates
@@ -36,9 +37,17 @@ describe('SourceConfiguration Updates Properties', () => {
       createQueryBuilder: jest.fn(),
     } as unknown as jest.Mocked<Repository<SourceConfigurationEntity>>;
 
+    // Create mock job repository
+    const mockJobRepository = {
+      find: jest.fn().mockResolvedValue([]),
+    } as unknown as jest.Mocked<Repository<IngestionJobEntity>>;
+
     // Create repositories and factory
     writeRepo = new TypeOrmSourceConfigurationWriteRepository(mockRepository);
-    readRepo = new TypeOrmSourceConfigurationReadRepository(mockRepository);
+    readRepo = new TypeOrmSourceConfigurationReadRepository(
+      mockRepository,
+      mockJobRepository,
+    );
     factory = new TypeOrmSourceConfigurationFactory(readRepo);
   });
 
@@ -101,6 +110,11 @@ describe('SourceConfiguration Updates Properties', () => {
             createdAt: new Date(),
             updatedAt: new Date(),
             version: 0,
+            consecutiveFailures: 0,
+            successRate: 100.0,
+            totalJobs: 0,
+            lastSuccessAt: null,
+            lastFailureAt: null,
           };
           mockRepository.findOne.mockResolvedValue(originalEntity);
 
@@ -141,6 +155,11 @@ describe('SourceConfiguration Updates Properties', () => {
             createdAt: originalEntity.createdAt,
             updatedAt: new Date(),
             version: 1, // Version incremented
+            consecutiveFailures: 0,
+            successRate: 100.0,
+            totalJobs: 0,
+            lastSuccessAt: null,
+            lastFailureAt: null,
           };
           mockRepository.findOne.mockResolvedValue(updatedEntity);
 
@@ -215,6 +234,11 @@ describe('SourceConfiguration Updates Properties', () => {
             createdAt: new Date(),
             updatedAt: new Date(),
             version: 0,
+            consecutiveFailures: 0,
+            successRate: 100.0,
+            totalJobs: 0,
+            lastSuccessAt: null,
+            lastFailureAt: null,
           };
           mockRepository.findOne.mockResolvedValue(entity);
 
@@ -312,6 +336,11 @@ describe('SourceConfiguration Updates Properties', () => {
               createdAt: new Date(),
               updatedAt: new Date(),
               version: currentVersion,
+              consecutiveFailures: 0,
+              successRate: 100.0,
+              totalJobs: 0,
+              lastSuccessAt: null,
+              lastFailureAt: null,
             };
             mockRepository.findOne.mockResolvedValue(entity);
 
@@ -338,6 +367,11 @@ describe('SourceConfiguration Updates Properties', () => {
             createdAt: new Date(),
             updatedAt: new Date(),
             version: currentVersion,
+            consecutiveFailures: 0,
+            successRate: 100.0,
+            totalJobs: 0,
+            lastSuccessAt: null,
+            lastFailureAt: null,
           };
           mockRepository.findOne.mockResolvedValue(finalEntity);
 

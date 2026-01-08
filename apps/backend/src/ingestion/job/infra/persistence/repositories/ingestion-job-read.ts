@@ -25,16 +25,46 @@ export class TypeOrmIngestionJobReadRepository implements IIngestionJobReadRepos
     return entity ? this.toReadModel(entity) : null;
   }
 
-  async findByStatus(status: string): Promise<IngestionJobReadModel[]> {
-    const entities = await this.repository.find({ where: { status } });
+  async findByStatus(
+    status: string,
+    limit?: number,
+    offset?: number,
+  ): Promise<IngestionJobReadModel[]> {
+    const queryBuilder = this.repository
+      .createQueryBuilder('job')
+      .where('job.status = :status', { status })
+      .orderBy('job.scheduledAt', 'DESC');
+
+    if (limit !== undefined) {
+      queryBuilder.take(limit);
+    }
+
+    if (offset !== undefined) {
+      queryBuilder.skip(offset);
+    }
+
+    const entities = await queryBuilder.getMany();
     return entities.map((e) => this.toReadModel(e));
   }
 
-  async findBySourceId(sourceId: string): Promise<IngestionJobReadModel[]> {
-    const entities = await this.repository.find({
-      where: { sourceId },
-      order: { scheduledAt: 'DESC' },
-    });
+  async countByStatus(status: string): Promise<number> {
+    return await this.repository.count({ where: { status } });
+  }
+
+  async findBySourceId(
+    sourceId: string,
+    limit?: number,
+  ): Promise<IngestionJobReadModel[]> {
+    const queryBuilder = this.repository
+      .createQueryBuilder('job')
+      .where('job.sourceId = :sourceId', { sourceId })
+      .orderBy('job.executedAt', 'DESC');
+
+    if (limit !== undefined) {
+      queryBuilder.take(limit);
+    }
+
+    const entities = await queryBuilder.getMany();
     return entities.map((e) => this.toReadModel(e));
   }
 

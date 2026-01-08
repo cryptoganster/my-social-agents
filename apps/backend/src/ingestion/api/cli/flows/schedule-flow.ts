@@ -3,7 +3,7 @@ import { CommandBus } from '@nestjs/cqrs';
 import chalk from 'chalk';
 import ora from 'ora';
 import inquirer from 'inquirer';
-import { ScheduleIngestionJobCommand } from '@/ingestion/job/app/commands/schedule-job/command';
+import { ScheduleJobCommand } from '@/ingestion/job/app/commands/schedule-job/command';
 import { FlowResult } from '../types';
 
 /**
@@ -104,14 +104,10 @@ export async function scheduleFlow(
   }).start();
 
   try {
-    const command = new ScheduleIngestionJobCommand(
-      sourceId,
-      scheduledAt,
-      undefined, // jobId will be auto-generated
-    );
+    const command = new ScheduleJobCommand(sourceId, scheduledAt);
 
     const result = await commandBus.execute<
-      ScheduleIngestionJobCommand,
+      ScheduleJobCommand,
       { jobId: string; sourceId: string; scheduledAt: Date }
     >(command);
 

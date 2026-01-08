@@ -32,6 +32,22 @@ export class SourceConfigurationEntity {
   @Column('boolean', { default: true, name: 'is_active' })
   isActive!: boolean;
 
+  // Health tracking fields
+  @Column('integer', { default: 0, name: 'consecutive_failures' })
+  consecutiveFailures!: number;
+
+  @Column('float', { default: 100.0, name: 'success_rate' })
+  successRate!: number;
+
+  @Column('integer', { default: 0, name: 'total_jobs' })
+  totalJobs!: number;
+
+  @Column('timestamp', { nullable: true, name: 'last_success_at' })
+  lastSuccessAt!: Date | null;
+
+  @Column('timestamp', { nullable: true, name: 'last_failure_at' })
+  lastFailureAt!: Date | null;
+
   // Version for optimistic locking
   @Column('integer', { default: 0 })
   version!: number;

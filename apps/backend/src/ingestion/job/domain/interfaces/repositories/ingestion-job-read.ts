@@ -17,16 +17,33 @@ export interface IIngestionJobReadRepository {
   findById(jobId: string): Promise<IngestionJobReadModel | null>;
 
   /**
-   * Find jobs by status
+   * Find jobs by status with pagination
    * @param status - Job status to filter by
+   * @param limit - Maximum number of results to return
+   * @param offset - Number of results to skip
    * @returns Array of job read models
    */
-  findByStatus(status: string): Promise<IngestionJobReadModel[]>;
+  findByStatus(
+    status: string,
+    limit?: number,
+    offset?: number,
+  ): Promise<IngestionJobReadModel[]>;
 
   /**
-   * Find jobs by source ID
+   * Count jobs by status
+   * @param status - Job status to filter by
+   * @returns Total count of jobs with the given status
+   */
+  countByStatus(status: string): Promise<number>;
+
+  /**
+   * Find jobs by source ID ordered by executedAt DESC
    * @param sourceId - Source identifier
+   * @param limit - Maximum number of results to return
    * @returns Array of job read models
    */
-  findBySourceId(sourceId: string): Promise<IngestionJobReadModel[]>;
+  findBySourceId(
+    sourceId: string,
+    limit?: number,
+  ): Promise<IngestionJobReadModel[]>;
 }

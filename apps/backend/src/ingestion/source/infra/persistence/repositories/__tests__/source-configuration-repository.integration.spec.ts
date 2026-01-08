@@ -9,9 +9,7 @@ import { TypeOrmSourceConfigurationWriteRepository } from '../source-configurati
 import { TypeOrmSourceConfigurationReadRepository } from '../source-configuration-read';
 import { TypeOrmSourceConfigurationFactory } from '../../factories/source-configuration-factory';
 import { SourceConfigurationEntity } from '../../entities/source-configuration';
-
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
+import { IngestionJobEntity } from '@/ingestion/job/infra/persistence/entities/ingestion-job';
 
 /**
  * SourceConfiguration Repository Integration Tests
@@ -25,12 +23,17 @@ describe('SourceConfiguration Repository Integration', () => {
   let readRepo: TypeOrmSourceConfigurationReadRepository;
   let factory: TypeOrmSourceConfigurationFactory;
   let entityRepository: Repository<SourceConfigurationEntity>;
+  let jobRepository: Repository<IngestionJobEntity>;
 
   beforeAll(async () => {
     dataSource = await setupTestDatabase();
     entityRepository = dataSource.getRepository(SourceConfigurationEntity);
+    jobRepository = dataSource.getRepository(IngestionJobEntity);
     writeRepo = new TypeOrmSourceConfigurationWriteRepository(entityRepository);
-    readRepo = new TypeOrmSourceConfigurationReadRepository(entityRepository);
+    readRepo = new TypeOrmSourceConfigurationReadRepository(
+      entityRepository,
+      jobRepository,
+    );
     factory = new TypeOrmSourceConfigurationFactory(readRepo);
   });
 
@@ -138,11 +141,14 @@ describe('SourceConfiguration Repository Integration', () => {
     });
 
     it('should find source by ID', async () => {
-      const found = await readRepo.findById('read-test-1');
+      const found = await readRepo.findByIdWithHealth('read-test-1');
 
       expect(found).toBeDefined();
       expect(found?.sourceId).toBe('read-test-1');
       expect(found?.name).toBe('Active Source');
+      expect(found?.healthMetrics).toBeDefined();
+      expect(found?.healthMetrics.successRate).toBeDefined();
+      expect(found?.healthMetrics.consecutiveFailures).toBeDefined();
     });
 
     it('should return null for non-existent source', async () => {
