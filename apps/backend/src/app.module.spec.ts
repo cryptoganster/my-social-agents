@@ -2,7 +2,6 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { SchedulerRegistry } from '@nestjs/schedule';
 import { Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppModule } from './app.module';
 import { IngestionModule } from './ingestion/ingestion.module';
 
@@ -131,26 +130,25 @@ import { IngestionModule } from './ingestion/ingestion.module';
 })
 class MockIngestionModule {}
 
-// Mock TypeOrmModule
-@Module({
-  providers: [],
-  exports: [],
-})
-class MockTypeOrmModule {}
-
 describe('AppModule', () => {
   let module: TestingModule;
 
   beforeEach(async () => {
+    // Set test environment variables
+    process.env.NODE_ENV = 'test';
+    process.env.DB_HOST = 'localhost';
+    process.env.DB_PORT = '5433';
+    process.env.DB_USERNAME = 'postgres';
+    process.env.DB_PASSWORD = 'postgres';
+    process.env.DB_DATABASE = 'crypto_knowledge_test';
+
     module = await Test.createTestingModule({
       imports: [AppModule],
     })
-      .overrideModule(TypeOrmModule)
-      .useModule(MockTypeOrmModule)
       .overrideModule(IngestionModule)
       .useModule(MockIngestionModule)
       .compile();
-  });
+  }, 15000); // Increase timeout to 15 seconds for DB connection
 
   afterEach(async () => {
     if (module !== null && module !== undefined) {
