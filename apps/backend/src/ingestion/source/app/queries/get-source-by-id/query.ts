@@ -25,6 +25,7 @@ export interface GetSourceByIdResult {
   healthMetrics: {
     successRate: number;
     consecutiveFailures: number;
+    totalJobs: number;
     lastSuccessAt: Date | null;
     lastFailureAt: Date | null;
   };

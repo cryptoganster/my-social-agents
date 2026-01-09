@@ -45,6 +45,7 @@ describe('GetSourceByIdQueryHandler', () => {
         healthMetrics: {
           successRate: 95.5,
           consecutiveFailures: 0,
+          totalJobs: 20,
           lastSuccessAt: new Date('2024-01-15T10:00:00Z'),
           lastFailureAt: null,
         },
@@ -94,6 +95,7 @@ describe('GetSourceByIdQueryHandler', () => {
         healthMetrics: {
           successRate: 45.2,
           consecutiveFailures: 5,
+          totalJobs: 10,
           lastSuccessAt: new Date('2024-01-10T08:00:00Z'),
           lastFailureAt: new Date('2024-01-15T12:00:00Z'),
         },
@@ -136,6 +138,7 @@ describe('GetSourceByIdQueryHandler', () => {
         healthMetrics: {
           successRate: 0,
           consecutiveFailures: 0,
+          totalJobs: 0,
           lastSuccessAt: null,
           lastFailureAt: null,
         },

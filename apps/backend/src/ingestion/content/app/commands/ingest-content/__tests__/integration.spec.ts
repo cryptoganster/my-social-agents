@@ -277,12 +277,15 @@ describe('IngestContentCommandHandler - Integration Tests', () => {
       });
 
       mockSourceConfigFactory.load.mockResolvedValue(sourceConfig);
-      mockAdapter.supports.mockReturnValue(false); // No adapter supports this type
+      // Mock getAdapter to throw error (as AdapterRegistry does when no adapter found)
+      mockAdapterRegistry.getAdapter.mockImplementation(() => {
+        throw new Error('No adapter registered for source type: PDF');
+      });
 
       // Act & Assert
       await expect(
         handler.execute(new IngestContentCommand('unsupported-source')),
-      ).rejects.toThrow('No adapter found for source type: PDF'); // SourceType returns uppercase
+      ).rejects.toThrow('No adapter registered for source type: PDF');
 
       expect(mockAdapter.collect).not.toHaveBeenCalled();
       expect(mockEventBus.publish).not.toHaveBeenCalled();
@@ -379,11 +382,16 @@ describe('IngestContentCommandHandler - Integration Tests', () => {
         validateConfig: jest.fn(),
       } as jest.Mocked<SourceAdapter>;
 
-      // Double cast to avoid TypeScript error: first to unknown, then to Record
-      (handler as unknown as Record<string, unknown>)['adapters'] = [
-        webAdapter,
-        rssAdapter,
-      ];
+      // Mock the adapter registry to return the RSS adapter for RSS source type
+      mockAdapterRegistry.getAdapter.mockImplementation(
+        (sourceType: SourceType) => {
+          const value: string = sourceType.getValue();
+          if (value === 'RSS') {
+            return rssAdapter;
+          }
+          return webAdapter;
+        },
+      );
 
       const sourceConfig = SourceConfiguration.create({
         sourceId: 'rss-source',

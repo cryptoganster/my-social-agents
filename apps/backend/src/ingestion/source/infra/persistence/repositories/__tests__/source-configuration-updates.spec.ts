@@ -9,7 +9,6 @@ import { TypeOrmSourceConfigurationWriteRepository } from '../source-configurati
 import { TypeOrmSourceConfigurationReadRepository } from '../source-configuration-read';
 import { TypeOrmSourceConfigurationFactory } from '../../factories/source-configuration-factory';
 import { SourceConfigurationEntity } from '../../entities/source-configuration';
-import { IngestionJobEntity } from '@/ingestion/job/infra/persistence/entities/ingestion-job';
 
 /**
  * Property-Based Tests for SourceConfiguration Updates
@@ -37,17 +36,9 @@ describe('SourceConfiguration Updates Properties', () => {
       createQueryBuilder: jest.fn(),
     } as unknown as jest.Mocked<Repository<SourceConfigurationEntity>>;
 
-    // Create mock job repository
-    const mockJobRepository = {
-      find: jest.fn().mockResolvedValue([]),
-    } as unknown as jest.Mocked<Repository<IngestionJobEntity>>;
-
     // Create repositories and factory
     writeRepo = new TypeOrmSourceConfigurationWriteRepository(mockRepository);
-    readRepo = new TypeOrmSourceConfigurationReadRepository(
-      mockRepository,
-      mockJobRepository,
-    );
+    readRepo = new TypeOrmSourceConfigurationReadRepository(mockRepository);
     factory = new TypeOrmSourceConfigurationFactory(readRepo);
   });
 

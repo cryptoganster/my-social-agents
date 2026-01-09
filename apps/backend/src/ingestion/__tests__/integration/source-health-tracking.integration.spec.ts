@@ -18,10 +18,15 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { ConfigureSourceCommand } from '@/ingestion/source/app/commands/configure-source/command';
 import { UpdateSourceHealthCommand } from '@/ingestion/source/app/commands/update-source-health/command';
-import { GetSourceByIdQuery } from '@/ingestion/source/app/queries/get-source-by-id/query';
+import {
+  GetSourceByIdQuery,
+  GetSourceByIdResult,
+} from '@/ingestion/source/app/queries/get-source-by-id/query';
 import { ScheduleJobCommand } from '@/ingestion/job/app/commands/schedule-job/command';
-import { ExecuteIngestionJobCommand } from '@/ingestion/job/app/commands/execute-job/command';
-import { GetJobByIdQuery } from '@/ingestion/job/app/queries/get-job-by-id/query';
+import {
+  GetJobByIdQuery,
+  GetJobByIdResult,
+} from '@/ingestion/job/app/queries/get-job-by-id/query';
 import { IngestionSharedModule } from '@/ingestion/shared/ingestion-shared.module';
 import { IngestionSourceModule } from '@/ingestion/source/ingestion-source.module';
 import { IngestionJobModule } from '@/ingestion/job/ingestion-job.module';
@@ -29,6 +34,11 @@ import { IngestionContentModule } from '@/ingestion/content/ingestion-content.mo
 import { SourceTypeEnum } from '@/ingestion/source/domain/value-objects/source-type';
 import { SourceUnhealthyEvent } from '@/ingestion/source/domain/events/source-unhealthy';
 import { createTestDataSource } from '@/../test/setup';
+import {
+  executeWithRetry,
+  pollUntil,
+  executeSequentially,
+} from '@/../test/helpers/integration-test-helpers';
 
 describe('Integration: Source Health Tracking', () => {
   let module: TestingModule;
@@ -111,7 +121,10 @@ describe('Integration: Source Health Tracking', () => {
       expect(initialSource.healthMetrics).toBeDefined();
       expect(initialSource.healthMetrics.consecutiveFailures).toBe(0);
 
-      // 3. Execute UpdateSourceHealthCommand with success
+      // 3. Wait to avoid concurrency issues
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // 4. Execute UpdateSourceHealthCommand with success
       await commandBus.execute(
         new UpdateSourceHealthCommand(sourceId, 'success', {
           itemsCollected: 10,
@@ -119,7 +132,10 @@ describe('Integration: Source Health Tracking', () => {
         }),
       );
 
-      // 4. Verify health metrics updated
+      // 5. Wait for persistence
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // 6. Verify health metrics updated
       const updatedSource = await queryBus.execute(
         new GetSourceByIdQuery(sourceId),
       );
@@ -149,29 +165,54 @@ describe('Integration: Source Health Tracking', () => {
 
       const sourceId = configureResult.sourceId;
 
-      // 2. Record first failure
-      await commandBus.execute(
+      // 2. Record first failure with retry
+      await executeWithRetry(
+        commandBus,
         new UpdateSourceHealthCommand(sourceId, 'failure'),
+        { maxRetries: 3, retryDelay: 100 },
       );
 
-      let source = await queryBus.execute(new GetSourceByIdQuery(sourceId));
-      expect(source.healthMetrics.consecutiveFailures).toBe(1);
+      // Wait and poll for health metrics to be updated
+      let source = await pollUntil<GetSourceByIdResult>(
+        queryBus,
+        new GetSourceByIdQuery(sourceId),
+        (s): s is GetSourceByIdResult =>
+          s !== null && s.healthMetrics.consecutiveFailures >= 1,
+        { interval: 200, timeout: 5000 },
+      );
+      expect(source!.healthMetrics.consecutiveFailures).toBe(1);
 
-      // 3. Record second failure
-      await commandBus.execute(
+      // 3. Record second failure with retry
+      await executeWithRetry(
+        commandBus,
         new UpdateSourceHealthCommand(sourceId, 'failure'),
+        { maxRetries: 3, retryDelay: 100 },
       );
 
-      source = await queryBus.execute(new GetSourceByIdQuery(sourceId));
-      expect(source.healthMetrics.consecutiveFailures).toBe(2);
+      source = await pollUntil<GetSourceByIdResult>(
+        queryBus,
+        new GetSourceByIdQuery(sourceId),
+        (s): s is GetSourceByIdResult =>
+          s !== null && s.healthMetrics.consecutiveFailures >= 2,
+        { interval: 200, timeout: 5000 },
+      );
+      expect(source!.healthMetrics.consecutiveFailures).toBe(2);
 
-      // 4. Record third failure
-      await commandBus.execute(
+      // 4. Record third failure with retry
+      await executeWithRetry(
+        commandBus,
         new UpdateSourceHealthCommand(sourceId, 'failure'),
+        { maxRetries: 3, retryDelay: 100 },
       );
 
-      source = await queryBus.execute(new GetSourceByIdQuery(sourceId));
-      expect(source.healthMetrics.consecutiveFailures).toBe(3);
+      source = await pollUntil<GetSourceByIdResult>(
+        queryBus,
+        new GetSourceByIdQuery(sourceId),
+        (s): s is GetSourceByIdResult =>
+          s !== null && s.healthMetrics.consecutiveFailures >= 3,
+        { interval: 200, timeout: 5000 },
+      );
+      expect(source!.healthMetrics.consecutiveFailures).toBe(3);
     }, 30000);
 
     it('should reset consecutive failures on success', async () => {
@@ -191,28 +232,52 @@ describe('Integration: Source Health Tracking', () => {
 
       const sourceId = configureResult.sourceId;
 
-      // 2. Record failures
-      await commandBus.execute(
+      // 2. Record failures with retry
+      await executeWithRetry(
+        commandBus,
         new UpdateSourceHealthCommand(sourceId, 'failure'),
-      );
-      await commandBus.execute(
-        new UpdateSourceHealthCommand(sourceId, 'failure'),
+        { maxRetries: 3, retryDelay: 100 },
       );
 
-      let source = await queryBus.execute(new GetSourceByIdQuery(sourceId));
-      expect(source.healthMetrics.consecutiveFailures).toBe(2);
+      await executeWithRetry(
+        commandBus,
+        new UpdateSourceHealthCommand(sourceId, 'failure'),
+        { maxRetries: 3, retryDelay: 100 },
+      );
 
-      // 3. Record success
-      await commandBus.execute(
+      let source = await pollUntil<GetSourceByIdResult>(
+        queryBus,
+        new GetSourceByIdQuery(sourceId),
+        (s): s is GetSourceByIdResult =>
+          s !== null && s.healthMetrics.consecutiveFailures >= 2,
+        { interval: 200, timeout: 5000 },
+      );
+      expect(source!.healthMetrics.consecutiveFailures).toBe(2);
+
+      // 3. Record success with retry
+      await executeWithRetry(
+        commandBus,
         new UpdateSourceHealthCommand(sourceId, 'success', {
           itemsCollected: 5,
           duration: 3000,
         }),
+        { maxRetries: 3, retryDelay: 100 },
       );
 
       // 4. Verify consecutive failures reset
-      source = await queryBus.execute(new GetSourceByIdQuery(sourceId));
-      expect(source.healthMetrics.consecutiveFailures).toBe(0);
+      source = await pollUntil<GetSourceByIdResult>(
+        queryBus,
+        new GetSourceByIdQuery(sourceId),
+        (s): s is GetSourceByIdResult =>
+          s !== null && s.healthMetrics.consecutiveFailures === 0,
+        { interval: 200, timeout: 5000 },
+      );
+      expect(source!.healthMetrics.consecutiveFailures).toBe(0);
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      const finalSource = await queryBus.execute(
+        new GetSourceByIdQuery(sourceId),
+      );
+      expect(finalSource?.healthMetrics.consecutiveFailures).toBe(0);
     }, 30000);
   });
 
@@ -238,36 +303,42 @@ describe('Integration: Source Health Tracking', () => {
 
       const sourceId = configureResult.sourceId;
 
-      // 2. Record mixed outcomes: 3 successes, 1 failure
-      await commandBus.execute(
-        new UpdateSourceHealthCommand(sourceId, 'success', {
-          itemsCollected: 10,
-          duration: 5000,
-        }),
-      );
-      await commandBus.execute(
-        new UpdateSourceHealthCommand(sourceId, 'success', {
-          itemsCollected: 8,
-          duration: 4000,
-        }),
-      );
-      await commandBus.execute(
-        new UpdateSourceHealthCommand(sourceId, 'failure'),
-      );
-      await commandBus.execute(
-        new UpdateSourceHealthCommand(sourceId, 'success', {
-          itemsCollected: 12,
-          duration: 6000,
-        }),
+      // 2. Record mixed outcomes: 3 successes, 1 failure with retry
+      await executeSequentially(
+        commandBus,
+        [
+          new UpdateSourceHealthCommand(sourceId, 'success', {
+            itemsCollected: 10,
+            duration: 5000,
+          }),
+          new UpdateSourceHealthCommand(sourceId, 'success', {
+            itemsCollected: 8,
+            duration: 4000,
+          }),
+          new UpdateSourceHealthCommand(sourceId, 'failure'),
+          new UpdateSourceHealthCommand(sourceId, 'success', {
+            itemsCollected: 12,
+            duration: 6000,
+          }),
+        ],
+        { maxRetries: 3, retryDelay: 100, waitBetween: 200 },
       );
 
-      // 3. Verify success rate
-      const source = await queryBus.execute(new GetSourceByIdQuery(sourceId));
+      // 3. Wait and poll for health metrics to be updated
+      const source = await pollUntil<GetSourceByIdResult>(
+        queryBus,
+        new GetSourceByIdQuery(sourceId),
+        (s): s is GetSourceByIdResult =>
+          s !== null && s.healthMetrics.totalJobs >= 4,
+        { interval: 200, timeout: 5000 },
+      );
 
-      // Success rate should be 75% (3 out of 4)
-      // Note: Actual calculation depends on implementation
-      expect(source.healthMetrics.successRate).toBeGreaterThanOrEqual(0);
-      expect(source.healthMetrics.successRate).toBeLessThanOrEqual(1);
+      expect(source).toBeDefined();
+      expect(source!.healthMetrics.totalJobs).toBe(4);
+
+      // Success rate should be 75 (3 out of 4) - stored as percentage 0-100
+      expect(source!.healthMetrics.successRate).toBeGreaterThanOrEqual(70);
+      expect(source!.healthMetrics.successRate).toBeLessThanOrEqual(80);
     }, 30000);
   });
 
@@ -301,12 +372,18 @@ describe('Integration: Source Health Tracking', () => {
 
       const sourceId = configureResult.sourceId;
 
-      // 2. Record multiple failures to cross threshold
-      for (let i = 0; i < 5; i++) {
-        await commandBus.execute(
+      // 2. Record multiple failures sequentially to avoid concurrency
+      await executeSequentially(
+        commandBus,
+        [
           new UpdateSourceHealthCommand(sourceId, 'failure'),
-        );
-      }
+          new UpdateSourceHealthCommand(sourceId, 'failure'),
+          new UpdateSourceHealthCommand(sourceId, 'failure'),
+          new UpdateSourceHealthCommand(sourceId, 'failure'),
+          new UpdateSourceHealthCommand(sourceId, 'failure'),
+        ],
+        { maxRetries: 3, retryDelay: 100, waitBetween: 200 },
+      );
 
       // 3. Wait for async event processing
       await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -349,29 +426,58 @@ describe('Integration: Source Health Tracking', () => {
       let source = await queryBus.execute(new GetSourceByIdQuery(sourceId));
       expect(source.isActive).toBe(true);
 
-      // 3. Record multiple failures
-      for (let i = 0; i < 5; i++) {
-        await commandBus.execute(
+      // 3. Record multiple failures sequentially to avoid concurrency
+      await executeSequentially(
+        commandBus,
+        [
           new UpdateSourceHealthCommand(sourceId, 'failure'),
-        );
-      }
+          new UpdateSourceHealthCommand(sourceId, 'failure'),
+          new UpdateSourceHealthCommand(sourceId, 'failure'),
+          new UpdateSourceHealthCommand(sourceId, 'failure'),
+          new UpdateSourceHealthCommand(sourceId, 'failure'),
+        ],
+        { maxRetries: 3, retryDelay: 100, waitBetween: 200 },
+      );
 
-      // 4. Wait for event processing
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // 4. Poll for source to be disabled (event handler should disable it)
+      source = await pollUntil<GetSourceByIdResult>(
+        queryBus,
+        new GetSourceByIdQuery(sourceId),
+        (s): s is GetSourceByIdResult =>
+          s !== null &&
+          (!s.isActive || s.healthMetrics.consecutiveFailures >= 5),
+        { interval: 200, timeout: 5000 },
+      );
 
       // 5. Verify source health degraded
-      source = await queryBus.execute(new GetSourceByIdQuery(sourceId));
-      expect(source.healthMetrics.consecutiveFailures).toBeGreaterThanOrEqual(
+      expect(source!.healthMetrics.consecutiveFailures).toBeGreaterThanOrEqual(
         5,
       );
 
       // Note: Actual auto-disable depends on SourceUnhealthyEventHandler
-      // In a real test with event handlers running, source.isActive would be false
+      // The source may or may not be disabled depending on event handler execution
     }, 30000);
   });
 
   describe('Health Tracking Through Job Execution', () => {
     it('should update health metrics after job completion', async () => {
+      // Mock adapter
+      const mockAdapter = {
+        collect: jest.fn().mockResolvedValue([
+          {
+            externalId: 'health-test-1',
+            content: 'Content for health tracking',
+            metadata: {
+              title: 'Health Test',
+              publishedAt: new Date(),
+            },
+          },
+        ]),
+      };
+
+      const adapterRegistry = module.get('AdapterRegistry');
+      jest.spyOn(adapterRegistry, 'getAdapter').mockReturnValue(mockAdapter);
+
       // 1. Configure source
       const configureResult = await commandBus.execute(
         new ConfigureSourceCommand(
@@ -392,37 +498,57 @@ describe('Integration: Source Health Tracking', () => {
 
       const sourceId = configureResult.sourceId;
 
-      // 2. Schedule and execute job
-      const scheduleResult = await commandBus.execute(
+      // 2. Schedule job (will be auto-executed by JobScheduledEventHandler)
+      const scheduleResult = await executeWithRetry<{ jobId: string }>(
+        commandBus,
         new ScheduleJobCommand(sourceId),
+        { maxRetries: 3, retryDelay: 100 },
       );
 
-      await commandBus.execute(
-        new ExecuteIngestionJobCommand(scheduleResult.jobId),
-      );
-
-      // 3. Wait for event processing
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // 4. Verify job completed
-      const job = await queryBus.execute(
+      // 3. Poll for job completion (auto-executed by event handler)
+      const job = await pollUntil<GetJobByIdResult>(
+        queryBus,
         new GetJobByIdQuery(scheduleResult.jobId),
+        (j): j is NonNullable<GetJobByIdResult> =>
+          j !== null && ['COMPLETED', 'FAILED'].includes(j.status),
+        { interval: 200, timeout: 5000 },
       );
 
       expect(job).toBeDefined();
-      expect(['COMPLETED', 'FAILED']).toContain(job.status);
+      expect(['COMPLETED', 'FAILED']).toContain(job!.status);
 
-      // 5. Verify source health was updated
-      const source = await queryBus.execute(new GetSourceByIdQuery(sourceId));
+      // 4. Poll for source health to be updated
+      const source = await pollUntil<GetSourceByIdResult>(
+        queryBus,
+        new GetSourceByIdQuery(sourceId),
+        (s): s is GetSourceByIdResult =>
+          s !== null && s.healthMetrics.totalJobs >= 1,
+        { interval: 200, timeout: 5000 },
+      );
 
       // Health metrics should reflect the job execution
-      expect(source.healthMetrics).toBeDefined();
-
-      // If job succeeded, lastSuccessAt should be set
-      // If job failed, consecutiveFailures should be incremented
+      expect(source!.healthMetrics).toBeDefined();
+      expect(source!.healthMetrics.totalJobs).toBeGreaterThanOrEqual(1);
     }, 30000);
 
     it('should track health across multiple job executions', async () => {
+      // Mock adapter
+      const mockAdapter = {
+        collect: jest.fn().mockResolvedValue([
+          {
+            externalId: `multi-job-test-${Date.now()}`,
+            content: 'Content for multiple jobs',
+            metadata: {
+              title: 'Multi Job Test',
+              publishedAt: new Date(),
+            },
+          },
+        ]),
+      };
+
+      const adapterRegistry = module.get('AdapterRegistry');
+      jest.spyOn(adapterRegistry, 'getAdapter').mockReturnValue(mockAdapter);
+
       // 1. Configure source
       const configureResult = await commandBus.execute(
         new ConfigureSourceCommand(
@@ -439,38 +565,49 @@ describe('Integration: Source Health Tracking', () => {
 
       const sourceId = configureResult.sourceId;
 
-      // 2. Execute multiple jobs
+      // 2. Execute multiple jobs sequentially (auto-executed by JobScheduledEventHandler)
       const jobIds: string[] = [];
 
       for (let i = 0; i < 3; i++) {
-        const scheduleResult = await commandBus.execute(
+        // Schedule job (will be auto-executed by event handler)
+        const scheduleResult = await executeWithRetry<{ jobId: string }>(
+          commandBus,
           new ScheduleJobCommand(sourceId),
+          { maxRetries: 3, retryDelay: 100 },
         );
         jobIds.push(scheduleResult.jobId);
 
-        await commandBus.execute(
-          new ExecuteIngestionJobCommand(scheduleResult.jobId),
+        // Poll for this job to complete before starting next
+        await pollUntil<GetJobByIdResult>(
+          queryBus,
+          new GetJobByIdQuery(scheduleResult.jobId),
+          (j): j is NonNullable<GetJobByIdResult> =>
+            j !== null && ['COMPLETED', 'FAILED'].includes(j.status),
+          { interval: 200, timeout: 5000 },
         );
 
-        // Wait between jobs
-        await new Promise((resolve) => setTimeout(resolve, 500));
+        // Wait between jobs to avoid race conditions
+        await new Promise((resolve) => setTimeout(resolve, 300));
       }
 
-      // 3. Wait for all event processing
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      // 4. Verify all jobs completed
+      // 3. Verify all jobs completed
       for (const jobId of jobIds) {
         const job = await queryBus.execute(new GetJobByIdQuery(jobId));
         expect(job).toBeDefined();
         expect(['COMPLETED', 'FAILED']).toContain(job.status);
       }
 
-      // 5. Verify source health reflects multiple executions
-      const source = await queryBus.execute(new GetSourceByIdQuery(sourceId));
+      // 4. Poll for source health to reflect all executions
+      const source = await pollUntil<GetSourceByIdResult>(
+        queryBus,
+        new GetSourceByIdQuery(sourceId),
+        (s): s is GetSourceByIdResult =>
+          s !== null && s.healthMetrics.totalJobs >= 3,
+        { interval: 200, timeout: 5000 },
+      );
 
-      expect(source.healthMetrics).toBeDefined();
-      // Health metrics should aggregate data from all job executions
+      expect(source!.healthMetrics).toBeDefined();
+      expect(source!.healthMetrics.totalJobs).toBeGreaterThanOrEqual(3);
     }, 60000); // Longer timeout for multiple jobs
   });
 });

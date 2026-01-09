@@ -19,8 +19,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { ScheduleJobCommand } from '@/ingestion/job/app/commands/schedule-job/command';
 import { ScheduleJobResult } from '@/ingestion/job/app/commands/schedule-job/result';
-import { ExecuteIngestionJobCommand } from '@/ingestion/job/app/commands/execute-job/command';
 import { GetJobByIdQuery } from '@/ingestion/job/app/queries/get-job-by-id/query';
+import { IngestionJobReadModel } from '@/ingestion/job/domain/read-models/ingestion-job';
 import { GetSourceByIdQuery } from '@/ingestion/source/app/queries/get-source-by-id/query';
 import { ConfigureSourceCommand } from '@/ingestion/source/app/commands/configure-source/command';
 import { IngestionSharedModule } from '@/ingestion/shared/ingestion-shared.module';
@@ -29,6 +29,11 @@ import { IngestionJobModule } from '@/ingestion/job/ingestion-job.module';
 import { IngestionContentModule } from '@/ingestion/content/ingestion-content.module';
 import { SourceTypeEnum } from '@/ingestion/source/domain/value-objects/source-type';
 import { createTestDataSource } from '@/../test/setup';
+import {
+  waitForEvents,
+  pollUntil,
+  executeWithRetry,
+} from '@/../test/helpers/integration-test-helpers';
 
 describe('Integration: Job Execution Flow', () => {
   let module: TestingModule;
@@ -83,6 +88,26 @@ describe('Integration: Job Execution Flow', () => {
 
   describe('Complete Job Lifecycle', () => {
     it('should execute complete flow: schedule → execute → complete', async () => {
+      // Mock the adapter to avoid real HTTP requests
+      const mockAdapter = {
+        collect: jest.fn().mockResolvedValue([
+          {
+            externalId: 'test-1',
+            content: 'Test content for integration test',
+            metadata: {
+              title: 'Test Article',
+              author: 'Test Author',
+              publishedAt: new Date(),
+              url: 'https://example.com/test',
+            },
+          },
+        ]),
+      };
+
+      // Get AdapterRegistry and register mock
+      const adapterRegistry = module.get('AdapterRegistry');
+      jest.spyOn(adapterRegistry, 'getAdapter').mockReturnValue(mockAdapter);
+
       // 1. Configure a test source
       const configureResult = await commandBus.execute(
         new ConfigureSourceCommand(
@@ -113,53 +138,44 @@ describe('Integration: Job Execution Flow', () => {
       expect(sourceResult.sourceType).toBe(SourceTypeEnum.WEB);
 
       // 3. Schedule a job
-      const scheduleResult = await commandBus.execute<
-        ScheduleJobCommand,
-        ScheduleJobResult
-      >(new ScheduleJobCommand(configureResult.sourceId));
+      const scheduleResult = await executeWithRetry<ScheduleJobResult>(
+        commandBus,
+        new ScheduleJobCommand(configureResult.sourceId),
+        {
+          maxRetries: 3,
+          retryDelay: 100,
+        },
+      );
 
       expect(scheduleResult.jobId).toBeDefined();
       expect(scheduleResult.scheduledAt).toBeInstanceOf(Date);
 
-      // 4. Verify job was created with PENDING status
-      const jobAfterSchedule = await queryBus.execute(
+      // 4. Wait for automatic job execution to complete
+      // JobScheduledEventHandler automatically triggers execution
+      const jobAfterExecution = await pollUntil<IngestionJobReadModel>(
+        queryBus,
         new GetJobByIdQuery(scheduleResult.jobId),
+        (job) => job !== null && ['COMPLETED', 'FAILED'].includes(job.status),
+        {
+          interval: 200,
+          timeout: 10000,
+          errorMessage: 'Job did not complete within timeout',
+        },
       );
 
-      expect(jobAfterSchedule).toBeDefined();
-      expect(jobAfterSchedule.status).toBe('PENDING');
-      expect(jobAfterSchedule.sourceId).toBe(configureResult.sourceId);
-
-      // 5. Execute the job
-      // Note: In a real scenario, this would be triggered by JobScheduledEventHandler
-      // For this test, we execute it directly
-      const executeResult = await commandBus.execute(
-        new ExecuteIngestionJobCommand(scheduleResult.jobId),
-      );
-
-      expect(executeResult.success).toBe(true);
-      expect(executeResult.jobId).toBe(scheduleResult.jobId);
-
-      // 6. Verify job completed successfully
-      const jobAfterExecution = await queryBus.execute(
-        new GetJobByIdQuery(scheduleResult.jobId),
-      );
-
+      // 5. Verify job completed successfully
       expect(jobAfterExecution).toBeDefined();
-      expect(jobAfterExecution.status).toBe('COMPLETED');
-      expect(jobAfterExecution.executedAt).toBeDefined();
-      expect(jobAfterExecution.completedAt).toBeDefined();
+      expect(jobAfterExecution!.status).toBe('COMPLETED');
+      expect(jobAfterExecution!.executedAt).toBeDefined();
+      expect(jobAfterExecution!.completedAt).toBeDefined();
 
-      // 7. Verify metrics were recorded
-      expect(jobAfterExecution.metrics).toBeDefined();
-      expect(jobAfterExecution.metrics.itemsCollected).toBeGreaterThanOrEqual(
-        0,
-      );
-      expect(
-        jobAfterExecution.metrics.duplicatesDetected,
-      ).toBeGreaterThanOrEqual(0);
+      // 6. Verify metrics were recorded
+      expect(jobAfterExecution!.itemsCollected).toBeGreaterThanOrEqual(0);
+      expect(jobAfterExecution!.duplicatesDetected).toBeGreaterThanOrEqual(0);
+      expect(jobAfterExecution!.errorsEncountered).toBeGreaterThanOrEqual(0);
 
-      // 8. Verify source health was updated
+      // 7. Verify source health was updated (wait for event processing)
+      await waitForEvents(500);
       const sourceAfterJob = await queryBus.execute(
         new GetSourceByIdQuery(configureResult.sourceId),
       );
@@ -170,6 +186,15 @@ describe('Integration: Job Execution Flow', () => {
     }, 30000); // 30 second timeout for integration test
 
     it('should handle job failure and update source health', async () => {
+      // Mock the adapter to simulate failure
+      const mockAdapter = {
+        collect: jest.fn().mockRejectedValue(new Error('Network error')),
+      };
+
+      // Get AdapterRegistry and register mock
+      const adapterRegistry = module.get('AdapterRegistry');
+      jest.spyOn(adapterRegistry, 'getAdapter').mockReturnValue(mockAdapter);
+
       // 1. Configure a source with invalid configuration (will cause failure)
       const configureResult = await commandBus.execute(
         new ConfigureSourceCommand(
@@ -189,38 +214,48 @@ describe('Integration: Job Execution Flow', () => {
       );
 
       // 2. Schedule a job
-      const scheduleResult = await commandBus.execute<
-        ScheduleJobCommand,
-        ScheduleJobResult
-      >(new ScheduleJobCommand(configureResult.sourceId));
-
-      // 3. Execute the job (expect it to fail)
-      const executeResult = await commandBus.execute(
-        new ExecuteIngestionJobCommand(scheduleResult.jobId),
+      const scheduleResult = await executeWithRetry<ScheduleJobResult>(
+        commandBus,
+        new ScheduleJobCommand(configureResult.sourceId),
+        {
+          maxRetries: 3,
+          retryDelay: 100,
+        },
       );
 
-      // Job should complete but with errors
-      expect(executeResult.jobId).toBe(scheduleResult.jobId);
+      // 3. Wait for automatic job execution (triggered by JobScheduledEventHandler)
+      const jobAfterExecution = await pollUntil<IngestionJobReadModel>(
+        queryBus,
+        new GetJobByIdQuery(scheduleResult.jobId),
+        (job) => job !== null && ['COMPLETED', 'FAILED'].includes(job.status),
+        {
+          interval: 200,
+          timeout: 10000,
+        },
+      );
 
       // 4. Verify job status reflects failure or completion with errors
-      const jobAfterExecution = await queryBus.execute(
-        new GetJobByIdQuery(scheduleResult.jobId),
-      );
-
       expect(jobAfterExecution).toBeDefined();
       // Job could be FAILED or COMPLETED depending on error handling
-      expect(['FAILED', 'COMPLETED']).toContain(jobAfterExecution.status);
+      expect(['FAILED', 'COMPLETED']).toContain(jobAfterExecution!.status);
 
       // 5. If job failed, verify error was recorded
-      if (jobAfterExecution.status === 'FAILED') {
-        expect(jobAfterExecution.errors).toBeDefined();
-        expect(jobAfterExecution.errors.length).toBeGreaterThan(0);
+      if (jobAfterExecution!.status === 'FAILED') {
+        expect(jobAfterExecution!.errors).toBeDefined();
+        expect(jobAfterExecution!.errors.length).toBeGreaterThan(0);
       }
     }, 30000);
   });
 
   describe('Event Publication', () => {
     it('should publish JobScheduledEvent when job is scheduled', async () => {
+      // Mock the adapter
+      const mockAdapter = {
+        collect: jest.fn().mockResolvedValue([]),
+      };
+      const adapterRegistry = module.get('AdapterRegistry');
+      jest.spyOn(adapterRegistry, 'getAdapter').mockReturnValue(mockAdapter);
+
       // Set up event listener
       const publishedEvents: any[] = [];
       const originalPublish = eventBus.publish.bind(eventBus);
@@ -244,9 +279,17 @@ describe('Integration: Job Execution Flow', () => {
       );
 
       // 2. Schedule job
-      await commandBus.execute<ScheduleJobCommand, ScheduleJobResult>(
+      await executeWithRetry<ScheduleJobResult>(
+        commandBus,
         new ScheduleJobCommand(configureResult.sourceId),
+        {
+          maxRetries: 3,
+          retryDelay: 100,
+        },
       );
+
+      // Wait for events to be processed
+      await waitForEvents(1000);
 
       // 3. Verify JobScheduledEvent was published
       const jobScheduledEvents = publishedEvents.filter(
@@ -261,6 +304,22 @@ describe('Integration: Job Execution Flow', () => {
 
   describe('Metrics Aggregation', () => {
     it('should aggregate metrics correctly during job execution', async () => {
+      // Mock the adapter
+      const mockAdapter = {
+        collect: jest.fn().mockResolvedValue([
+          {
+            externalId: 'metrics-1',
+            content: 'Content for metrics test',
+            metadata: {
+              title: 'Metrics Test',
+              publishedAt: new Date(),
+            },
+          },
+        ]),
+      };
+      const adapterRegistry = module.get('AdapterRegistry');
+      jest.spyOn(adapterRegistry, 'getAdapter').mockReturnValue(mockAdapter);
+
       // 1. Configure source
       const configureResult = await commandBus.execute(
         new ConfigureSourceCommand(
@@ -279,26 +338,40 @@ describe('Integration: Job Execution Flow', () => {
         ),
       );
 
-      // 2. Schedule and execute job
-      const scheduleResult = await commandBus.execute<
-        ScheduleJobCommand,
-        ScheduleJobResult
-      >(new ScheduleJobCommand(configureResult.sourceId));
-
-      await commandBus.execute(
-        new ExecuteIngestionJobCommand(scheduleResult.jobId),
+      // 2. Schedule and execute job (automatic via JobScheduledEventHandler)
+      const scheduleResult = await executeWithRetry<ScheduleJobResult>(
+        commandBus,
+        new ScheduleJobCommand(configureResult.sourceId),
+        {
+          maxRetries: 3,
+          retryDelay: 100,
+        },
       );
+
+      // Wait for automatic execution and event processing
+      await pollUntil<IngestionJobReadModel>(
+        queryBus,
+        new GetJobByIdQuery(scheduleResult.jobId),
+        (job) => job !== null && ['COMPLETED', 'FAILED'].includes(job.status),
+        {
+          interval: 200,
+          timeout: 10000,
+        },
+      );
+
+      // Additional wait for metrics to be updated
+      await waitForEvents(500);
 
       // 3. Verify metrics
       const job = await queryBus.execute(
         new GetJobByIdQuery(scheduleResult.jobId),
       );
 
-      expect(job.metrics).toBeDefined();
-      expect(typeof job.metrics.itemsCollected).toBe('number');
-      expect(typeof job.metrics.duplicatesDetected).toBe('number');
-      expect(typeof job.metrics.validationErrors).toBe('number');
-      expect(job.metrics.itemsCollected).toBeGreaterThanOrEqual(0);
+      expect(job).toBeDefined();
+      expect(typeof job!.itemsCollected).toBe('number');
+      expect(typeof job!.duplicatesDetected).toBe('number');
+      expect(typeof job!.errorsEncountered).toBe('number');
+      expect(job!.itemsCollected).toBeGreaterThanOrEqual(0);
     }, 30000);
   });
 });

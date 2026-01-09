@@ -89,6 +89,13 @@ export class IngestContentCommandHandler implements ICommandHandler<
         `Collecting content from source: ${command.sourceId} using ${sourceConfig.sourceType.getValue()} adapter`,
       );
       const rawContentItems = await adapter.collect(sourceConfig);
+
+      if (!rawContentItems) {
+        throw new Error(
+          `Adapter returned undefined for source: ${command.sourceId}`,
+        );
+      }
+
       result.itemsCollected = rawContentItems.length;
 
       this.logger.log(`Collected ${rawContentItems.length} items`);

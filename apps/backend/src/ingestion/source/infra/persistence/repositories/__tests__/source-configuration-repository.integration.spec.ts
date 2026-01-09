@@ -9,7 +9,6 @@ import { TypeOrmSourceConfigurationWriteRepository } from '../source-configurati
 import { TypeOrmSourceConfigurationReadRepository } from '../source-configuration-read';
 import { TypeOrmSourceConfigurationFactory } from '../../factories/source-configuration-factory';
 import { SourceConfigurationEntity } from '../../entities/source-configuration';
-import { IngestionJobEntity } from '@/ingestion/job/infra/persistence/entities/ingestion-job';
 
 /**
  * SourceConfiguration Repository Integration Tests
@@ -23,17 +22,12 @@ describe('SourceConfiguration Repository Integration', () => {
   let readRepo: TypeOrmSourceConfigurationReadRepository;
   let factory: TypeOrmSourceConfigurationFactory;
   let entityRepository: Repository<SourceConfigurationEntity>;
-  let jobRepository: Repository<IngestionJobEntity>;
 
   beforeAll(async () => {
     dataSource = await setupTestDatabase();
     entityRepository = dataSource.getRepository(SourceConfigurationEntity);
-    jobRepository = dataSource.getRepository(IngestionJobEntity);
     writeRepo = new TypeOrmSourceConfigurationWriteRepository(entityRepository);
-    readRepo = new TypeOrmSourceConfigurationReadRepository(
-      entityRepository,
-      jobRepository,
-    );
+    readRepo = new TypeOrmSourceConfigurationReadRepository(entityRepository);
     factory = new TypeOrmSourceConfigurationFactory(readRepo);
   });
 

@@ -36,45 +36,81 @@ export class SourceUnhealthyEventHandler implements IEventHandler<SourceUnhealth
   /**
    * Handles SourceUnhealthyEvent
    *
-   * Logs health issue and automatically disables the source
+   * Logs health issue and automatically disables the source.
+   * Uses retry logic to handle concurrency conflicts.
    */
   async handle(event: SourceUnhealthyEvent): Promise<void> {
-    try {
-      // Log unhealthy source details
-      this.logger.error(
-        `Source ${event.sourceId} marked unhealthy: ${event.failureRate.toFixed(2)}% failure rate, ${event.consecutiveFailures} consecutive failures`,
-      );
+    const maxRetries = 3;
+    let attempt = 0;
 
-      // Load source via factory
-      const source = await this.sourceFactory.load(event.sourceId);
+    while (attempt < maxRetries) {
+      try {
+        // Log unhealthy source details
+        if (attempt === 0) {
+          this.logger.error(
+            `Source ${event.sourceId} marked unhealthy: ${event.failureRate.toFixed(2)}% failure rate, ${event.consecutiveFailures} consecutive failures`,
+          );
+        }
 
-      if (!source) {
+        // Load source via factory (gets latest version)
+        const source = await this.sourceFactory.load(event.sourceId);
+
+        if (!source) {
+          this.logger.warn(
+            `Source ${event.sourceId} not found when attempting to disable`,
+          );
+          return;
+        }
+
+        // Check if already disabled (avoid redundant updates)
+        if (!source.isActive) {
+          this.logger.debug(
+            `Source ${event.sourceId} is already disabled, skipping`,
+          );
+          return;
+        }
+
+        // Disable source with reason
+        source.disable('Automatic disable due to health issues');
+
+        // Persist via write repository
+        await this.sourceWriteRepo.save(source);
+
         this.logger.warn(
-          `Source ${event.sourceId} not found when attempting to disable`,
+          `Source ${event.sourceId} has been automatically disabled due to health issues`,
+        );
+
+        // TODO: Send alert to administrators
+        // Implement alerting mechanism (email, Slack, PagerDuty, etc.)
+        // Include source details, failure metrics, and recommended actions
+
+        return; // Success, exit retry loop
+      } catch (error) {
+        attempt++;
+
+        // Check if it's a concurrency exception
+        const isConcurrencyError =
+          error instanceof Error &&
+          error.message.includes('was modified by another transaction');
+
+        if (isConcurrencyError && attempt < maxRetries) {
+          // Retry on concurrency conflicts
+          this.logger.warn(
+            `Concurrency conflict disabling source ${event.sourceId}, retrying (attempt ${attempt}/${maxRetries})`,
+          );
+          // Wait a bit before retrying
+          await new Promise((resolve) => setTimeout(resolve, 50 * attempt));
+          continue;
+        }
+
+        // Error isolation: log error but don't rethrow
+        // This allows other events to continue processing
+        this.logger.error(
+          `Error handling SourceUnhealthyEvent for source ${event.sourceId}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          error instanceof Error ? error.stack : undefined,
         );
         return;
       }
-
-      // Disable source with reason
-      source.disable('Automatic disable due to health issues');
-
-      // Persist via write repository
-      await this.sourceWriteRepo.save(source);
-
-      this.logger.warn(
-        `Source ${event.sourceId} has been automatically disabled due to health issues`,
-      );
-
-      // TODO: Send alert to administrators
-      // Implement alerting mechanism (email, Slack, PagerDuty, etc.)
-      // Include source details, failure metrics, and recommended actions
-    } catch (error) {
-      // Error isolation: log error but don't rethrow
-      // This allows other events to continue processing
-      this.logger.error(
-        `Error handling SourceUnhealthyEvent for source ${event.sourceId}: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        error instanceof Error ? error.stack : undefined,
-      );
     }
   }
 }

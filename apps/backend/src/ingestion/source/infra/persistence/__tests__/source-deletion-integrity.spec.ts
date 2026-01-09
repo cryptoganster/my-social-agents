@@ -10,7 +10,6 @@ import { TypeOrmSourceConfigurationFactory } from '../factories/source-configura
 import { TypeOrmContentItemReadRepository } from '@/ingestion/content/infra/persistence/repositories/content-item-read';
 import { SourceConfigurationEntity } from '../entities/source-configuration';
 import { ContentItemEntity } from '@/ingestion/content/infra/persistence/entities/content-item';
-import { IngestionJobEntity } from '@/ingestion/job/infra/persistence/entities/ingestion-job';
 
 /**
  * Property-Based Tests for Source Deletion Integrity
@@ -48,18 +47,12 @@ describe('Source Deletion Integrity', () => {
       find: jest.fn(),
     } as unknown as jest.Mocked<Repository<ContentItemEntity>>;
 
-    const mockJobRepository = {
-      find: jest.fn(),
-      count: jest.fn(),
-    } as unknown as jest.Mocked<Repository<IngestionJobEntity>>;
-
     // Create repositories and factories
     sourceWriteRepo = new TypeOrmSourceConfigurationWriteRepository(
       mockSourceRepository,
     );
     sourceReadRepo = new TypeOrmSourceConfigurationReadRepository(
       mockSourceRepository,
-      mockJobRepository,
     );
     sourceFactory = new TypeOrmSourceConfigurationFactory(sourceReadRepo);
 
