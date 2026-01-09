@@ -11,6 +11,7 @@ import { IContentRefinementWriteRepository } from '@refinement/domain/interfaces
 import { IEntityExtractor } from '@refinement/domain/interfaces/services/entity-extractor';
 import { ITemporalExtractor } from '@refinement/domain/interfaces/services/temporal-extractor';
 import { IQualityAnalyzer } from '@refinement/domain/interfaces/services/quality-analyzer';
+import { SemanticChunker } from '@refinement/domain/services/semantic-chunker';
 import { Chunk } from '@refinement/domain/entities/chunk';
 import { ChunkHash } from '@refinement/domain/value-objects/chunk-hash';
 import { ChunkPosition } from '@refinement/domain/value-objects/chunk-position';
@@ -22,7 +23,7 @@ describe('RefineContentCommandHandler', () => {
   let handler: RefineContentCommandHandler;
   let mockContentItemFactory: jest.Mocked<IContentItemFactory>;
   let mockWriteRepository: jest.Mocked<IContentRefinementWriteRepository>;
-  let mockSemanticChunker: any; // SemanticChunker (not an interface yet)
+  let mockSemanticChunker: any;
   let mockEntityExtractor: jest.Mocked<IEntityExtractor>;
   let mockTemporalExtractor: jest.Mocked<ITemporalExtractor>;
   let mockQualityAnalyzer: jest.Mocked<IQualityAnalyzer>;
@@ -77,7 +78,7 @@ describe('RefineContentCommandHandler', () => {
           useValue: mockWriteRepository,
         },
         {
-          provide: 'ISemanticChunker',
+          provide: SemanticChunker,
           useValue: mockSemanticChunker,
         },
         {
