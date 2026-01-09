@@ -61,7 +61,8 @@ export class ContentNormalizationService implements IContentNormalizationService
     normalized = normalized.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
     // Remove excessive whitespace (more than 2 consecutive spaces)
-    normalized = normalized.replace(/ {3,}/g, '  ');
+    // BUT preserve whitespace within JSON strings by using a more careful approach
+    normalized = this.normalizeWhitespace(normalized);
 
     // Remove excessive newlines (more than 2 consecutive)
     normalized = normalized.replace(/\n{3,}/g, '\n\n');
@@ -73,6 +74,61 @@ export class ContentNormalizationService implements IContentNormalizationService
     normalized = this.applySourceSpecificNormalization(normalized, sourceType);
 
     return normalized;
+  }
+
+  /**
+   * Normalizes whitespace while preserving structured data like JSON
+   */
+  private normalizeWhitespace(content: string): string {
+    // Try to detect if content contains JSON structures
+    const hasJsonStructure = /\{[\s\S]*"[^"]*"[\s\S]*:[\s\S]*\}/.test(content);
+
+    if (hasJsonStructure) {
+      // If JSON is detected, be more conservative with whitespace normalization
+      // Only normalize whitespace outside of quoted strings
+      let result = '';
+      let inString = false;
+      let escapeNext = false;
+
+      for (let i = 0; i < content.length; i++) {
+        const char = content[i];
+        const prevChar = i > 0 ? content[i - 1] : '';
+
+        // Track if we're inside a string
+        if (char === '"' && !escapeNext) {
+          inString = !inString;
+          result += char;
+        } else if (char === '\\' && inString) {
+          escapeNext = !escapeNext;
+          result += char;
+        } else if (inString) {
+          // Inside string - preserve all whitespace
+          result += char;
+          escapeNext = false;
+        } else {
+          // Outside string - normalize excessive spaces
+          if (char === ' ' && prevChar === ' ') {
+            // Check if we have 3+ consecutive spaces
+            let spaceCount = 2;
+            let j = i + 1;
+            while (j < content.length && content[j] === ' ') {
+              spaceCount++;
+              j++;
+            }
+            if (spaceCount >= 3) {
+              // Skip this space, we'll reduce to 2 spaces
+              continue;
+            }
+          }
+          result += char;
+          escapeNext = false;
+        }
+      }
+      return result;
+    } else {
+      // No JSON detected, use simple normalization
+      return content.replace(/ {3,}/g, '  ');
+    }
   }
 
   /**

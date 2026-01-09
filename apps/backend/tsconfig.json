@@ -10,7 +10,8 @@
     "removeComments": true,
     "paths": {
       "@/ingestion/*": ["src/ingestion/*"],
-      "@/shared/*": ["src/shared/*"]
+      "@/shared/*": ["src/shared/*"],
+      "@refinement/*": ["src/refinement/*"]
     }
   },
   "include": ["src/**/*", "test/**/*"],
