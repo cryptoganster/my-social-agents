@@ -1,5 +1,5 @@
 import * as fc from 'fast-check';
-import { ChunkHash } from '../chunk-hash';
+import { ChunkHash } from '@refinement/domain/value-objects/chunk-hash';
 
 describe('ChunkHash', () => {
   describe('Unit Tests', () => {
