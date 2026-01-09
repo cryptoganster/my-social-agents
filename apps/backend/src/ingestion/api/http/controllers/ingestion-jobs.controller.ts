@@ -4,13 +4,18 @@ import {
   Get,
   Body,
   Param,
+  Query,
   HttpException,
   HttpStatus,
   Logger,
   Inject,
 } from '@nestjs/common';
-import { CommandBus } from '@nestjs/cqrs';
-import { ScheduleIngestionJobCommand } from '@/ingestion/job/app/commands/schedule-job/command';
+import { CommandBus, QueryBus } from '@nestjs/cqrs';
+import { ScheduleJobCommand } from '@/ingestion/job/app/commands/schedule-job/command';
+import {
+  GetJobsByStatusQuery,
+  GetJobsByStatusResult,
+} from '@/ingestion/job/app/queries/get-jobs-by-status/query';
 import { IIngestionJobReadRepository } from '@/ingestion/job/domain/interfaces/repositories/ingestion-job-read';
 import { IngestionJobReadModel } from '@/ingestion/job/domain/read-models/ingestion-job';
 import { ScheduleJobDto } from '../dto/schedule-job.dto';
@@ -21,13 +26,14 @@ import { ScheduleJobDto } from '../dto/schedule-job.dto';
  * Handles HTTP requests for:
  * - Scheduling ingestion jobs (POST /ingestion/jobs)
  * - Retrieving job details (GET /ingestion/jobs/:id)
+ * - Listing jobs by status (GET /ingestion/jobs?status=completed)
  *
  * Follows Clean Architecture:
- * - Depends only on Application layer (CommandBus)
+ * - Depends only on Application layer (CommandBus, QueryBus)
  * - Uses domain interface for read operations (not concrete implementation)
  * - Maps domain errors to HTTP status codes
  *
- * Requirements: All
+ * Requirements: 1.1, 1.2, 6.1-6.4
  */
 @Controller('ingestion/jobs')
 export class IngestionJobsController {
@@ -35,6 +41,7 @@ export class IngestionJobsController {
 
   constructor(
     private readonly commandBus: CommandBus,
+    private readonly queryBus: QueryBus,
     @Inject('IIngestionJobReadRepository')
     private readonly jobReadRepo: IIngestionJobReadRepository,
   ) {}
@@ -55,14 +62,10 @@ export class IngestionJobsController {
           ? new Date(dto.scheduledAt)
           : new Date();
 
-      const command = new ScheduleIngestionJobCommand(
-        dto.sourceId,
-        scheduledAt,
-        undefined, // jobId will be auto-generated
-      );
+      const command = new ScheduleJobCommand(dto.sourceId, scheduledAt);
 
       const result = await this.commandBus.execute<
-        ScheduleIngestionJobCommand,
+        ScheduleJobCommand,
         { jobId: string; sourceId: string; scheduledAt: Date }
       >(command);
 
@@ -102,6 +105,56 @@ export class IngestionJobsController {
 
       throw new HttpException(
         'Failed to schedule job',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * GET /ingestion/jobs
+   * List jobs filtered by status with pagination
+   * Query params: status (required), limit (optional), offset (optional)
+   */
+  @Get()
+  async getJobsByStatus(
+    @Query('status') status: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ): Promise<GetJobsByStatusResult> {
+    try {
+      if (!status) {
+        throw new HttpException(
+          'Status query parameter is required',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      this.logger.debug(`Retrieving jobs with status: ${status}`);
+
+      const query = new GetJobsByStatusQuery(
+        status,
+        limit ? parseInt(limit, 10) : undefined,
+        offset ? parseInt(offset, 10) : undefined,
+      );
+
+      const result = await this.queryBus.execute<
+        GetJobsByStatusQuery,
+        GetJobsByStatusResult
+      >(query);
+
+      return result;
+    } catch (error) {
+      this.logger.error(
+        `Failed to get jobs by status: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        error instanceof Error ? error.stack : undefined,
+      );
+
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      throw new HttpException(
+        'Failed to retrieve jobs',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }

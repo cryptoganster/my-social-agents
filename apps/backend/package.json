@@ -20,6 +20,12 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
+    "test:integration": "jest --testPathPatterns=integration.spec.ts --runInBand",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f postgres",
+    "docker:restart": "docker-compose restart postgres",
+    "docker:clean": "docker-compose down -v",
     "migration:generate": "typeorm-ts-node-commonjs migration:generate -d src/data-source.ts",
     "migration:create": "typeorm-ts-node-commonjs migration:create",
     "migration:run": "typeorm-ts-node-commonjs migration:run -d src/data-source.ts",
@@ -28,6 +34,7 @@
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
+    "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.0.1",
     "@nestjs/cqrs": "^11.0.3",
     "@nestjs/platform-express": "^11.0.1",
@@ -35,12 +42,24 @@
     "@nestjs/schedule": "^6.1.0",
     "@nestjs/typeorm": "^11.0.0",
     "@types/figlet": "^1.7.0",
+    "@types/inquirer": "^9.0.9",
+    "boxen": "^8.0.1",
+    "center-align": "^1.0.1",
     "chalk": "^4.1.2",
+    "chalk-animation": "^2.0.3",
+    "clear": "^0.1.0",
+    "cli-cursor": "^5.0.0",
+    "dotenv": "^16.6.1",
+    "enquirer": "^2.4.1",
     "figlet": "^1.9.4",
+    "gradient-string": "^3.0.0",
+    "inquirer": "^8.2.7",
     "ora": "^5.4.1",
     "pg": "^8.16.3",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
+    "string-width": "^7.2.0",
+    "term-size": "^3.0.2",
     "typeorm": "^0.3.28"
   },
   "devDependencies": {
@@ -49,7 +68,10 @@
     "@nestjs/cli": "^11.0.0",
     "@nestjs/schematics": "^11.0.0",
     "@nestjs/testing": "^11.0.1",
+    "@types/center-align": "^1.0.2",
+    "@types/clear": "^0.1.4",
     "@types/express": "^5.0.0",
+    "@types/gradient-string": "^1.1.6",
     "@types/jest": "^30.0.0",
     "@types/node": "^22.10.7",
     "@types/supertest": "^6.0.2",
@@ -86,9 +108,11 @@
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node",
+    "maxWorkers": 1,
     "moduleNameMapper": {
       "^@/ingestion/(.*)$": "<rootDir>/ingestion/$1",
-      "^@/shared/(.*)$": "<rootDir>/shared/$1"
+      "^@/shared/(.*)$": "<rootDir>/shared/$1",
+      "^@/../test/(.*)$": "<rootDir>/../test/$1"
     }
   }
 }

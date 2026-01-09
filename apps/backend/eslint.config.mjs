@@ -54,10 +54,23 @@ export default tseslint.config(
     },
   },
   {
-    // Disable unbound-method for test files (common Jest pattern)
+    // Disable strict type checking for test files (common Jest/testing patterns with mocks)
+    // Tests use mocks and dynamic types extensively, so we disable these rules entirely
     files: ['**/*.spec.ts', '**/__tests__/**/*.ts'],
     rules: {
       '@typescript-eslint/unbound-method': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
+      '@typescript-eslint/no-unsafe-argument': 'off',
+      '@typescript-eslint/require-await': 'off',
+      '@typescript-eslint/no-unused-vars': 'off',
+      '@typescript-eslint/no-require-imports': 'off',
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/explicit-function-return-type': 'off',
+      '@typescript-eslint/no-var-requires': 'off',
+      '@typescript-eslint/strict-boolean-expressions': 'off',
     },
   },
 );

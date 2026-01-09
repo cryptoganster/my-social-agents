@@ -1,145 +1,129 @@
-import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import {
+  CommandHandler,
+  ICommandHandler,
+  QueryBus,
+  EventBus,
+} from '@nestjs/cqrs';
 import { Logger, Inject } from '@nestjs/common';
 import { randomUUID } from 'crypto';
-import { ISourceConfigurationFactory } from '@/ingestion/source/domain/interfaces/factories/source-configuration-factory';
 import { IngestionJob } from '@/ingestion/job/domain/aggregates/ingestion-job';
 import { IIngestionJobWriteRepository } from '@/ingestion/job/domain/interfaces/repositories/ingestion-job-write';
-import { IJobScheduler } from '@/shared/kernel';
-import { ScheduleIngestionJobCommand } from './command';
-import { ScheduleIngestionJobResult } from './result';
+import { JobScheduledEvent } from '@/ingestion/job/domain/events/job-scheduled';
+import {
+  GetSourceByIdQuery,
+  GetSourceByIdResult,
+} from '@/ingestion/source/app/queries/get-source-by-id/query';
+import { ISourceConfigurationFactory } from '@/ingestion/source/domain/interfaces/factories/source-configuration-factory';
+import { ScheduleJobCommand } from './command';
+import { ScheduleJobResult } from './result';
 
 /**
- * ScheduleIngestionJobCommandHandler
+ * ScheduleJobCommandHandler
  *
  * Handles the scheduling of ingestion jobs following CQRS principles.
  * Responsibilities:
- * 1. Load and validate source configuration
- * 2. Create new IngestionJob aggregate
- * 3. Persist the job
- * 4. Schedule execution (immediate or future)
+ * 1. Load source configuration using GetSourceByIdQuery
+ * 2. Validate source is active and healthy
+ * 3. Create IngestionJob aggregate
+ * 4. Persist via write repository
+ * 5. Publish JobScheduledEvent
  *
- * Requirements: 4.1, 4.2
+ * Requirements: 1.1, 1.2
+ * Design: Commands - Job Commands
  */
-@CommandHandler(ScheduleIngestionJobCommand)
-export class ScheduleIngestionJobCommandHandler implements ICommandHandler<
-  ScheduleIngestionJobCommand,
-  ScheduleIngestionJobResult
+@CommandHandler(ScheduleJobCommand)
+export class ScheduleJobCommandHandler implements ICommandHandler<
+  ScheduleJobCommand,
+  ScheduleJobResult
 > {
-  private readonly logger = new Logger(ScheduleIngestionJobCommandHandler.name);
+  private readonly logger = new Logger(ScheduleJobCommandHandler.name);
 
   constructor(
+    private readonly queryBus: QueryBus,
     @Inject('ISourceConfigurationFactory')
-    private readonly sourceConfigFactory: ISourceConfigurationFactory,
+    private readonly sourceFactory: ISourceConfigurationFactory,
     @Inject('IIngestionJobWriteRepository')
     private readonly jobWriteRepository: IIngestionJobWriteRepository,
-    @Inject('IJobScheduler')
-    private readonly jobScheduler: IJobScheduler,
+    private readonly eventBus: EventBus,
   ) {}
 
   /**
-   * Executes the ScheduleIngestionJobCommand
+   * Executes the ScheduleJobCommand
    *
-   * Pipeline: load config → validate → create job → persist → schedule
+   * Pipeline: load source → validate → create job → persist → publish event
    */
-  async execute(
-    command: ScheduleIngestionJobCommand,
-  ): Promise<ScheduleIngestionJobResult> {
-    try {
-      // 1. Load source configuration
-      this.logger.log(`Loading source configuration: ${command.sourceId}`);
-      const sourceConfig = await this.sourceConfigFactory.load(
-        command.sourceId,
-      );
+  async execute(command: ScheduleJobCommand): Promise<ScheduleJobResult> {
+    this.logger.log(`Scheduling job for source: ${command.sourceId}`);
 
-      if (!sourceConfig) {
-        throw new Error(`Source configuration not found: ${command.sourceId}`);
-      }
+    // 1. Load source configuration using query
+    const sourceResult = await this.queryBus.execute<
+      GetSourceByIdQuery,
+      GetSourceByIdResult | null
+    >(new GetSourceByIdQuery(command.sourceId));
 
-      // 2. Validate source configuration
-      const validation = sourceConfig.validateConfig();
-      if (!validation.isValid) {
-        throw new Error(
-          `Invalid source configuration: ${validation.errors.join(', ')}`,
-        );
-      }
-
-      if (!sourceConfig.isActive) {
-        throw new Error(
-          `Source configuration is inactive: ${command.sourceId}`,
-        );
-      }
-
-      // 3. Create IngestionJob aggregate
-      const jobId = command.jobId ?? randomUUID();
-      const scheduledAt = command.scheduledAt || new Date(); // Default to immediate execution
-
-      this.logger.log(
-        `Creating ingestion job ${jobId} for source ${command.sourceId}`,
-      );
-      const ingestionJob = IngestionJob.create(
-        jobId,
-        sourceConfig,
-        scheduledAt,
-      );
-
-      // 4. Persist the job
-      this.logger.log(`Persisting ingestion job ${jobId}`);
-      await this.jobWriteRepository.save(ingestionJob);
-
-      // 5. Schedule execution
-      // Note: The actual execution logic would be implemented in ExecuteIngestionJobUseCase
-      // For now, we just register the job with the scheduler
-      const isImmediate = scheduledAt.getTime() <= Date.now();
-
-      if (isImmediate) {
-        this.logger.log(`Job ${jobId} scheduled for immediate execution`);
-        // For immediate execution, schedule with minimal delay (1ms)
-        // This allows the current transaction to complete before execution starts
-        this.jobScheduler.scheduleOnce(
-          jobId,
-          async (): Promise<void> => {
-            this.logger.log(`Executing job ${jobId} (immediate)`);
-            // TODO: Invoke ExecuteIngestionJobUseCase when implemented
-            // For now, just log that the job would execute
-            this.logger.warn(
-              `Job ${jobId} execution placeholder - ExecuteIngestionJobUseCase not yet implemented`,
-            );
-            return Promise.resolve();
-          },
-          new Date(Date.now() + 1),
-        );
-      } else {
-        this.logger.log(
-          `Job ${jobId} scheduled for execution at ${scheduledAt.toISOString()}`,
-        );
-        this.jobScheduler.scheduleOnce(
-          jobId,
-          async (): Promise<void> => {
-            this.logger.log(`Executing job ${jobId} at scheduled time`);
-            // TODO: Invoke ExecuteIngestionJobUseCase when implemented
-            // For now, just log that the job would execute
-            this.logger.warn(
-              `Job ${jobId} execution placeholder - ExecuteIngestionJobUseCase not yet implemented`,
-            );
-            return Promise.resolve();
-          },
-          scheduledAt,
-        );
-      }
-
-      return {
-        jobId,
-        sourceId: command.sourceId,
-        scheduledAt,
-        isScheduled: true,
-      };
-    } catch (error) {
-      // Fatal error: log and rethrow
-      this.logger.error(
-        `Fatal error scheduling ingestion job: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        error instanceof Error ? error.stack : undefined,
-      );
-      throw error;
+    if (!sourceResult) {
+      throw new Error(`Source not found: ${command.sourceId}`);
     }
+
+    // 2. Validate source is active
+    if (!sourceResult.isActive) {
+      throw new Error(
+        `Cannot schedule job for inactive source: ${command.sourceId}`,
+      );
+    }
+
+    // 3. Validate source is healthy
+    const healthMetrics = sourceResult.healthMetrics;
+
+    // A source is considered unhealthy if:
+    // - It has 3 or more consecutive failures, OR
+    // - It has a success rate below 50% AND has executed at least 5 jobs
+    // This allows new sources (with no job history) to be scheduled
+    const hasJobHistory =
+      healthMetrics.lastSuccessAt !== null ||
+      healthMetrics.lastFailureAt !== null;
+    const isUnhealthy =
+      healthMetrics.consecutiveFailures >= 3 ||
+      (hasJobHistory && healthMetrics.successRate < 50);
+
+    if (isUnhealthy) {
+      throw new Error(
+        `Cannot schedule job for unhealthy source: ${command.sourceId} ` +
+          `(${healthMetrics.consecutiveFailures} consecutive failures, ` +
+          `${healthMetrics.successRate.toFixed(1)}% success rate)`,
+      );
+    }
+
+    // 4. Load source aggregate for job creation
+    const sourceConfig = await this.sourceFactory.load(command.sourceId);
+    if (!sourceConfig) {
+      throw new Error(`Source configuration not found: ${command.sourceId}`);
+    }
+
+    // 5. Create IngestionJob aggregate
+    const jobId = randomUUID();
+    const scheduledAt = command.scheduledAt || new Date();
+
+    const job = IngestionJob.create(jobId, sourceConfig, scheduledAt);
+
+    this.logger.log(
+      `Created job ${jobId} for source ${command.sourceId}, scheduled at ${scheduledAt.toISOString()}`,
+    );
+
+    // 6. Persist via write repository
+    await this.jobWriteRepository.save(job);
+
+    this.logger.log(`Persisted job ${jobId}`);
+
+    // 7. Publish JobScheduledEvent
+    const event = new JobScheduledEvent(jobId, command.sourceId, scheduledAt);
+    await this.eventBus.publish(event);
+
+    this.logger.log(`Published JobScheduledEvent for job ${jobId}`);
+
+    return {
+      jobId,
+      scheduledAt,
+    };
   }
 }

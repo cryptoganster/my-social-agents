@@ -232,7 +232,12 @@ export class RssFeedAdapter implements SourceAdapter {
     const match = xml.match(regex);
 
     if (match) {
-      return this.decodeXmlEntities(match[1].trim());
+      let content = match[1].trim();
+
+      // Remove CDATA sections
+      content = content.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1');
+
+      return this.decodeXmlEntities(content);
     }
 
     return null;

@@ -14,38 +14,38 @@ import {
  */
 @Entity('ingestion_jobs')
 export class IngestionJobEntity {
-  @PrimaryColumn('varchar', { length: 255 })
+  @PrimaryColumn('varchar', { length: 255, name: 'job_id' })
   jobId!: string;
 
-  @Column('varchar', { length: 255 })
+  @Column('varchar', { length: 255, name: 'source_id' })
   sourceId!: string;
 
   @Column('varchar', { length: 50 })
   status!: string;
 
-  @Column('timestamp')
+  @Column('timestamp', { name: 'scheduled_at' })
   scheduledAt!: Date;
 
-  @Column('timestamp', { nullable: true })
+  @Column('timestamp', { nullable: true, name: 'executed_at' })
   executedAt!: Date | null;
 
-  @Column('timestamp', { nullable: true })
+  @Column('timestamp', { nullable: true, name: 'completed_at' })
   completedAt!: Date | null;
 
   // Metrics (flattened)
-  @Column('integer', { default: 0 })
+  @Column('integer', { default: 0, name: 'items_collected' })
   itemsCollected!: number;
 
-  @Column('integer', { default: 0 })
+  @Column('integer', { default: 0, name: 'duplicates_detected' })
   duplicatesDetected!: number;
 
-  @Column('integer', { default: 0 })
+  @Column('integer', { default: 0, name: 'errors_encountered' })
   errorsEncountered!: number;
 
-  @Column('bigint', { default: 0 })
+  @Column('bigint', { default: 0, name: 'bytes_processed' })
   bytesProcessed!: number;
 
-  @Column('integer', { default: 0 })
+  @Column('integer', { default: 0, name: 'duration_ms' })
   durationMs!: number;
 
   // Errors stored as JSON
@@ -60,7 +60,7 @@ export class IngestionJobEntity {
   }>;
 
   // Source configuration stored as JSON
-  @Column('jsonb')
+  @Column('jsonb', { name: 'source_config' })
   sourceConfig!: {
     sourceId: string;
     sourceType: string;
@@ -76,9 +76,9 @@ export class IngestionJobEntity {
   @Column('integer', { default: 0 })
   version!: number;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at' })
   updatedAt!: Date;
 }

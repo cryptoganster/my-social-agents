@@ -1,0 +1,14 @@
+{
+  "_metadata": {
+    "name": "CoinDesk",
+    "description": "Leading cryptocurrency news and market data from CoinDesk",
+    "version": "1.0.0",
+    "author": "System"
+  },
+  "feedUrl": "https://www.coindesk.com/arc/outboundfeeds/rss/",
+  "updateInterval": 3600,
+  "categories": ["bitcoin", "ethereum", "markets", "policy", "technology"],
+  "language": "en",
+  "maxItems": 50,
+  "timeout": 30000
+}

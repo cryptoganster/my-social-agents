@@ -1,0 +1,14 @@
+{
+  "_metadata": {
+    "name": "CoinTelegraph",
+    "description": "Cryptocurrency news and analysis from CoinTelegraph",
+    "version": "1.0.0",
+    "author": "System"
+  },
+  "feedUrl": "https://cointelegraph.com/rss",
+  "updateInterval": 3600,
+  "categories": ["bitcoin", "ethereum", "defi", "altcoin", "blockchain"],
+  "language": "en",
+  "maxItems": 50,
+  "timeout": 30000
+}

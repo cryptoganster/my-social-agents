@@ -20,6 +20,12 @@ export interface SourceConfigurationProps {
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
+  // Health tracking fields
+  consecutiveFailures: number;
+  successRate: number;
+  totalJobs: number;
+  lastSuccessAt: Date | null;
+  lastFailureAt: Date | null;
 }
 
 export interface SourceConfigurationValidationResult {
@@ -35,6 +41,12 @@ export class SourceConfiguration extends AggregateRoot<string> {
   private _isActive: boolean;
   private readonly _createdAt: Date;
   private _updatedAt: Date;
+  // Health tracking fields
+  private _consecutiveFailures: number;
+  private _successRate: number;
+  private _lastSuccessAt: Date | null;
+  private _lastFailureAt: Date | null;
+  private _totalJobs: number; // Track total jobs for success rate calculation
 
   private constructor(
     id: string,
@@ -49,6 +61,11 @@ export class SourceConfiguration extends AggregateRoot<string> {
     this._isActive = props.isActive;
     this._createdAt = props.createdAt;
     this._updatedAt = props.updatedAt;
+    this._consecutiveFailures = props.consecutiveFailures;
+    this._successRate = props.successRate;
+    this._totalJobs = props.totalJobs;
+    this._lastSuccessAt = props.lastSuccessAt;
+    this._lastFailureAt = props.lastFailureAt;
   }
 
   /**
@@ -58,7 +75,14 @@ export class SourceConfiguration extends AggregateRoot<string> {
   static create(
     props: Omit<
       SourceConfigurationProps,
-      'createdAt' | 'updatedAt' | 'isActive'
+      | 'createdAt'
+      | 'updatedAt'
+      | 'isActive'
+      | 'consecutiveFailures'
+      | 'successRate'
+      | 'totalJobs'
+      | 'lastSuccessAt'
+      | 'lastFailureAt'
     > & { isActive?: boolean },
   ): SourceConfiguration {
     const now = new Date();
@@ -70,6 +94,11 @@ export class SourceConfiguration extends AggregateRoot<string> {
       isActive: props.isActive ?? true,
       createdAt: now,
       updatedAt: now,
+      consecutiveFailures: 0,
+      successRate: 100, // Start with 100% success rate
+      totalJobs: 0,
+      lastSuccessAt: null,
+      lastFailureAt: null,
     });
   }
 
@@ -91,6 +120,11 @@ export class SourceConfiguration extends AggregateRoot<string> {
         isActive: props.isActive,
         createdAt: props.createdAt,
         updatedAt: props.updatedAt,
+        consecutiveFailures: props.consecutiveFailures,
+        successRate: props.successRate,
+        totalJobs: props.totalJobs,
+        lastSuccessAt: props.lastSuccessAt,
+        lastFailureAt: props.lastFailureAt,
       },
     );
   }
@@ -257,6 +291,85 @@ export class SourceConfiguration extends AggregateRoot<string> {
     return errors;
   }
 
+  /**
+   * Records a successful job execution
+   * Updates health metrics and resets consecutive failures
+   * Requirements: 4.1, 4.3
+   */
+  recordSuccess(metrics?: { itemsCollected: number; duration: number }): void {
+    // Note: metrics parameter available for future use (e.g., tracking average duration)
+    void metrics; // Explicitly mark as intentionally unused for now
+
+    this._consecutiveFailures = 0;
+    this._lastSuccessAt = new Date();
+    this._totalJobs++;
+
+    // Recalculate success rate
+    // Use a simple moving average approach
+    const successfulJobs =
+      Math.round((this._successRate / 100) * (this._totalJobs - 1)) + 1;
+    this._successRate = (successfulJobs / this._totalJobs) * 100;
+
+    this._updatedAt = new Date();
+    this.incrementVersion(); // CRITICAL: Increment version on state change
+  }
+
+  /**
+   * Records a failed job execution
+   * Updates health metrics and increments consecutive failures
+   * Requirements: 4.2, 4.4
+   */
+  recordFailure(): void {
+    this._consecutiveFailures++;
+    this._lastFailureAt = new Date();
+    this._totalJobs++;
+
+    // Recalculate success rate
+    const successfulJobs = Math.round(
+      (this._successRate / 100) * (this._totalJobs - 1),
+    );
+    this._successRate = (successfulJobs / this._totalJobs) * 100;
+
+    this._updatedAt = new Date();
+    this.incrementVersion(); // CRITICAL: Increment version on state change
+  }
+
+  /**
+   * Checks if the source is unhealthy based on thresholds
+   * A source is unhealthy if:
+   * - Consecutive failures >= 3, OR
+   * - Success rate < 50% (after at least 5 jobs)
+   * Requirements: 4.5, 4.6, 4.7
+   */
+  isUnhealthy(): boolean {
+    // Check consecutive failures threshold
+    if (this._consecutiveFailures >= 3) {
+      return true;
+    }
+
+    // Check success rate threshold (only after sufficient data)
+    if (this._totalJobs >= 5 && this._successRate < 50) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Disables the source with a reason
+   * Requirements: 4.5, 4.6
+   */
+  disable(reason: string): void {
+    // Note: reason parameter available for future use (e.g., audit logging)
+    void reason; // Explicitly mark as intentionally unused for now
+
+    if (this._isActive) {
+      this._isActive = false;
+      this._updatedAt = new Date();
+      this.incrementVersion(); // CRITICAL: Increment version on state change
+    }
+  }
+
   // Getters
   get sourceId(): string {
     return this.id; // Use inherited id property
@@ -290,6 +403,26 @@ export class SourceConfiguration extends AggregateRoot<string> {
     return this._updatedAt;
   }
 
+  get consecutiveFailures(): number {
+    return this._consecutiveFailures;
+  }
+
+  get successRate(): number {
+    return this._successRate;
+  }
+
+  get totalJobs(): number {
+    return this._totalJobs;
+  }
+
+  get lastSuccessAt(): Date | null {
+    return this._lastSuccessAt;
+  }
+
+  get lastFailureAt(): Date | null {
+    return this._lastFailureAt;
+  }
+
   /**
    * Returns a plain object representation
    */
@@ -303,6 +436,11 @@ export class SourceConfiguration extends AggregateRoot<string> {
       isActive: this._isActive,
       createdAt: this._createdAt,
       updatedAt: this._updatedAt,
+      consecutiveFailures: this._consecutiveFailures,
+      successRate: this._successRate,
+      totalJobs: this._totalJobs,
+      lastSuccessAt: this._lastSuccessAt,
+      lastFailureAt: this._lastFailureAt,
       version: this.version.value,
     };
   }

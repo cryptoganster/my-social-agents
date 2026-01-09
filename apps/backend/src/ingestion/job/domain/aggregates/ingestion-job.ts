@@ -208,6 +208,43 @@ export class IngestionJob extends AggregateRoot<string> {
   }
 
   /**
+   * Updates job metrics incrementally
+   * Used for real-time metric updates as content is processed
+   * Requirements: 3.1, 3.2, 3.3
+   */
+  updateMetrics(update: {
+    itemsCollected?: number;
+    itemsPersisted?: number;
+    duplicatesDetected?: number;
+    validationErrors?: number;
+  }): void {
+    // Create new metrics with incremented values
+    const currentProps = {
+      itemsCollected: this._metrics.itemsCollected,
+      duplicatesDetected: this._metrics.duplicatesDetected,
+      errorsEncountered: this._metrics.errorsEncountered,
+      bytesProcessed: this._metrics.bytesProcessed,
+      durationMs: this._metrics.durationMs,
+    };
+
+    // Apply increments
+    if (update.itemsCollected !== undefined) {
+      currentProps.itemsCollected += update.itemsCollected;
+    }
+    if (update.duplicatesDetected !== undefined) {
+      currentProps.duplicatesDetected += update.duplicatesDetected;
+    }
+    if (update.validationErrors !== undefined) {
+      currentProps.errorsEncountered += update.validationErrors;
+    }
+    // Note: itemsPersisted is tracked via itemsCollected - duplicatesDetected - validationErrors
+
+    // Create new metrics value object
+    this._metrics = JobMetrics.create(currentProps);
+    this.incrementVersion(); // CRITICAL: Increment version on state change
+  }
+
+  /**
    * Gets the most recent error
    */
   getLastError(): ErrorRecord | null {

@@ -1,0 +1,14 @@
+{
+  "_metadata": {
+    "name": "Generic RSS Feed",
+    "description": "Generic template for any RSS/Atom feed source",
+    "version": "1.0.0",
+    "author": "System"
+  },
+  "feedUrl": "https://example.com/rss",
+  "updateInterval": 3600,
+  "categories": ["category1", "category2"],
+  "language": "en",
+  "maxItems": 50,
+  "timeout": 30000
+}

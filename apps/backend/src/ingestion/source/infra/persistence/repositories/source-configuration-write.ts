@@ -47,6 +47,11 @@ export class TypeOrmSourceConfigurationWriteRepository implements ISourceConfigu
         >,
         credentials: entity.credentials,
         isActive: entity.isActive,
+        consecutiveFailures: entity.consecutiveFailures,
+        successRate: entity.successRate,
+        totalJobs: entity.totalJobs,
+        lastSuccessAt: entity.lastSuccessAt,
+        lastFailureAt: entity.lastFailureAt,
         version: configData.version,
         updatedAt: new Date(),
       })
@@ -88,7 +93,14 @@ export class TypeOrmSourceConfigurationWriteRepository implements ISourceConfigu
     entity.config = configData.config;
     entity.credentials = configData.credentials;
     entity.isActive = configData.isActive;
+    entity.consecutiveFailures = configData.consecutiveFailures;
+    entity.successRate = configData.successRate;
+    entity.totalJobs = configData.totalJobs;
+    entity.lastSuccessAt = configData.lastSuccessAt;
+    entity.lastFailureAt = configData.lastFailureAt;
     entity.version = configData.version;
+    entity.createdAt = configData.createdAt;
+    entity.updatedAt = configData.updatedAt;
     return entity;
   }
 }

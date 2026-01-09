@@ -1,6 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-
 import * as fc from 'fast-check';
 import { ContentNormalizationService } from '../content-normalization';
 import {

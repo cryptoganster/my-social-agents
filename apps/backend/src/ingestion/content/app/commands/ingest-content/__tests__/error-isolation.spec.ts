@@ -13,6 +13,8 @@ import {
   SourceTypeEnum,
 } from '@/ingestion/source/domain/value-objects/source-type';
 import { ContentCollectedEvent } from '@/ingestion/content/domain/events';
+import { ISourceConfigurationFactory } from '@/ingestion/source/domain/interfaces/factories/source-configuration-factory';
+import { AdapterRegistry } from '@/ingestion/source/domain/services/adapter-registry';
 
 /**
  * Property-Based Test: Error Isolation
@@ -31,6 +33,7 @@ describe('IngestContentCommandHandler - Error Isolation Property', () => {
   let mockSourceConfigFactory: jest.Mocked<{ load: jest.Mock }>;
   let mockEventBus: jest.Mocked<EventBus>;
   let mockAdapter: jest.Mocked<SourceAdapter>;
+  let mockAdapterRegistry: jest.Mocked<AdapterRegistry>;
 
   beforeEach(async () => {
     // Reset all mocks before each test
@@ -52,20 +55,39 @@ describe('IngestContentCommandHandler - Error Isolation Property', () => {
       validateConfig: jest.fn(),
     } as jest.Mocked<SourceAdapter>;
 
+    mockAdapterRegistry = {
+      getAdapter: jest.fn().mockReturnValue(mockAdapter),
+      getRegisteredTypes: jest.fn().mockReturnValue(['WEB_SCRAPER']),
+    } as unknown as jest.Mocked<AdapterRegistry>;
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        IngestContentCommandHandler,
+        {
+          provide: IngestContentCommandHandler,
+          useFactory: (
+            factory: ISourceConfigurationFactory,
+            adapterRegistry: AdapterRegistry,
+            eventBus: EventBus,
+          ) => {
+            return new IngestContentCommandHandler(
+              factory,
+              adapterRegistry,
+              eventBus,
+            );
+          },
+          inject: ['ISourceConfigurationFactory', 'AdapterRegistry', EventBus],
+        },
         {
           provide: 'ISourceConfigurationFactory',
           useValue: mockSourceConfigFactory,
         },
         {
-          provide: EventBus,
-          useValue: mockEventBus,
+          provide: 'AdapterRegistry',
+          useValue: mockAdapterRegistry,
         },
         {
-          provide: 'SourceAdapter',
-          useValue: [mockAdapter],
+          provide: EventBus,
+          useValue: mockEventBus,
         },
       ],
     }).compile();
@@ -73,10 +95,6 @@ describe('IngestContentCommandHandler - Error Isolation Property', () => {
     handler = module.get<IngestContentCommandHandler>(
       IngestContentCommandHandler,
     );
-
-    // Inject adapters manually since we can't use array injection in testing
-    // Double cast to avoid TypeScript error: first to unknown, then to Record
-    (handler as unknown as Record<string, unknown>)['adapters'] = [mockAdapter];
   });
 
   afterEach(() => {

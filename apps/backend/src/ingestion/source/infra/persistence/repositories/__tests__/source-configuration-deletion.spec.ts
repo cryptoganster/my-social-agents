@@ -139,6 +139,11 @@ describe('SourceConfiguration Deletion Properties', () => {
             createdAt: new Date(),
             updatedAt: new Date(),
             version: 0,
+            consecutiveFailures: 0,
+            successRate: 0,
+            totalJobs: 0,
+            lastSuccessAt: null,
+            lastFailureAt: null,
           };
           mockSourceRepository.findOne.mockResolvedValue(activeEntity);
 
@@ -173,6 +178,11 @@ describe('SourceConfiguration Deletion Properties', () => {
             createdAt: activeEntity.createdAt,
             updatedAt: new Date(),
             version: 1,
+            consecutiveFailures: 0,
+            successRate: 0,
+            totalJobs: 0,
+            lastSuccessAt: null,
+            lastFailureAt: null,
           };
           mockSourceRepository.findOne.mockResolvedValue(deactivatedEntity);
 
@@ -238,6 +248,11 @@ describe('SourceConfiguration Deletion Properties', () => {
             createdAt: new Date(),
             updatedAt: new Date(),
             version: 0,
+            consecutiveFailures: 0,
+            successRate: 0,
+            totalJobs: 0,
+            lastSuccessAt: null,
+            lastFailureAt: null,
           };
           mockSourceRepository.findOne.mockResolvedValue(activeEntity);
 
@@ -270,6 +285,11 @@ describe('SourceConfiguration Deletion Properties', () => {
             createdAt: activeEntity.createdAt,
             updatedAt: new Date(),
             version: 1,
+            consecutiveFailures: 0,
+            successRate: 0,
+            totalJobs: 0,
+            lastSuccessAt: null,
+            lastFailureAt: null,
           };
           mockSourceRepository.findOne.mockResolvedValue(deactivatedEntity);
 
@@ -319,6 +339,11 @@ describe('SourceConfiguration Deletion Properties', () => {
               createdAt: new Date(),
               updatedAt: new Date(),
               version: 0,
+              consecutiveFailures: 0,
+              successRate: 100.0,
+              totalJobs: 0,
+              lastSuccessAt: null,
+              lastFailureAt: null,
             }),
           );
 

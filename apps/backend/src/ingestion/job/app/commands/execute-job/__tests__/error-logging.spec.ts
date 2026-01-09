@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { CommandBus } from '@nestjs/cqrs';
+import { CommandBus, EventBus } from '@nestjs/cqrs';
 import * as fc from 'fast-check';
 import { ExecuteIngestionJobCommandHandler } from '../handler';
 import { ExecuteIngestionJobCommand } from '../command';
@@ -12,8 +12,8 @@ import {
   SourceType,
   SourceTypeEnum,
 } from '@/ingestion/source/domain/value-objects/source-type';
-import { IRetryService } from '@/ingestion/shared/interfaces/external/retry';
-import { ICircuitBreaker } from '@/ingestion/shared/interfaces/external/circuit-breaker';
+import { IRetryService } from '@/shared/interfaces/retry';
+import { ICircuitBreaker } from '@/shared/interfaces/circuit-breaker';
 import { ErrorType } from '@/ingestion/shared/entities/error-record';
 
 /**
@@ -30,6 +30,7 @@ describe('ExecuteIngestionJobCommandHandler - Error Logging Property', () => {
   let mockJobFactory: jest.Mocked<IIngestionJobFactory>;
   let mockJobWriteRepository: jest.Mocked<IIngestionJobWriteRepository>;
   let mockCommandBus: jest.Mocked<CommandBus>;
+  let mockEventBus: jest.Mocked<EventBus>;
   let mockRetryService: jest.Mocked<IRetryService>;
   let mockCircuitBreaker: jest.Mocked<ICircuitBreaker>;
 
@@ -50,6 +51,10 @@ describe('ExecuteIngestionJobCommandHandler - Error Logging Property', () => {
     mockCommandBus = {
       execute: jest.fn(),
     } as unknown as jest.Mocked<CommandBus>;
+
+    mockEventBus = {
+      publish: jest.fn(),
+    } as unknown as jest.Mocked<EventBus>;
 
     mockRetryService = {
       execute: jest.fn(),
@@ -76,6 +81,10 @@ describe('ExecuteIngestionJobCommandHandler - Error Logging Property', () => {
         {
           provide: CommandBus,
           useValue: mockCommandBus,
+        },
+        {
+          provide: EventBus,
+          useValue: mockEventBus,
         },
         {
           provide: 'IRetryService',
@@ -150,6 +159,7 @@ describe('ExecuteIngestionJobCommandHandler - Error Logging Property', () => {
           });
 
           mockJobWriteRepository.save.mockResolvedValue(undefined);
+          mockEventBus.publish.mockResolvedValue(undefined);
 
           // Execute
           const command = new ExecuteIngestionJobCommand(jobId);
@@ -236,6 +246,7 @@ describe('ExecuteIngestionJobCommandHandler - Error Logging Property', () => {
           });
 
           mockJobWriteRepository.save.mockResolvedValue(undefined);
+          mockEventBus.publish.mockResolvedValue(undefined);
 
           // Record time before execution
           const beforeTime = Date.now();
@@ -305,6 +316,7 @@ describe('ExecuteIngestionJobCommandHandler - Error Logging Property', () => {
           });
 
           mockJobWriteRepository.save.mockResolvedValue(undefined);
+          mockEventBus.publish.mockResolvedValue(undefined);
 
           // Execute
           const command = new ExecuteIngestionJobCommand(jobId);
@@ -370,6 +382,7 @@ describe('ExecuteIngestionJobCommandHandler - Error Logging Property', () => {
           });
 
           mockJobWriteRepository.save.mockResolvedValue(undefined);
+          mockEventBus.publish.mockResolvedValue(undefined);
 
           // Execute
           const command = new ExecuteIngestionJobCommand(jobId);
@@ -442,6 +455,8 @@ describe('ExecuteIngestionJobCommandHandler - Error Logging Property', () => {
             totalTimeMs: 100,
           });
 
+          mockEventBus.publish.mockResolvedValue(undefined);
+
           // Execute and expect it to throw
           const command = new ExecuteIngestionJobCommand(jobId);
           await expect(handler.execute(command)).rejects.toThrow();
@@ -503,6 +518,7 @@ describe('ExecuteIngestionJobCommandHandler - Error Logging Property', () => {
     });
 
     mockJobWriteRepository.save.mockResolvedValue(undefined);
+    mockEventBus.publish.mockResolvedValue(undefined);
 
     // Execute
     const command = new ExecuteIngestionJobCommand(jobId);

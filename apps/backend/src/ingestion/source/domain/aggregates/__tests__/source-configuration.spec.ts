@@ -353,12 +353,19 @@ describe('SourceConfiguration', () => {
         isActive: true,
         createdAt: now,
         updatedAt: now,
+        consecutiveFailures: 0,
+        successRate: 100,
+        totalJobs: 0,
+        lastSuccessAt: null,
+        lastFailureAt: null,
         version: 0,
       });
 
       expect(config.sourceId).toBe('test-id');
       expect(config.createdAt).toBe(now);
       expect(config.updatedAt).toBe(now);
+      expect(config.consecutiveFailures).toBe(0);
+      expect(config.successRate).toBe(100);
     });
   });
 });

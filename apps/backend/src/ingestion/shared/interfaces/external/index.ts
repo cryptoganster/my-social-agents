@@ -3,13 +3,8 @@
  *
  * Interfaces for external dependencies that the domain layer needs.
  * Implementations live in the infrastructure layer.
+ *
+ * Note: IHashService has been moved to the shared kernel at @/shared/interfaces
  */
-export type { IHashService } from './hash';
+export type { IHashService } from '@/shared/interfaces';
 export type { ICredentialEncryption } from './credential-encryption';
-export type { IRetryService, RetryOptions, RetryResult } from './retry';
-export type {
-  ICircuitBreaker,
-  CircuitBreakerOptions,
-  CircuitBreakerStats,
-} from './circuit-breaker';
-export { CircuitState } from './circuit-breaker';

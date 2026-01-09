@@ -3,7 +3,6 @@ import { IngestionJobsController } from '../http/controllers/ingestion-jobs.cont
 import { SourcesController } from '../http/controllers/sources.controller';
 import { ScheduleJobDto } from '../http/dto/schedule-job.dto';
 import { ConfigureSourceDto } from '../http/dto/configure-source.dto';
-import { createIngestionCLI } from '../cli/ingestion-cli';
 import { IIngestionJobReadRepository } from '@/ingestion/job/domain/interfaces/repositories/ingestion-job-read';
 import { ISourceConfigurationReadRepository } from '@/ingestion/source/domain/interfaces/repositories/source-configuration-read';
 import { SourceConfigurationReadModel } from '@/ingestion/source/domain/read-models/source-configuration';
@@ -27,13 +26,22 @@ describe('Ingestion API Integration Tests', () => {
         execute: jest.fn(),
       } as unknown as jest.Mocked<CommandBus>;
 
+      const mockQueryBus = {
+        execute: jest.fn(),
+      } as any;
+
       mockJobReadRepo = {
         findById: jest.fn(),
         findByStatus: jest.fn(),
         findBySourceId: jest.fn(),
+        countByStatus: jest.fn(),
       };
 
-      controller = new IngestionJobsController(mockCommandBus, mockJobReadRepo);
+      controller = new IngestionJobsController(
+        mockCommandBus,
+        mockQueryBus,
+        mockJobReadRepo,
+      );
     });
 
     describe('POST /ingestion/jobs - scheduleJob', () => {
@@ -170,13 +178,23 @@ describe('Ingestion API Integration Tests', () => {
         execute: jest.fn(),
       } as unknown as jest.Mocked<CommandBus>;
 
+      const mockQueryBus = {
+        execute: jest.fn(),
+      } as any;
+
       mockSourceReadRepo = {
         findById: jest.fn(),
         findActive: jest.fn(),
         findByType: jest.fn(),
+        findByIdWithHealth: jest.fn(),
+        findUnhealthy: jest.fn(),
       };
 
-      controller = new SourcesController(mockCommandBus, mockSourceReadRepo);
+      controller = new SourcesController(
+        mockCommandBus,
+        mockQueryBus,
+        mockSourceReadRepo,
+      );
     });
 
     describe('POST /sources - configureSource', () => {
@@ -254,6 +272,11 @@ describe('Ingestion API Integration Tests', () => {
             createdAt: new Date(),
             updatedAt: new Date(),
             version: 0,
+            consecutiveFailures: 0,
+            successRate: 100.0,
+            totalJobs: 0,
+            lastSuccessAt: null,
+            lastFailureAt: null,
           },
           {
             sourceId: 'source-2',
@@ -264,6 +287,11 @@ describe('Ingestion API Integration Tests', () => {
             createdAt: new Date(),
             updatedAt: new Date(),
             version: 0,
+            consecutiveFailures: 0,
+            successRate: 100.0,
+            totalJobs: 0,
+            lastSuccessAt: null,
+            lastFailureAt: null,
           },
         ];
 
@@ -287,54 +315,6 @@ describe('Ingestion API Integration Tests', () => {
     });
   });
 
-  describe('CLI Commands', () => {
-    it('should create CLI program with all commands', () => {
-      const program = createIngestionCLI();
-
-      expect(program).toBeDefined();
-      expect(program.name()).toBe('ingestion');
-      expect(program.version()).toBe('1.0.0');
-
-      // Verify commands are registered
-      const commands = program.commands;
-      const commandNames = commands.map((cmd) => cmd.name());
-
-      expect(commandNames).toContain('ingest');
-      expect(commandNames).toContain('schedule');
-      expect(commandNames).toContain('configure');
-    });
-
-    it('should have ingest command with correct configuration', () => {
-      const program = createIngestionCLI();
-      const ingestCommand = program.commands.find(
-        (cmd) => cmd.name() === 'ingest',
-      );
-
-      expect(ingestCommand).toBeDefined();
-      expect(ingestCommand?.description()).toContain('Ingest content');
-    });
-
-    it('should have schedule command with correct configuration', () => {
-      const program = createIngestionCLI();
-      const scheduleCommand = program.commands.find(
-        (cmd) => cmd.name() === 'schedule',
-      );
-
-      expect(scheduleCommand).toBeDefined();
-      expect(scheduleCommand?.description()).toContain('Schedule');
-    });
-
-    it('should have configure command with correct configuration', () => {
-      const program = createIngestionCLI();
-      const configureCommand = program.commands.find(
-        (cmd) => cmd.name() === 'configure',
-      );
-
-      expect(configureCommand).toBeDefined();
-      expect(configureCommand?.description()).toContain('Configure');
-    });
-  });
-
   describe('Error Handling', () => {
     let jobsController: IngestionJobsController;
     let sourcesController: SourcesController;
@@ -345,16 +325,27 @@ describe('Ingestion API Integration Tests', () => {
         execute: jest.fn(),
       } as unknown as jest.Mocked<CommandBus>;
 
-      jobsController = new IngestionJobsController(mockCommandBus, {
-        findById: jest.fn(),
-        findByStatus: jest.fn(),
-        findBySourceId: jest.fn(),
-      });
+      const mockQueryBus = {
+        execute: jest.fn(),
+      } as any;
 
-      sourcesController = new SourcesController(mockCommandBus, {
+      jobsController = new IngestionJobsController(
+        mockCommandBus,
+        mockQueryBus,
+        {
+          findById: jest.fn(),
+          findByStatus: jest.fn(),
+          findBySourceId: jest.fn(),
+          countByStatus: jest.fn(),
+        },
+      );
+
+      sourcesController = new SourcesController(mockCommandBus, mockQueryBus, {
         findById: jest.fn(),
         findActive: jest.fn(),
         findByType: jest.fn(),
+        findByIdWithHealth: jest.fn(),
+        findUnhealthy: jest.fn(),
       });
     });
 

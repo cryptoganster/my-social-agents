@@ -12,6 +12,8 @@ import {
   SourceType,
   SourceTypeEnum,
 } from '@/ingestion/source/domain/value-objects/source-type';
+import { ISourceConfigurationFactory } from '@/ingestion/source/domain/interfaces/factories/source-configuration-factory';
+import { AdapterRegistry } from '@/ingestion/source/domain/services/adapter-registry';
 
 /**
  * Integration Test: IngestContentCommandHandler
@@ -28,6 +30,7 @@ describe('IngestContentCommandHandler - Integration Tests', () => {
   let mockSourceConfigFactory: jest.Mocked<{ load: jest.Mock }>;
   let mockEventBus: jest.Mocked<EventBus>;
   let mockAdapter: jest.Mocked<SourceAdapter>;
+  let mockAdapterRegistry: jest.Mocked<AdapterRegistry>;
 
   beforeEach(async () => {
     // Reset all mocks before each test
@@ -48,20 +51,39 @@ describe('IngestContentCommandHandler - Integration Tests', () => {
       validateConfig: jest.fn(),
     } as jest.Mocked<SourceAdapter>;
 
+    mockAdapterRegistry = {
+      getAdapter: jest.fn().mockReturnValue(mockAdapter),
+      getRegisteredTypes: jest.fn().mockReturnValue(['WEB_SCRAPER']),
+    } as unknown as jest.Mocked<AdapterRegistry>;
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        IngestContentCommandHandler,
+        {
+          provide: IngestContentCommandHandler,
+          useFactory: (
+            factory: ISourceConfigurationFactory,
+            adapterRegistry: AdapterRegistry,
+            eventBus: EventBus,
+          ) => {
+            return new IngestContentCommandHandler(
+              factory,
+              adapterRegistry,
+              eventBus,
+            );
+          },
+          inject: ['ISourceConfigurationFactory', 'AdapterRegistry', EventBus],
+        },
         {
           provide: 'ISourceConfigurationFactory',
           useValue: mockSourceConfigFactory,
         },
         {
-          provide: EventBus,
-          useValue: mockEventBus,
+          provide: 'AdapterRegistry',
+          useValue: mockAdapterRegistry,
         },
         {
-          provide: 'SourceAdapter',
-          useValue: [mockAdapter],
+          provide: EventBus,
+          useValue: mockEventBus,
         },
       ],
     }).compile();
@@ -69,10 +91,6 @@ describe('IngestContentCommandHandler - Integration Tests', () => {
     handler = module.get<IngestContentCommandHandler>(
       IngestContentCommandHandler,
     );
-
-    // Inject adapters manually for testing
-    // Double cast to avoid TypeScript error: first to unknown, then to Record
-    (handler as unknown as Record<string, unknown>)['adapters'] = [mockAdapter];
   });
 
   afterEach(() => {
@@ -259,12 +277,15 @@ describe('IngestContentCommandHandler - Integration Tests', () => {
       });
 
       mockSourceConfigFactory.load.mockResolvedValue(sourceConfig);
-      mockAdapter.supports.mockReturnValue(false); // No adapter supports this type
+      // Mock getAdapter to throw error (as AdapterRegistry does when no adapter found)
+      mockAdapterRegistry.getAdapter.mockImplementation(() => {
+        throw new Error('No adapter registered for source type: PDF');
+      });
 
       // Act & Assert
       await expect(
         handler.execute(new IngestContentCommand('unsupported-source')),
-      ).rejects.toThrow('No adapter found for source type: PDF'); // SourceType returns uppercase
+      ).rejects.toThrow('No adapter registered for source type: PDF');
 
       expect(mockAdapter.collect).not.toHaveBeenCalled();
       expect(mockEventBus.publish).not.toHaveBeenCalled();
@@ -361,11 +382,16 @@ describe('IngestContentCommandHandler - Integration Tests', () => {
         validateConfig: jest.fn(),
       } as jest.Mocked<SourceAdapter>;
 
-      // Double cast to avoid TypeScript error: first to unknown, then to Record
-      (handler as unknown as Record<string, unknown>)['adapters'] = [
-        webAdapter,
-        rssAdapter,
-      ];
+      // Mock the adapter registry to return the RSS adapter for RSS source type
+      mockAdapterRegistry.getAdapter.mockImplementation(
+        (sourceType: SourceType) => {
+          const value: string = sourceType.getValue();
+          if (value === 'RSS') {
+            return rssAdapter;
+          }
+          return webAdapter;
+        },
+      );
 
       const sourceConfig = SourceConfiguration.create({
         sourceId: 'rss-source',

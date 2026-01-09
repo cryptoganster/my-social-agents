@@ -101,6 +101,11 @@ describe('SourceConfiguration Updates Properties', () => {
             createdAt: new Date(),
             updatedAt: new Date(),
             version: 0,
+            consecutiveFailures: 0,
+            successRate: 100.0,
+            totalJobs: 0,
+            lastSuccessAt: null,
+            lastFailureAt: null,
           };
           mockRepository.findOne.mockResolvedValue(originalEntity);
 
@@ -141,6 +146,11 @@ describe('SourceConfiguration Updates Properties', () => {
             createdAt: originalEntity.createdAt,
             updatedAt: new Date(),
             version: 1, // Version incremented
+            consecutiveFailures: 0,
+            successRate: 100.0,
+            totalJobs: 0,
+            lastSuccessAt: null,
+            lastFailureAt: null,
           };
           mockRepository.findOne.mockResolvedValue(updatedEntity);
 
@@ -215,6 +225,11 @@ describe('SourceConfiguration Updates Properties', () => {
             createdAt: new Date(),
             updatedAt: new Date(),
             version: 0,
+            consecutiveFailures: 0,
+            successRate: 100.0,
+            totalJobs: 0,
+            lastSuccessAt: null,
+            lastFailureAt: null,
           };
           mockRepository.findOne.mockResolvedValue(entity);
 
@@ -312,6 +327,11 @@ describe('SourceConfiguration Updates Properties', () => {
               createdAt: new Date(),
               updatedAt: new Date(),
               version: currentVersion,
+              consecutiveFailures: 0,
+              successRate: 100.0,
+              totalJobs: 0,
+              lastSuccessAt: null,
+              lastFailureAt: null,
             };
             mockRepository.findOne.mockResolvedValue(entity);
 
@@ -338,6 +358,11 @@ describe('SourceConfiguration Updates Properties', () => {
             createdAt: new Date(),
             updatedAt: new Date(),
             version: currentVersion,
+            consecutiveFailures: 0,
+            successRate: 100.0,
+            totalJobs: 0,
+            lastSuccessAt: null,
+            lastFailureAt: null,
           };
           mockRepository.findOne.mockResolvedValue(finalEntity);
 

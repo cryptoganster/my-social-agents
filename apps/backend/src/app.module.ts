@@ -1,10 +1,8 @@
 import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@/shared/infra/scheduling';
-import { IngestionSharedModule } from './ingestion/shared/ingestion-shared.module';
-import { IngestionSourceModule } from './ingestion/source/ingestion-source.module';
-import { IngestionJobModule } from './ingestion/job/ingestion-job.module';
-import { IngestionContentModule } from './ingestion/content/ingestion-content.module';
-import { IngestionApiModule } from './ingestion/api/ingestion-api.module';
+import { IngestionModule } from './ingestion/ingestion.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -13,31 +11,60 @@ import { AppService } from './app.service';
  *
  * Root application module that imports all bounded contexts and shared infrastructure.
  *
- * Module Dependency Order (important for proper dependency injection):
- * 1. ScheduleModule - Shared scheduling infrastructure
- * 2. IngestionSharedModule - Shared ingestion infrastructure (retry, circuit breaker, encryption, hashing, events)
- * 3. IngestionSourceModule - Source configuration and adapters
- * 4. IngestionJobModule - Job scheduling and execution
- * 5. IngestionContentModule - Content ingestion and normalization
- * 6. IngestionApiModule - API layer (HTTP controllers and CLI)
+ * Architecture:
+ * - Clean Architecture with strict layer separation
+ * - DDD bounded contexts (Content Ingestion, Document Processing, etc.)
+ * - CQRS for command/query separation
+ * - Event-driven communication between contexts
  *
- * This order ensures that:
- * - Shared services are available before sub-contexts that depend on them
- * - Source module is available before Job and Content modules (they depend on source configuration)
- * - Job module is available before Content module (content ingestion is triggered by jobs)
- * - API module is last (depends on all command handlers)
+ * Module Organization:
+ * 1. ConfigModule - Environment configuration (global)
+ * 2. TypeOrmModule - Database connection (PostgreSQL)
+ * 3. ScheduleModule - Shared scheduling infrastructure
+ * 4. IngestionModule - Content Ingestion bounded context (encapsulates all ingestion sub-modules)
+ *
+ * Future Bounded Contexts:
+ * - ProcessingModule - Document Processing
+ * - EmbeddingModule - Embedding & Indexing
+ * - RetrievalModule - Retrieval & Re-Ranking
+ * - QueryModule - Knowledge Query/Chat
+ * - SignalsModule - Signals & Analytics
+ * - IdentityModule - Identity & Configuration
  */
 @Module({
   imports: [
+    // Configuration
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: '.env',
+    }),
+
+    // Database
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        type: 'postgres',
+        host: configService.get<string>('DB_HOST', 'localhost'),
+        port: configService.get<number>('DB_PORT', 5432),
+        username: configService.get<string>('DB_USERNAME', 'postgres'),
+        password: configService.get<string>('DB_PASSWORD', 'postgres'),
+        database: configService.get<string>('DB_DATABASE', 'crypto_knowledge'),
+        entities: [__dirname + '/**/infra/persistence/entities/*.{ts,js}'],
+        migrations: [__dirname + '/ingestion/migrations/*.{ts,js}'],
+        synchronize: false, // Never use synchronize in production
+        logging:
+          configService.get<string>('NODE_ENV') === 'development' &&
+          configService.get<string>('DB_LOGGING') !== 'false',
+        autoLoadEntities: true,
+      }),
+    }),
+
     // Shared infrastructure
     ScheduleModule,
 
-    // Ingestion bounded context (in dependency order)
-    IngestionSharedModule, // Shared → Source → Job → Content → API
-    IngestionSourceModule,
-    IngestionJobModule,
-    IngestionContentModule,
-    IngestionApiModule,
+    // Bounded Contexts
+    IngestionModule, // Content Ingestion bounded context
   ],
   controllers: [AppController],
   providers: [AppService],

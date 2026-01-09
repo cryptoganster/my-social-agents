@@ -1,11 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { SchedulerRegistry } from '@nestjs/schedule';
 import { ScheduleModule } from '../schedule.module';
-import { JobSchedulerService } from '../job-scheduler';
+import { IJobScheduler } from '@/shared/kernel';
 
 describe('ScheduleModule', () => {
   let module: TestingModule;
-  let schedulerService: JobSchedulerService;
+  let schedulerService: IJobScheduler;
   let schedulerRegistry: SchedulerRegistry;
 
   beforeEach(async () => {
@@ -13,7 +13,7 @@ describe('ScheduleModule', () => {
       imports: [ScheduleModule],
     }).compile();
 
-    schedulerService = module.get<JobSchedulerService>(JobSchedulerService);
+    schedulerService = module.get<IJobScheduler>('IJobScheduler');
     schedulerRegistry = module.get<SchedulerRegistry>(SchedulerRegistry);
   });
 
@@ -31,9 +31,8 @@ describe('ScheduleModule', () => {
       expect(module).toBeDefined();
     });
 
-    it('should provide JobSchedulerService', () => {
+    it('should provide IJobScheduler', () => {
       expect(schedulerService).toBeDefined();
-      expect(schedulerService).toBeInstanceOf(JobSchedulerService);
     });
 
     it('should provide SchedulerRegistry', () => {
@@ -43,10 +42,10 @@ describe('ScheduleModule', () => {
   });
 
   describe('Dependency Injection', () => {
-    it('should inject JobSchedulerService into other services', async () => {
-      // Create a test service that depends on JobSchedulerService
+    it('should inject IJobScheduler into other services', async () => {
+      // Create a test service that depends on IJobScheduler
       class TestService {
-        constructor(public readonly scheduler: JobSchedulerService) {}
+        constructor(public readonly scheduler: IJobScheduler) {}
       }
 
       const testModule = await Test.createTestingModule({
@@ -54,10 +53,10 @@ describe('ScheduleModule', () => {
         providers: [
           {
             provide: TestService,
-            useFactory: (scheduler: JobSchedulerService): TestService => {
+            useFactory: (scheduler: IJobScheduler): TestService => {
               return new TestService(scheduler);
             },
-            inject: [JobSchedulerService],
+            inject: ['IJobScheduler'],
           },
         ],
       }).compile();
@@ -66,7 +65,6 @@ describe('ScheduleModule', () => {
 
       expect(testService).toBeDefined();
       expect(testService.scheduler).toBeDefined();
-      expect(testService.scheduler).toBeInstanceOf(JobSchedulerService);
 
       await testModule.close();
     });

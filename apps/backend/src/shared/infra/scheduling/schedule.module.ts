@@ -59,12 +59,15 @@ import { JobSchedulerService } from './job-scheduler';
     NestScheduleModule.forRoot(),
   ],
   providers: [
-    // Provide JobSchedulerService implementation
-    JobSchedulerService,
+    // Provide JobSchedulerService implementation with interface token
+    {
+      provide: 'IJobScheduler',
+      useClass: JobSchedulerService,
+    },
   ],
   exports: [
-    // Export JobSchedulerService for use in other modules
-    JobSchedulerService,
+    // Export IJobScheduler token for use in other modules
+    'IJobScheduler',
   ],
 })
 export class ScheduleModule {}

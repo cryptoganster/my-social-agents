@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
+import { IngestionJobModule } from '../job/ingestion-job.module';
+import { IngestionSourceModule } from '../source/ingestion-source.module';
 import { IngestionJobsController } from './http/controllers/ingestion-jobs.controller';
 import { SourcesController } from './http/controllers/sources.controller';
-import { TypeOrmIngestionJobReadRepository } from '@/ingestion/job/infra/persistence/repositories/ingestion-job-read';
-import { TypeOrmSourceConfigurationReadRepository } from '@/ingestion/source/infra/persistence/repositories/source-configuration-read';
 
 /**
  * IngestionApiModule
@@ -15,25 +15,24 @@ import { TypeOrmSourceConfigurationReadRepository } from '@/ingestion/source/inf
  *
  * Follows Clean Architecture:
  * - API layer depends only on Application layer (CommandBus)
- * - Uses interface tokens for read repositories (not concrete implementations)
+ * - Uses interface tokens for read repositories (injected from sub-modules)
  * - Controllers inject abstractions, not infrastructure details
+ *
+ * Dependencies (provided by imported modules):
+ * - IIngestionJobReadRepository (from IngestionJobModule)
+ * - ISourceConfigurationReadRepository (from IngestionSourceModule)
  *
  * Requirements: All
  */
 @Module({
-  imports: [CqrsModule],
+  imports: [
+    CqrsModule,
+    IngestionJobModule, // Provides IIngestionJobReadRepository
+    IngestionSourceModule, // Provides ISourceConfigurationReadRepository
+  ],
   controllers: [IngestionJobsController, SourcesController],
   providers: [
-    // Read repositories with interface tokens
-    // API layer depends on abstractions, not concrete implementations
-    {
-      provide: 'IIngestionJobReadRepository',
-      useClass: TypeOrmIngestionJobReadRepository,
-    },
-    {
-      provide: 'ISourceConfigurationReadRepository',
-      useClass: TypeOrmSourceConfigurationReadRepository,
-    },
+    // Note: Read repositories are provided by imported modules
   ],
 })
 export class IngestionApiModule {}

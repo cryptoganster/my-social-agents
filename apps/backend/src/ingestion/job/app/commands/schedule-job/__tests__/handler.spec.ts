@@ -1,23 +1,28 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ScheduleIngestionJobCommandHandler } from '../handler';
-import { ScheduleIngestionJobCommand } from '../command';
+import { QueryBus, EventBus } from '@nestjs/cqrs';
+import { ScheduleJobCommandHandler } from '../handler';
+import { ScheduleJobCommand } from '../command';
 import { ISourceConfigurationFactory } from '@/ingestion/source/domain/interfaces/factories/source-configuration-factory';
 import { IIngestionJobWriteRepository } from '@/ingestion/job/domain/interfaces/repositories/ingestion-job-write';
-import { IJobScheduler } from '@/shared/kernel';
 import { SourceConfiguration } from '@/ingestion/source/domain/aggregates/source-configuration';
 import {
   SourceType,
   SourceTypeEnum,
 } from '@/ingestion/source/domain/value-objects/source-type';
 
-describe('ScheduleIngestionJobCommandHandler', () => {
-  let handler: ScheduleIngestionJobCommandHandler;
+describe('ScheduleJobCommandHandler', () => {
+  let handler: ScheduleJobCommandHandler;
+  let queryBus: jest.Mocked<QueryBus>;
   let sourceConfigFactory: jest.Mocked<ISourceConfigurationFactory>;
   let jobWriteRepository: jest.Mocked<IIngestionJobWriteRepository>;
-  let jobScheduler: jest.Mocked<IJobScheduler>;
+  let eventBus: jest.Mocked<EventBus>;
 
   beforeEach(async () => {
     // Create mocks
+    queryBus = {
+      execute: jest.fn(),
+    } as any;
+
     sourceConfigFactory = {
       load: jest.fn(),
     } as jest.Mocked<ISourceConfigurationFactory>;
@@ -26,17 +31,18 @@ describe('ScheduleIngestionJobCommandHandler', () => {
       save: jest.fn(),
     } as jest.Mocked<IIngestionJobWriteRepository>;
 
-    jobScheduler = {
-      scheduleOnce: jest.fn(),
-      scheduleRecurring: jest.fn(),
-      cancel: jest.fn(),
-      isScheduled: jest.fn(),
-      cancelAll: jest.fn(),
-    } as jest.Mocked<IJobScheduler>;
+    eventBus = {
+      publish: jest.fn(),
+      publishAll: jest.fn(),
+    } as any;
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        ScheduleIngestionJobCommandHandler,
+        ScheduleJobCommandHandler,
+        {
+          provide: QueryBus,
+          useValue: queryBus,
+        },
         {
           provide: 'ISourceConfigurationFactory',
           useValue: sourceConfigFactory,
@@ -46,15 +52,13 @@ describe('ScheduleIngestionJobCommandHandler', () => {
           useValue: jobWriteRepository,
         },
         {
-          provide: 'IJobScheduler',
-          useValue: jobScheduler,
+          provide: EventBus,
+          useValue: eventBus,
         },
       ],
     }).compile();
 
-    handler = module.get<ScheduleIngestionJobCommandHandler>(
-      ScheduleIngestionJobCommandHandler,
-    );
+    handler = module.get<ScheduleJobCommandHandler>(ScheduleJobCommandHandler);
   });
 
   describe('execute', () => {
@@ -62,11 +66,7 @@ describe('ScheduleIngestionJobCommandHandler', () => {
       // Arrange
       const sourceId = 'source-123';
       const scheduledAt = new Date(Date.now() + 60000); // 1 minute from now
-      const command = new ScheduleIngestionJobCommand(
-        sourceId,
-        scheduledAt,
-        'job-123',
-      );
+      const command = new ScheduleJobCommand(sourceId, scheduledAt);
 
       const mockSourceConfig = SourceConfiguration.reconstitute({
         sourceId,
@@ -77,9 +77,23 @@ describe('ScheduleIngestionJobCommandHandler', () => {
         isActive: true,
         createdAt: new Date(),
         updatedAt: new Date(),
+        consecutiveFailures: 0,
+        successRate: 95,
+        totalJobs: 0,
+        lastSuccessAt: new Date(),
+        lastFailureAt: null,
         version: 1,
       });
 
+      queryBus.execute.mockResolvedValue({
+        isActive: true,
+        healthMetrics: {
+          successRate: 95, // 95% as a number 0-100
+          consecutiveFailures: 0,
+          lastSuccessAt: new Date(),
+          lastFailureAt: null,
+        },
+      });
       sourceConfigFactory.load.mockResolvedValue(mockSourceConfig);
       jobWriteRepository.save.mockResolvedValue();
 
@@ -87,26 +101,24 @@ describe('ScheduleIngestionJobCommandHandler', () => {
       const result = await handler.execute(command);
 
       // Assert
-      expect(result).toEqual({
-        jobId: 'job-123',
-        sourceId,
-        scheduledAt,
-        isScheduled: true,
-      });
-
-      expect(sourceConfigFactory.load).toHaveBeenCalledWith(sourceId);
+      expect(result.jobId).toBeDefined();
+      expect(result.scheduledAt).toEqual(scheduledAt);
+      expect(queryBus.execute).toHaveBeenCalledWith(
+        expect.objectContaining({ sourceId }),
+      );
       expect(jobWriteRepository.save).toHaveBeenCalledTimes(1);
-      expect(jobScheduler.scheduleOnce).toHaveBeenCalledWith(
-        'job-123',
-        expect.any(Function),
-        scheduledAt,
+      expect(eventBus.publish).toHaveBeenCalledWith(
+        expect.objectContaining({
+          jobId: result.jobId,
+          sourceId,
+        }),
       );
     });
 
     it('should schedule for immediate execution when no scheduledAt provided', async () => {
       // Arrange
       const sourceId = 'source-123';
-      const command = new ScheduleIngestionJobCommand(sourceId);
+      const command = new ScheduleJobCommand(sourceId);
 
       const mockSourceConfig = SourceConfiguration.reconstitute({
         sourceId,
@@ -117,9 +129,23 @@ describe('ScheduleIngestionJobCommandHandler', () => {
         isActive: true,
         createdAt: new Date(),
         updatedAt: new Date(),
+        consecutiveFailures: 0,
+        successRate: 95,
+        totalJobs: 0,
+        lastSuccessAt: new Date(),
+        lastFailureAt: null,
         version: 1,
       });
 
+      queryBus.execute.mockResolvedValue({
+        isActive: true,
+        healthMetrics: {
+          successRate: 95, // 95% as a number 0-100
+          consecutiveFailures: 0,
+          lastSuccessAt: new Date(),
+          lastFailureAt: null,
+        },
+      });
       sourceConfigFactory.load.mockResolvedValue(mockSourceConfig);
       jobWriteRepository.save.mockResolvedValue();
 
@@ -127,82 +153,77 @@ describe('ScheduleIngestionJobCommandHandler', () => {
       const result = await handler.execute(command);
 
       // Assert
-      expect(result.isScheduled).toBe(true);
-      expect(sourceConfigFactory.load).toHaveBeenCalledWith(sourceId);
+      expect(result.jobId).toBeDefined();
+      expect(result.scheduledAt).toBeDefined();
+      expect(queryBus.execute).toHaveBeenCalledWith(
+        expect.objectContaining({ sourceId }),
+      );
       expect(jobWriteRepository.save).toHaveBeenCalledTimes(1);
-      expect(jobScheduler.scheduleOnce).toHaveBeenCalledTimes(1);
+      expect(eventBus.publish).toHaveBeenCalledTimes(1);
     });
 
     it('should throw error when source configuration not found', async () => {
       // Arrange
       const sourceId = 'non-existent-source';
-      const command = new ScheduleIngestionJobCommand(sourceId);
+      const command = new ScheduleJobCommand(sourceId);
 
-      sourceConfigFactory.load.mockResolvedValue(null);
+      queryBus.execute.mockResolvedValue(null);
 
       // Act & Assert
       await expect(handler.execute(command)).rejects.toThrow(
-        'Source configuration not found: non-existent-source',
+        'Source not found: non-existent-source',
       );
 
       expect(jobWriteRepository.save).not.toHaveBeenCalled();
-      expect(jobScheduler.scheduleOnce).not.toHaveBeenCalled();
+      expect(eventBus.publish).not.toHaveBeenCalled();
     });
 
     it('should throw error when source configuration is inactive', async () => {
       // Arrange
       const sourceId = 'source-123';
-      const command = new ScheduleIngestionJobCommand(sourceId);
+      const command = new ScheduleJobCommand(sourceId);
 
-      const mockSourceConfig = SourceConfiguration.reconstitute({
-        sourceId,
-        sourceType: SourceType.fromEnum(SourceTypeEnum.WEB),
-        name: 'Test Source',
-        config: { url: 'https://example.com' },
-        credentials: undefined,
+      queryBus.execute.mockResolvedValue({
         isActive: false, // Inactive
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        version: 1,
+        healthMetrics: {
+          successRate: 95, // 95% as a number 0-100
+          consecutiveFailures: 0,
+          lastSuccessAt: new Date(),
+          lastFailureAt: null,
+        },
       });
-
-      sourceConfigFactory.load.mockResolvedValue(mockSourceConfig);
 
       // Act & Assert
       await expect(handler.execute(command)).rejects.toThrow(
-        'Source configuration is inactive: source-123',
+        'Cannot schedule job for inactive source: source-123',
       );
 
       expect(jobWriteRepository.save).not.toHaveBeenCalled();
-      expect(jobScheduler.scheduleOnce).not.toHaveBeenCalled();
+      expect(eventBus.publish).not.toHaveBeenCalled();
     });
 
-    it('should throw error when source configuration is invalid', async () => {
+    it('should throw error when source configuration is unhealthy', async () => {
       // Arrange
       const sourceId = 'source-123';
-      const command = new ScheduleIngestionJobCommand(sourceId);
+      const command = new ScheduleJobCommand(sourceId);
 
-      const mockSourceConfig = SourceConfiguration.reconstitute({
-        sourceId,
-        sourceType: SourceType.fromEnum(SourceTypeEnum.WEB),
-        name: 'Test Source',
-        config: {}, // Invalid config - missing required fields
-        credentials: undefined,
+      queryBus.execute.mockResolvedValue({
         isActive: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        version: 1,
+        healthMetrics: {
+          successRate: 30, // 30% as a number 0-100 (Low success rate)
+          consecutiveFailures: 5, // High consecutive failures
+          lastSuccessAt: new Date(Date.now() - 86400000),
+          lastFailureAt: new Date(),
+        },
       });
-
-      sourceConfigFactory.load.mockResolvedValue(mockSourceConfig);
 
       // Act & Assert
       await expect(handler.execute(command)).rejects.toThrow(
-        'Invalid source configuration',
+        'Cannot schedule job for unhealthy source: source-123',
       );
 
       expect(jobWriteRepository.save).not.toHaveBeenCalled();
-      expect(jobScheduler.scheduleOnce).not.toHaveBeenCalled();
+      expect(eventBus.publish).not.toHaveBeenCalled();
     });
   });
 });

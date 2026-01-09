@@ -3,15 +3,13 @@ import { SchedulerRegistry } from '@nestjs/schedule';
 import { Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
 import { AppModule } from './app.module';
-import { IngestionContentModule } from './ingestion/content/ingestion-content.module';
-import { IngestionJobModule } from './ingestion/job/ingestion-job.module';
-import { IngestionSourceModule } from './ingestion/source/ingestion-source.module';
-import { IngestionSharedModule } from './ingestion/shared/ingestion-shared.module';
-import { IngestionApiModule } from './ingestion/api/ingestion-api.module';
+import { IngestionModule } from './ingestion/ingestion.module';
 
-// Mock IngestionSharedModule with all required providers
+// Mock IngestionModule with all required providers from all sub-modules
 @Module({
+  imports: [CqrsModule],
   providers: [
+    // Shared infrastructure
     {
       provide: 'IRetryService',
       useValue: {
@@ -44,21 +42,7 @@ import { IngestionApiModule } from './ingestion/api/ingestion-api.module';
         publishBatch: jest.fn(),
       },
     },
-  ],
-  exports: [
-    'IRetryService',
-    'ICircuitBreaker',
-    'ICredentialEncryption',
-    'IHashService',
-    'IEventPublisher',
-  ],
-})
-class MockIngestionSharedModule {}
-
-// Mock IngestionSourceModule with all required providers
-@Module({
-  imports: [CqrsModule],
-  providers: [
+    // Source configuration
     {
       provide: 'ISourceConfigurationWriteRepository',
       useValue: {
@@ -83,20 +67,7 @@ class MockIngestionSharedModule {}
       provide: 'SourceAdapter',
       useValue: [],
     },
-  ],
-  exports: [
-    'ISourceConfigurationWriteRepository',
-    'ISourceConfigurationFactory',
-    'ISourceConfigurationReadRepository',
-    'SourceAdapter',
-  ],
-})
-class MockIngestionSourceModule {}
-
-// Mock IngestionJobModule with all required providers
-@Module({
-  imports: [CqrsModule],
-  providers: [
+    // Ingestion jobs
     {
       provide: 'IIngestionJobWriteRepository',
       useValue: {
@@ -117,19 +88,7 @@ class MockIngestionSourceModule {}
         findScheduledJobs: jest.fn(),
       },
     },
-  ],
-  exports: [
-    'IIngestionJobWriteRepository',
-    'IIngestionJobFactory',
-    'IIngestionJobReadRepository',
-  ],
-})
-class MockIngestionJobModule {}
-
-// Mock IngestionContentModule with all required providers
-@Module({
-  imports: [CqrsModule],
-  providers: [
+    // Content items
     {
       provide: 'IContentItemReadRepository',
       useValue: {
@@ -144,52 +103,52 @@ class MockIngestionJobModule {}
         save: jest.fn(),
       },
     },
-  ],
-  exports: ['IContentItemReadRepository', 'IContentItemWriteRepository'],
-})
-class MockIngestionContentModule {}
-
-// Mock IngestionApiModule
-@Module({
-  imports: [CqrsModule],
-  providers: [
     {
-      provide: 'IIngestionJobReadRepository',
+      provide: 'IContentItemFactory',
       useValue: {
-        findById: jest.fn(),
-        findByStatus: jest.fn(),
-      },
-    },
-    {
-      provide: 'ISourceConfigurationReadRepository',
-      useValue: {
-        findById: jest.fn(),
-        findActive: jest.fn(),
+        load: jest.fn().mockResolvedValue(null),
       },
     },
   ],
+  exports: [
+    'IRetryService',
+    'ICircuitBreaker',
+    'ICredentialEncryption',
+    'IHashService',
+    'IEventPublisher',
+    'ISourceConfigurationWriteRepository',
+    'ISourceConfigurationFactory',
+    'ISourceConfigurationReadRepository',
+    'SourceAdapter',
+    'IIngestionJobWriteRepository',
+    'IIngestionJobFactory',
+    'IIngestionJobReadRepository',
+    'IContentItemReadRepository',
+    'IContentItemWriteRepository',
+    'IContentItemFactory',
+  ],
 })
-class MockIngestionApiModule {}
+class MockIngestionModule {}
 
 describe('AppModule', () => {
   let module: TestingModule;
 
   beforeEach(async () => {
+    // Set test environment variables
+    process.env.NODE_ENV = 'test';
+    process.env.DB_HOST = 'localhost';
+    process.env.DB_PORT = '5433';
+    process.env.DB_USERNAME = 'postgres';
+    process.env.DB_PASSWORD = 'postgres';
+    process.env.DB_DATABASE = 'crypto_knowledge_test';
+
     module = await Test.createTestingModule({
       imports: [AppModule],
     })
-      .overrideModule(IngestionSharedModule)
-      .useModule(MockIngestionSharedModule)
-      .overrideModule(IngestionSourceModule)
-      .useModule(MockIngestionSourceModule)
-      .overrideModule(IngestionJobModule)
-      .useModule(MockIngestionJobModule)
-      .overrideModule(IngestionContentModule)
-      .useModule(MockIngestionContentModule)
-      .overrideModule(IngestionApiModule)
-      .useModule(MockIngestionApiModule)
+      .overrideModule(IngestionModule)
+      .useModule(MockIngestionModule)
       .compile();
-  });
+  }, 15000); // Increase timeout to 15 seconds for DB connection
 
   afterEach(async () => {
     if (module !== null && module !== undefined) {

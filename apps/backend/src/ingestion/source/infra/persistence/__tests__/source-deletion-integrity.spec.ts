@@ -132,6 +132,11 @@ describe('Source Deletion Integrity', () => {
             createdAt: new Date(),
             updatedAt: new Date(),
             version: 0,
+            consecutiveFailures: 0,
+            successRate: 0,
+            totalJobs: 0,
+            lastSuccessAt: null,
+            lastFailureAt: null,
           };
           mockSourceRepository.findOne.mockResolvedValue(sourceEntity);
 
@@ -159,6 +164,11 @@ describe('Source Deletion Integrity', () => {
             ...sourceEntity,
             isActive: false,
             version: 1,
+            consecutiveFailures: 0,
+            successRate: 0,
+            totalJobs: 0,
+            lastSuccessAt: null,
+            lastFailureAt: null,
           };
           mockSourceRepository.findOne.mockResolvedValue(
             deactivatedSourceEntity,
@@ -230,6 +240,11 @@ describe('Source Deletion Integrity', () => {
             createdAt: new Date(),
             updatedAt: new Date(),
             version: 0,
+            consecutiveFailures: 0,
+            successRate: 0,
+            totalJobs: 0,
+            lastSuccessAt: null,
+            lastFailureAt: null,
           };
           mockSourceRepository.findOne.mockResolvedValue(sourceEntity);
 
@@ -262,6 +277,11 @@ describe('Source Deletion Integrity', () => {
             ...sourceEntity,
             isActive: false,
             version: 1,
+            consecutiveFailures: 0,
+            successRate: 0,
+            totalJobs: 0,
+            lastSuccessAt: null,
+            lastFailureAt: null,
           };
           mockSourceRepository.findOne.mockResolvedValue(
             deactivatedSourceEntity,
@@ -352,6 +372,11 @@ describe('Source Deletion Integrity', () => {
             createdAt: new Date(),
             updatedAt: new Date(),
             version: 0,
+            consecutiveFailures: 0,
+            successRate: 0,
+            totalJobs: 0,
+            lastSuccessAt: null,
+            lastFailureAt: null,
           };
           mockSourceRepository.findOne.mockResolvedValue(sourceEntity);
 
