@@ -163,6 +163,9 @@ describe('Property: Deduplication Correctness', () => {
    *
    * Even small changes to content should produce completely different hashes.
    * This is a property of cryptographic hash functions (avalanche effect).
+   *
+   * Uses a fixed seed for reproducibility across different environments (local, CI).
+   * Uses guaranteed-different modifications to ensure test reliability.
    */
   it('should produce different hashes for minor content changes', async () => {
     await fc.assert(
@@ -172,28 +175,30 @@ describe('Property: Deduplication Correctness', () => {
           // Original content
           const hash1 = hashGenerator.generate(content);
 
-          // Add a single character
-          const modifiedContent = content + 'x';
+          // Strategy 1: Add a unique suffix (guaranteed to be different)
+          const modifiedContent = content + '_MODIFIED_SUFFIX';
           const hash2 = hashGenerator.generate(modifiedContent);
 
           // Hashes should be completely different
           expect(hash1.getValue()).not.toBe(hash2.getValue());
 
-          // Change a single character in the middle
-          if (content.length > 10) {
-            const midpoint = Math.floor(content.length / 2);
-            const alteredContent =
-              content.substring(0, midpoint) +
-              'X' +
-              content.substring(midpoint + 1);
-            const hash3 = hashGenerator.generate(alteredContent);
+          // Strategy 2: Prepend a unique prefix (guaranteed to be different)
+          const alteredContent = 'PREFIX_' + content;
+          const hash3 = hashGenerator.generate(alteredContent);
 
-            expect(hash1.getValue()).not.toBe(hash3.getValue());
-            expect(hash2.getValue()).not.toBe(hash3.getValue());
-          }
+          expect(hash1.getValue()).not.toBe(hash3.getValue());
+          expect(hash2.getValue()).not.toBe(hash3.getValue());
+
+          // Strategy 3: Append different suffix (guaranteed to be different from strategy 1)
+          const anotherModification = content + '_DIFFERENT_SUFFIX';
+          const hash4 = hashGenerator.generate(anotherModification);
+
+          expect(hash1.getValue()).not.toBe(hash4.getValue());
+          expect(hash2.getValue()).not.toBe(hash4.getValue());
+          expect(hash3.getValue()).not.toBe(hash4.getValue());
         },
       ),
-      { numRuns: 20, timeout: 60000 },
+      { numRuns: 100, timeout: 60000, seed: 42 }, // Fixed seed for reproducibility, increased to 100 runs per testing standards
     );
   }, 120000);
 });
