@@ -34,3 +34,14 @@ yarn-error.log*
 
 # AI
 .kiro/
+
+# Terraform
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.*
+terraform/*.tfvars
+terraform/*.tfvars.json
+terraform/crash.log
+terraform/crash.*.log
+terraform/.terraformrc
+terraform/terraform.rc

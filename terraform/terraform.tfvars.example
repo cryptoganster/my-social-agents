@@ -1,0 +1,13 @@
+# Example Terraform variables file
+# Copy this file to terraform.tfvars and fill in your values
+
+# GitHub Personal Access Token
+# Create one at: https://github.com/settings/tokens
+# Required scopes: repo (full control of private repositories)
+github_token = "ghp_your_token_here"
+
+# GitHub owner (organization or user)
+github_owner = "cryptoganster"
+
+# Repository name
+repository_name = "my-social-agents"
