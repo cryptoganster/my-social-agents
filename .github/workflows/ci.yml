@@ -155,11 +155,9 @@ jobs:
 
       - name: Run npm audit
         run: npm audit --audit-level=moderate
-        continue-on-error: true
 
       - name: Check for known vulnerabilities
         run: npx audit-ci --moderate
-        continue-on-error: true
 
   # Summary job that all checks must pass
   ci-success:
@@ -172,15 +170,19 @@ jobs:
       - name: Check all jobs
         run: |
           if [[ "${{ needs.quality.result }}" != "success" ]]; then
-            echo "Quality checks failed"
+            echo "❌ Quality checks failed"
             exit 1
           fi
           if [[ "${{ needs.test.result }}" != "success" ]]; then
-            echo "Tests failed"
+            echo "❌ Tests failed"
             exit 1
           fi
           if [[ "${{ needs.build.result }}" != "success" ]]; then
-            echo "Build failed"
+            echo "❌ Build failed"
             exit 1
           fi
-          echo "All CI checks passed!"
+          if [[ "${{ needs.security.result }}" != "success" ]]; then
+            echo "❌ Security audit failed"
+            exit 1
+          fi
+          echo "✅ All CI checks passed!"
