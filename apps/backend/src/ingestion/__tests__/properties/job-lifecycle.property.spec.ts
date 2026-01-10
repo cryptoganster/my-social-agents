@@ -232,7 +232,7 @@ describe('Property: Job Lifecycle Progression', () => {
 
           // Verify initial state is PENDING or RUNNING (may execute immediately)
           expect(['PENDING', 'RUNNING', 'COMPLETED', 'FAILED']).toContain(
-            jobAfterSchedule.status,
+            jobAfterSchedule!.status,
           );
 
           // 3. Wait for job to be executed by JobScheduledEventHandler
@@ -244,7 +244,7 @@ describe('Property: Job Lifecycle Progression', () => {
           // Poll for completion if still running (max 10 seconds = 50 attempts * 200ms)
           let attempts = 0;
           while (
-            !['COMPLETED', 'FAILED'].includes(jobAfterExecution.status) &&
+            !['COMPLETED', 'FAILED'].includes(jobAfterExecution!.status) &&
             attempts < 50
           ) {
             await new Promise((resolve) => setTimeout(resolve, 200));
@@ -255,23 +255,23 @@ describe('Property: Job Lifecycle Progression', () => {
           }
 
           // Verify final state is either COMPLETED or FAILED (never PENDING or RUNNING)
-          expect(['COMPLETED', 'FAILED']).toContain(jobAfterExecution.status);
+          expect(['COMPLETED', 'FAILED']).toContain(jobAfterExecution!.status);
 
           // Verify executedAt timestamp was set (proves it went through RUNNING)
-          expect(jobAfterExecution.executedAt).toBeDefined();
-          expect(jobAfterExecution.executedAt).toBeInstanceOf(Date);
+          expect(jobAfterExecution!.executedAt).toBeDefined();
+          expect(jobAfterExecution!.executedAt).toBeInstanceOf(Date);
 
           // Verify completedAt timestamp was set
-          expect(jobAfterExecution.completedAt).toBeDefined();
-          expect(jobAfterExecution.completedAt).toBeInstanceOf(Date);
+          expect(jobAfterExecution!.completedAt).toBeDefined();
+          expect(jobAfterExecution!.completedAt).toBeInstanceOf(Date);
 
           // Verify temporal ordering: scheduledAt < executedAt < completedAt
-          expect(jobAfterExecution.executedAt.getTime()).toBeGreaterThanOrEqual(
-            jobAfterSchedule.scheduledAt.getTime(),
-          );
           expect(
-            jobAfterExecution.completedAt.getTime(),
-          ).toBeGreaterThanOrEqual(jobAfterExecution.executedAt.getTime());
+            jobAfterExecution!.executedAt!.getTime(),
+          ).toBeGreaterThanOrEqual(jobAfterSchedule!.scheduledAt.getTime());
+          expect(
+            jobAfterExecution!.completedAt!.getTime(),
+          ).toBeGreaterThanOrEqual(jobAfterExecution!.executedAt!.getTime());
 
           // Property verified: Job followed valid state transitions
           // PENDING/RUNNING → COMPLETED/FAILED
@@ -347,7 +347,7 @@ describe('Property: Job Lifecycle Progression', () => {
           // Poll for completion if still running
           let attempts = 0;
           while (
-            !['COMPLETED', 'FAILED'].includes(jobAfterCompletion.status) &&
+            !['COMPLETED', 'FAILED'].includes(jobAfterCompletion!.status) &&
             attempts < 20
           ) {
             await new Promise((resolve) => setTimeout(resolve, 200));
@@ -357,7 +357,7 @@ describe('Property: Job Lifecycle Progression', () => {
             attempts++;
           }
 
-          const terminalStatus = jobAfterCompletion.status;
+          const terminalStatus = jobAfterCompletion!.status;
           expect(['COMPLETED', 'FAILED']).toContain(terminalStatus);
 
           // Property verified: Job reached terminal state and stayed there

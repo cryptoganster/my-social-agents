@@ -146,7 +146,7 @@ describe('Integration: Content Deduplication', () => {
       );
 
       expect(persistedContent).toBeDefined();
-      expect(persistedContent.contentHash).toBe(contentHash.getValue());
+      expect(persistedContent!.contentHash).toBe(contentHash.getValue());
 
       // 5. Second ingestion - should detect duplicate
       const secondResult = await commandBus.execute<
@@ -168,7 +168,7 @@ describe('Integration: Content Deduplication', () => {
       );
 
       expect(contentAfterSecondIngestion).toBeDefined();
-      expect(contentAfterSecondIngestion.contentHash).toBe(
+      expect(contentAfterSecondIngestion!.contentHash).toBe(
         contentHash.getValue(),
       );
       // Content should still be the same (not duplicated)
@@ -239,7 +239,7 @@ describe('Integration: Content Deduplication', () => {
       );
 
       expect(persistedContent).toBeDefined();
-      expect(persistedContent.contentHash).toBe(contentHash.getValue());
+      expect(persistedContent!.contentHash).toBe(contentHash.getValue());
     }, 30000);
 
     it('should increment duplicate counter correctly', async () => {
@@ -308,7 +308,7 @@ describe('Integration: Content Deduplication', () => {
       );
 
       expect(persistedContent).toBeDefined();
-      expect(persistedContent.contentHash).toBe(contentHash.getValue());
+      expect(persistedContent!.contentHash).toBe(contentHash.getValue());
     }, 30000);
   });
 

@@ -1,4 +1,4 @@
-import { ErrorRecord, ErrorType } from '../error-record';
+import { ErrorRecord, ErrorType } from '../../domain/entities/error-record';
 
 describe('ErrorRecord', () => {
   describe('Unit Tests', () => {

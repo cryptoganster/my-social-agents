@@ -1,11 +1,13 @@
 /**
  * ContentItemReadModel
  *
- * Optimized read model for querying content items.
- * This is a plain object (not an aggregate) used for read operations.
- * Contains all content properties in a flat structure for efficient querying.
+ * Read model for content item queries.
+ * Contains all content properties in a flat structure optimized for querying.
+ * Used by query handlers to return content data.
  *
- * Requirements: 10.1
+ * NOT a CQRS projection - queries write table directly.
+ *
+ * Requirements: 5.1, 8.1
  */
 export interface ContentItemReadModel {
   contentId: string;

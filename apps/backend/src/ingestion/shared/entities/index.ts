@@ -1,7 +1,8 @@
 /**
  * Shared Kernel Entities
  *
- * Entities that are shared across multiple sub-bounded contexts.
+ * Re-exports from domain layer for backward compatibility.
+ * @deprecated Import from @/ingestion/shared/domain/entities instead
  */
 
-export * from './error-record';
+export * from '../domain/entities';

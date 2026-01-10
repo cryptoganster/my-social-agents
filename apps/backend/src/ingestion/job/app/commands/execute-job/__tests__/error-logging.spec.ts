@@ -14,7 +14,7 @@ import {
 } from '@/ingestion/source/domain/value-objects/source-type';
 import { IRetryService } from '@/shared/interfaces/retry';
 import { ICircuitBreaker } from '@/shared/interfaces/circuit-breaker';
-import { ErrorType } from '@/ingestion/shared/entities/error-record';
+import { ErrorType } from '@/ingestion/shared/domain/entities/error-record';
 
 /**
  * Property-Based Test: Error Logging Completeness

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ContentItemReadModel } from '@/ingestion/content/domain/read-models/content-item';
+import { ContentItemReadModel } from '@/ingestion/content/app/queries/read-models/content-item';
 import { IContentItemReadRepository } from '@/ingestion/content/domain/interfaces/repositories/content-item-read';
 import { ContentHash } from '@/ingestion/content/domain/value-objects/content-hash';
 import { ContentItemEntity } from '../entities/content-item';

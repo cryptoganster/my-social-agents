@@ -10,7 +10,7 @@ import {
 import {
   ErrorRecord,
   ErrorType,
-} from '@/ingestion/shared/entities/error-record';
+} from '@/ingestion/shared/domain/entities/error-record';
 import { TypeOrmIngestionJobWriteRepository } from '../ingestion-job-write';
 import { TypeOrmIngestionJobReadRepository } from '../ingestion-job-read';
 import { TypeOrmIngestionJobFactory } from '../../factories/ingestion-job-factory';

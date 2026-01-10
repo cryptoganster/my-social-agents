@@ -15,7 +15,7 @@ import { ICircuitBreaker } from '@/shared/interfaces/circuit-breaker';
 import {
   ErrorRecord,
   ErrorType,
-} from '@/ingestion/shared/entities/error-record';
+} from '@/ingestion/shared/domain/entities/error-record';
 import {
   JobStartedEvent,
   JobCompletedEvent,

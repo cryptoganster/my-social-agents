@@ -41,6 +41,14 @@ describe('ContentIngestedEventHandler', () => {
         'source-456',
         'job-789',
         'abc123def456',
+        'Normalized content text',
+        {
+          title: 'Test Title',
+          author: 'Test Author',
+          publishedAt: new Date('2024-01-15T09:00:00Z'),
+          language: 'en',
+          sourceUrl: 'https://example.com/article',
+        },
         ['BTC', 'ETH'],
         new Date('2024-01-15T10:00:00Z'),
       );
@@ -64,6 +72,8 @@ describe('ContentIngestedEventHandler', () => {
         'source-456',
         'job-789',
         'abc123def456',
+        'Normalized content',
+        { title: 'Test' },
         ['BTC'],
         new Date('2024-01-15T10:00:00Z'),
       );
@@ -89,6 +99,8 @@ describe('ContentIngestedEventHandler', () => {
         'source-111',
         'job-specific-id',
         'hash123',
+        'Content',
+        {},
         [],
         new Date('2024-01-15T11:00:00Z'),
       );
@@ -111,6 +123,8 @@ describe('ContentIngestedEventHandler', () => {
         'source-456',
         'job-789',
         'abc123def456',
+        'Content',
+        {},
         ['BTC'],
         new Date('2024-01-15T10:00:00Z'),
       );
@@ -138,6 +152,8 @@ describe('ContentIngestedEventHandler', () => {
         'source-1',
         'job-1',
         'hash1',
+        'Content 1',
+        {},
         ['BTC'],
         new Date('2024-01-15T10:00:00Z'),
       );
@@ -146,6 +162,8 @@ describe('ContentIngestedEventHandler', () => {
         'source-1',
         'job-1',
         'hash2',
+        'Content 2',
+        {},
         ['ETH'],
         new Date('2024-01-15T10:01:00Z'),
       );

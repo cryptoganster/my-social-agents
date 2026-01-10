@@ -134,8 +134,8 @@ describe('Integration: Job Execution Flow', () => {
       );
 
       expect(sourceResult).toBeDefined();
-      expect(sourceResult.isActive).toBe(true);
-      expect(sourceResult.sourceType).toBe(SourceTypeEnum.WEB);
+      expect(sourceResult!.isActive).toBe(true);
+      expect(sourceResult!.sourceType).toBe(SourceTypeEnum.WEB);
 
       // 3. Schedule a job
       const scheduleResult = await executeWithRetry<ScheduleJobResult>(
@@ -180,7 +180,7 @@ describe('Integration: Job Execution Flow', () => {
         new GetSourceByIdQuery(configureResult.sourceId),
       );
 
-      expect(sourceAfterJob.healthMetrics).toBeDefined();
+      expect(sourceAfterJob!.healthMetrics).toBeDefined();
       // Health metrics should reflect the job execution
       // Note: Actual values depend on whether the job succeeded or failed
     }, 30000); // 30 second timeout for integration test

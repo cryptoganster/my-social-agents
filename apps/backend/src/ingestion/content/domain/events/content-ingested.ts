@@ -4,7 +4,10 @@
  * Domain event published when content has been successfully ingested
  * (validated, normalized, deduplicated, and persisted).
  *
- * Requirements: 2.1, 2.2, 3.5
+ * Enhanced with full content data to enable event-carried state transfer pattern.
+ * Maintains backward compatibility with existing subscribers.
+ *
+ * Requirements: 1.1, 1.4, 2.1, 2.2, 3.5, 5.1, 5.4
  */
 export class ContentIngestedEvent {
   constructor(
@@ -12,6 +15,14 @@ export class ContentIngestedEvent {
     public readonly sourceId: string,
     public readonly jobId: string,
     public readonly contentHash: string,
+    public readonly normalizedContent: string,
+    public readonly metadata: {
+      title?: string;
+      author?: string;
+      publishedAt?: Date;
+      language?: string;
+      sourceUrl?: string;
+    },
     public readonly assetTags: string[],
     public readonly collectedAt: Date,
   ) {}

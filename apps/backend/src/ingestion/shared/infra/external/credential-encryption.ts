@@ -5,7 +5,7 @@ import {
   randomBytes,
   scryptSync,
 } from 'crypto';
-import { ICredentialEncryption } from '@/ingestion/shared/interfaces/external';
+import { ICredentialEncryption } from '@/ingestion/shared/domain/interfaces/external/credential-encryption';
 
 /**
  * CredentialEncryptionService

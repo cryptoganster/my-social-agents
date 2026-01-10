@@ -118,8 +118,9 @@ describe('Integration: Source Health Tracking', () => {
         new GetSourceByIdQuery(sourceId),
       );
 
-      expect(initialSource.healthMetrics).toBeDefined();
-      expect(initialSource.healthMetrics.consecutiveFailures).toBe(0);
+      expect(initialSource).toBeDefined();
+      expect(initialSource!.healthMetrics).toBeDefined();
+      expect(initialSource!.healthMetrics.consecutiveFailures).toBe(0);
 
       // 3. Wait to avoid concurrency issues
       await new Promise((resolve) => setTimeout(resolve, 100));
@@ -140,8 +141,9 @@ describe('Integration: Source Health Tracking', () => {
         new GetSourceByIdQuery(sourceId),
       );
 
-      expect(updatedSource.healthMetrics.consecutiveFailures).toBe(0);
-      expect(updatedSource.healthMetrics.lastSuccessAt).toBeDefined();
+      expect(updatedSource).toBeDefined();
+      expect(updatedSource!.healthMetrics.consecutiveFailures).toBe(0);
+      expect(updatedSource!.healthMetrics.lastSuccessAt).toBeDefined();
     }, 30000);
 
     it('should track consecutive failures', async () => {
@@ -424,7 +426,7 @@ describe('Integration: Source Health Tracking', () => {
 
       // 2. Verify source is initially active
       let source = await queryBus.execute(new GetSourceByIdQuery(sourceId));
-      expect(source.isActive).toBe(true);
+      expect(source!.isActive).toBe(true);
 
       // 3. Record multiple failures sequentially to avoid concurrency
       await executeSequentially(
@@ -594,7 +596,7 @@ describe('Integration: Source Health Tracking', () => {
       for (const jobId of jobIds) {
         const job = await queryBus.execute(new GetJobByIdQuery(jobId));
         expect(job).toBeDefined();
-        expect(['COMPLETED', 'FAILED']).toContain(job.status);
+        expect(['COMPLETED', 'FAILED']).toContain(job!.status);
       }
 
       // 4. Poll for source health to reflect all executions

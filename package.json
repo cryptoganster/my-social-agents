@@ -16,6 +16,7 @@
     "typecheck": "tsc --noEmit -p apps/backend/tsconfig.json",
     "test": "npm run test --workspaces --if-present",
     "test:cov": "npm run test:cov --workspaces --if-present",
+    "ci": "npm run format && npm run lint:check && npm run typecheck && npm run test",
     "prepare": "husky"
   },
   "devDependencies": {

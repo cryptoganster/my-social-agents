@@ -3,4 +3,3 @@ export * from './value-objects';
 export * from './services';
 export * from './interfaces/repositories';
 export * from './interfaces/factories';
-export * from './read-models';

@@ -1,299 +1,399 @@
 /**
- * Property-Based Test: Query Idempotency
+ * Property-Based Test: Read Model Query Independence
  *
- * Property 6: Query Idempotency
- * For any query parameters, executing the same query multiple times
- * should return identical results (assuming no state changes between calls).
+ * Property 8: Read Model Query Independence
+ * For any query to a read model, the query SHALL NOT trigger any writes or side effects in the system.
  *
- * Requirements: 6.1-6.6
- * Design: Correctness Properties - Property 6
+ * Requirements: 3.1, 3.2, 3.3, 6.1, 6.2, 6.3
+ * Design: Correctness Properties - Property 8
  *
- * Feature: ingestion-event-driven-architecture, Property 6: Query Idempotency
+ * Feature: decouple-bounded-contexts, Property 8: Read Model Query Independence
  */
 
 import * as fc from 'fast-check';
-import { GetJobByIdQuery } from '@/ingestion/job/app/queries/get-job-by-id/query';
-import { GetContentByHashQuery } from '@/ingestion/content/app/queries/get-content-by-hash/query';
-import { GetSourceByIdQuery } from '@/ingestion/source/app/queries/get-source-by-id/query';
-import { GetJobsByStatusQuery } from '@/ingestion/job/app/queries/get-jobs-by-status/query';
+import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { TypeOrmSourceReadRepository } from '@/ingestion/shared/infra/persistence/repositories/source-read-repository';
+import { TypeOrmContentItemReadRepository } from '@/ingestion/shared/infra/persistence/repositories/content-item-read-repository';
+import { SourceReadModelEntity } from '@/ingestion/shared/infra/persistence/entities/source-read-model.entity';
+import { ContentItemReadModelEntity } from '@/ingestion/shared/infra/persistence/entities/content-item-read-model.entity';
 
-describe('Property: Query Idempotency', () => {
-  /**
-   * Property 6.1: Query Object Equality
-   *
-   * For any query parameters, creating multiple query objects with the same
-   * parameters should produce equivalent queries.
-   */
-  it('should create equivalent query objects from same parameters', () => {
-    fc.assert(
-      fc.property(fc.string({ minLength: 1, maxLength: 100 }), (id) => {
-        // Create multiple query objects with same parameters
-        const query1 = new GetJobByIdQuery(id);
-        const query2 = new GetJobByIdQuery(id);
-        const query3 = new GetJobByIdQuery(id);
+describe('Property: Read Model Query Independence', () => {
+  let sourceReadRepository: TypeOrmSourceReadRepository;
+  let contentItemReadRepository: TypeOrmContentItemReadRepository;
+  let mockSourceRepository: jest.Mocked<Repository<SourceReadModelEntity>>;
+  let mockContentRepository: jest.Mocked<
+    Repository<ContentItemReadModelEntity>
+  >;
 
-        // Verify all queries have same parameters
-        expect(query1.jobId).toBe(query2.jobId);
-        expect(query2.jobId).toBe(query3.jobId);
-        expect(query1.jobId).toBe(id);
-      }),
-      { numRuns: 20 },
-    );
-  });
+  beforeEach(async () => {
+    // Create mock repositories
+    mockSourceRepository = {
+      findOne: jest.fn(),
+      find: jest.fn(),
+      save: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    } as any;
 
-  /**
-   * Property 6.2: GetJobByIdQuery Idempotency
-   *
-   * For any job ID, the query object should be immutable and consistent.
-   */
-  it('should maintain GetJobByIdQuery immutability', () => {
-    fc.assert(
-      fc.property(fc.string({ minLength: 1, maxLength: 100 }), (jobId) => {
-        const query = new GetJobByIdQuery(jobId);
+    mockContentRepository = {
+      findOne: jest.fn(),
+      find: jest.fn(),
+      save: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    } as any;
 
-        // Store original value
-        const originalJobId = query.jobId;
-
-        // Attempt to access multiple times
-        const access1 = query.jobId;
-        const access2 = query.jobId;
-        const access3 = query.jobId;
-
-        // All accesses should return the same value
-        expect(access1).toBe(originalJobId);
-        expect(access2).toBe(originalJobId);
-        expect(access3).toBe(originalJobId);
-      }),
-      { numRuns: 20 },
-    );
-  });
-
-  /**
-   * Property 6.3: GetContentByHashQuery Idempotency
-   *
-   * For any content hash, the query object should be immutable and consistent.
-   */
-  it('should maintain GetContentByHashQuery immutability', () => {
-    fc.assert(
-      fc.property(
-        // Generate 64 hex characters
-        fc
-          .array(fc.integer({ min: 0, max: 15 }), {
-            minLength: 64,
-            maxLength: 64,
-          })
-          .map((arr) => arr.map((n) => n.toString(16)).join('')),
-        (contentHash) => {
-          const query = new GetContentByHashQuery(contentHash);
-
-          // Store original value
-          const originalHash = query.contentHash;
-
-          // Attempt to access multiple times
-          const access1 = query.contentHash;
-          const access2 = query.contentHash;
-          const access3 = query.contentHash;
-
-          // All accesses should return the same value
-          expect(access1).toBe(originalHash);
-          expect(access2).toBe(originalHash);
-          expect(access3).toBe(originalHash);
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        TypeOrmSourceReadRepository,
+        TypeOrmContentItemReadRepository,
+        {
+          provide: getRepositoryToken(SourceReadModelEntity),
+          useValue: mockSourceRepository,
         },
-      ),
-      { numRuns: 20 },
+        {
+          provide: getRepositoryToken(ContentItemReadModelEntity),
+          useValue: mockContentRepository,
+        },
+      ],
+    }).compile();
+
+    sourceReadRepository = module.get<TypeOrmSourceReadRepository>(
+      TypeOrmSourceReadRepository,
+    );
+    contentItemReadRepository = module.get<TypeOrmContentItemReadRepository>(
+      TypeOrmContentItemReadRepository,
     );
   });
 
-  /**
-   * Property 6.4: GetSourceByIdQuery Idempotency
-   *
-   * For any source ID, the query object should be immutable and consistent.
-   */
-  it('should maintain GetSourceByIdQuery immutability', () => {
-    fc.assert(
-      fc.property(fc.string({ minLength: 1, maxLength: 100 }), (sourceId) => {
-        const query = new GetSourceByIdQuery(sourceId);
-
-        // Store original value
-        const originalSourceId = query.sourceId;
-
-        // Attempt to access multiple times
-        const access1 = query.sourceId;
-        const access2 = query.sourceId;
-        const access3 = query.sourceId;
-
-        // All accesses should return the same value
-        expect(access1).toBe(originalSourceId);
-        expect(access2).toBe(originalSourceId);
-        expect(access3).toBe(originalSourceId);
-      }),
-      { numRuns: 20 },
-    );
+  afterEach(() => {
+    jest.clearAllMocks();
   });
 
   /**
-   * Property 6.5: GetJobsByStatusQuery Idempotency
+   * Property 1: SourceReadRepository queries do not trigger writes
    *
-   * For any status and pagination parameters, the query object should be
-   * immutable and consistent.
+   * For any source read query (findById, findByType, findActive),
+   * the repository should ONLY call read methods (findOne, find)
+   * and NEVER call write methods (save, update, delete).
    */
-  it('should maintain GetJobsByStatusQuery immutability', () => {
-    fc.assert(
-      fc.property(
+  it('SourceReadRepository queries should not trigger any write operations', async () => {
+    await fc.assert(
+      fc.asyncProperty(
         fc.record({
-          status: fc.constantFrom('PENDING', 'RUNNING', 'COMPLETED', 'FAILED'),
-          limit: fc.integer({ min: 1, max: 100 }),
-          offset: fc.integer({ min: 0, max: 1000 }),
+          sourceId: fc.uuid(),
+          sourceType: fc.constantFrom(
+            'WEB_SCRAPER',
+            'RSS_FEED',
+            'SOCIAL_MEDIA',
+          ),
         }),
-        ({ status, limit, offset }) => {
-          const query = new GetJobsByStatusQuery(status, limit, offset);
+        async (data) => {
+          // Reset mocks before each property test iteration
+          jest.clearAllMocks();
 
-          // Store original values
-          const originalStatus = query.status;
-          const originalLimit = query.limit;
-          const originalOffset = query.offset;
+          // Mock return value for findById
+          mockSourceRepository.findOne.mockResolvedValue({
+            sourceId: data.sourceId,
+            sourceType: data.sourceType,
+            name: 'Test Source',
+            isActive: true,
+            consecutiveFailures: 0,
+            successRate: 1.0,
+            lastSuccessAt: null,
+            lastFailureAt: null,
+            configSummary: {},
+            updatedAt: new Date(),
+          } as SourceReadModelEntity);
 
-          // Attempt to access multiple times
-          const statusAccess1 = query.status;
-          const statusAccess2 = query.status;
-          const limitAccess1 = query.limit;
-          const limitAccess2 = query.limit;
-          const offsetAccess1 = query.offset;
-          const offsetAccess2 = query.offset;
+          // Mock return value for findByType and findActive
+          mockSourceRepository.find.mockResolvedValue([
+            {
+              sourceId: data.sourceId,
+              sourceType: data.sourceType,
+              name: 'Test Source',
+              isActive: true,
+              consecutiveFailures: 0,
+              successRate: 1.0,
+              lastSuccessAt: null,
+              lastFailureAt: null,
+              configSummary: {},
+              updatedAt: new Date(),
+            } as SourceReadModelEntity,
+          ]);
 
-          // All accesses should return the same values
-          expect(statusAccess1).toBe(originalStatus);
-          expect(statusAccess2).toBe(originalStatus);
-          expect(limitAccess1).toBe(originalLimit);
-          expect(limitAccess2).toBe(originalLimit);
-          expect(offsetAccess1).toBe(originalOffset);
-          expect(offsetAccess2).toBe(originalOffset);
+          // Execute all read operations
+          await sourceReadRepository.findById(data.sourceId);
+          await sourceReadRepository.findByType(data.sourceType);
+          await sourceReadRepository.findActive();
+
+          // Verify ONLY read methods were called
+          expect(mockSourceRepository.findOne).toHaveBeenCalled();
+          expect(mockSourceRepository.find).toHaveBeenCalled();
+
+          // Verify NO write methods were called
+          expect(mockSourceRepository.save).not.toHaveBeenCalled();
+          expect(mockSourceRepository.update).not.toHaveBeenCalled();
+          expect(mockSourceRepository.delete).not.toHaveBeenCalled();
         },
       ),
-      { numRuns: 20 },
+      { numRuns: 100 },
     );
   });
 
   /**
-   * Property 6.6: Query Parameter Preservation
+   * Property 2: ContentItemReadRepository queries do not trigger writes
    *
-   * For any query, parameters should be preserved exactly as provided
-   * (no normalization, transformation, or mutation).
+   * For any content item read query (findById, findByHash, findBySourceId),
+   * the repository should ONLY call read methods (findOne, find)
+   * and NEVER call write methods (save, update, delete).
    */
-  it('should preserve query parameters exactly', () => {
-    fc.assert(
-      fc.property(
+  it('ContentItemReadRepository queries should not trigger any write operations', async () => {
+    await fc.assert(
+      fc.asyncProperty(
         fc.record({
-          jobId: fc.string({ minLength: 1, maxLength: 100 }),
+          contentId: fc.uuid(),
+          sourceId: fc.uuid(),
           contentHash: fc
-            .array(fc.integer({ min: 0, max: 15 }), {
-              minLength: 64,
-              maxLength: 64,
-            })
-            .map((arr) => arr.map((n) => n.toString(16)).join('')),
-          sourceId: fc.string({ minLength: 1, maxLength: 100 }),
+            .array(
+              fc.constantFrom(
+                '0',
+                '1',
+                '2',
+                '3',
+                '4',
+                '5',
+                '6',
+                '7',
+                '8',
+                '9',
+                'a',
+                'b',
+                'c',
+                'd',
+                'e',
+                'f',
+              ),
+              { minLength: 64, maxLength: 64 },
+            )
+            .map((arr) => arr.join('')),
         }),
-        ({ jobId, contentHash, sourceId }) => {
-          // Create queries
-          const jobQuery = new GetJobByIdQuery(jobId);
-          const contentQuery = new GetContentByHashQuery(contentHash);
-          const sourceQuery = new GetSourceByIdQuery(sourceId);
+        async (data) => {
+          // Reset mocks before each property test iteration
+          jest.clearAllMocks();
 
-          // Verify exact preservation (no trimming, lowercasing, etc.)
-          expect(jobQuery.jobId).toBe(jobId);
-          expect(contentQuery.contentHash).toBe(contentHash);
-          expect(sourceQuery.sourceId).toBe(sourceId);
+          // Mock return value for findById and findByHash
+          mockContentRepository.findOne.mockResolvedValue({
+            contentId: data.contentId,
+            sourceId: data.sourceId,
+            contentHash: data.contentHash,
+            normalizedContent: 'Test content',
+            metadata: {},
+            assetTags: [],
+            collectedAt: new Date(),
+          } as ContentItemReadModelEntity);
+
+          // Mock return value for findBySourceId
+          mockContentRepository.find.mockResolvedValue([
+            {
+              contentId: data.contentId,
+              sourceId: data.sourceId,
+              contentHash: data.contentHash,
+              normalizedContent: 'Test content',
+              metadata: {},
+              assetTags: [],
+              collectedAt: new Date(),
+            } as ContentItemReadModelEntity,
+          ]);
+
+          // Execute all read operations
+          await contentItemReadRepository.findById(data.contentId);
+          await contentItemReadRepository.findByHash(data.contentHash);
+          await contentItemReadRepository.findBySourceId(data.sourceId);
+
+          // Verify ONLY read methods were called
+          expect(mockContentRepository.findOne).toHaveBeenCalled();
+          expect(mockContentRepository.find).toHaveBeenCalled();
+
+          // Verify NO write methods were called
+          expect(mockContentRepository.save).not.toHaveBeenCalled();
+          expect(mockContentRepository.update).not.toHaveBeenCalled();
+          expect(mockContentRepository.delete).not.toHaveBeenCalled();
         },
       ),
-      { numRuns: 20 },
+      { numRuns: 100 },
     );
   });
 
   /**
-   * Property 6.7: Query Equality
+   * Property 3: Read queries are idempotent
    *
-   * Two queries with the same parameters should be considered equivalent
-   * for the purpose of caching and deduplication.
+   * For any read query, executing it multiple times should:
+   * 1. Return the same result (or equivalent result)
+   * 2. Not change the underlying data
+   * 3. Not have cumulative side effects
    */
-  it('should treat queries with same parameters as equivalent', () => {
-    fc.assert(
-      fc.property(fc.string({ minLength: 1, maxLength: 100 }), (id) => {
-        const query1 = new GetJobByIdQuery(id);
-        const query2 = new GetJobByIdQuery(id);
-
-        // Queries should have identical parameters
-        expect(query1.jobId).toBe(query2.jobId);
-
-        // This property enables query result caching:
-        // If query1.jobId === query2.jobId, then
-        // cache.get(query1.jobId) should equal cache.get(query2.jobId)
-      }),
-      { numRuns: 20 },
-    );
-  });
-
-  /**
-   * Property 6.8: Query Constructor Purity
-   *
-   * Query constructors should be pure functions - same input always
-   * produces equivalent output, with no side effects.
-   */
-  it('should have pure query constructors', () => {
-    fc.assert(
-      fc.property(
+  it('read queries should be idempotent - multiple calls return same result', async () => {
+    await fc.assert(
+      fc.asyncProperty(
         fc.record({
-          status: fc.constantFrom('PENDING', 'RUNNING', 'COMPLETED', 'FAILED'),
-          limit: fc.integer({ min: 1, max: 100 }),
-          offset: fc.integer({ min: 0, max: 1000 }),
+          sourceId: fc.uuid(),
+          sourceType: fc.constantFrom('WEB_SCRAPER', 'RSS_FEED'),
+          name: fc.string({ minLength: 5, maxLength: 50 }),
+          isActive: fc.boolean(),
         }),
-        ({ status, limit, offset }) => {
-          // Create multiple queries with same parameters
-          const queries = Array.from(
-            { length: 5 },
-            () => new GetJobsByStatusQuery(status, limit, offset),
+        async (data) => {
+          // Reset mocks
+          jest.clearAllMocks();
+
+          // Mock consistent return value
+          const mockEntity: SourceReadModelEntity = {
+            sourceId: data.sourceId,
+            sourceType: data.sourceType,
+            name: data.name,
+            isActive: data.isActive,
+            consecutiveFailures: 0,
+            successRate: 1.0,
+            lastSuccessAt: null,
+            lastFailureAt: null,
+            configSummary: {},
+            updatedAt: new Date('2025-01-09T00:00:00Z'),
+          } as SourceReadModelEntity;
+
+          mockSourceRepository.findOne.mockResolvedValue(mockEntity);
+
+          // Execute query multiple times
+          const result1 = await sourceReadRepository.findById(data.sourceId);
+          const result2 = await sourceReadRepository.findById(data.sourceId);
+          const result3 = await sourceReadRepository.findById(data.sourceId);
+
+          // Verify all results are equivalent
+          expect(result1).toEqual(result2);
+          expect(result2).toEqual(result3);
+          expect(result1).toEqual(result3);
+
+          // Verify the same data is returned
+          if (result1 && result2 && result3) {
+            expect(result1.sourceId).toBe(data.sourceId);
+            expect(result2.sourceId).toBe(data.sourceId);
+            expect(result3.sourceId).toBe(data.sourceId);
+
+            expect(result1.sourceType).toBe(data.sourceType);
+            expect(result2.sourceType).toBe(data.sourceType);
+            expect(result3.sourceType).toBe(data.sourceType);
+          }
+
+          // Verify NO write operations occurred
+          expect(mockSourceRepository.save).not.toHaveBeenCalled();
+          expect(mockSourceRepository.update).not.toHaveBeenCalled();
+          expect(mockSourceRepository.delete).not.toHaveBeenCalled();
+        },
+      ),
+      { numRuns: 100 },
+    );
+  });
+
+  /**
+   * Property 4: Queries return null for non-existent entities without side effects
+   *
+   * For any query for a non-existent entity, the repository should:
+   * 1. Return null (not throw an error)
+   * 2. Not create any new entities
+   * 3. Not modify any existing entities
+   */
+  it('queries for non-existent entities should return null without side effects', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.record({
+          nonExistentId: fc.uuid(),
+        }),
+        async (data) => {
+          // Reset mocks
+          jest.clearAllMocks();
+
+          // Mock null return (entity not found)
+          mockSourceRepository.findOne.mockResolvedValue(null);
+          mockContentRepository.findOne.mockResolvedValue(null);
+
+          // Execute queries for non-existent entities
+          const sourceResult = await sourceReadRepository.findById(
+            data.nonExistentId,
+          );
+          const contentResult = await contentItemReadRepository.findById(
+            data.nonExistentId,
           );
 
-          // All queries should have identical parameters
-          for (let i = 1; i < queries.length; i++) {
-            expect(queries[i].status).toBe(queries[0].status);
-            expect(queries[i].limit).toBe(queries[0].limit);
-            expect(queries[i].offset).toBe(queries[0].offset);
-          }
+          // Verify null is returned
+          expect(sourceResult).toBeNull();
+          expect(contentResult).toBeNull();
+
+          // Verify NO write operations occurred
+          expect(mockSourceRepository.save).not.toHaveBeenCalled();
+          expect(mockSourceRepository.update).not.toHaveBeenCalled();
+          expect(mockSourceRepository.delete).not.toHaveBeenCalled();
+
+          expect(mockContentRepository.save).not.toHaveBeenCalled();
+          expect(mockContentRepository.update).not.toHaveBeenCalled();
+          expect(mockContentRepository.delete).not.toHaveBeenCalled();
         },
       ),
-      { numRuns: 20 },
+      { numRuns: 100 },
     );
   });
 
   /**
-   * Property 6.9: Query Parameter Types
+   * Property 5: Collection queries return empty arrays without side effects
    *
-   * Query parameters should maintain their types without coercion.
+   * For any collection query that returns no results, the repository should:
+   * 1. Return an empty array (not null or undefined)
+   * 2. Not create any new entities
+   * 3. Not modify any existing entities
    */
-  it('should maintain parameter types', () => {
-    fc.assert(
-      fc.property(
+  it('collection queries with no results should return empty array without side effects', async () => {
+    await fc.assert(
+      fc.asyncProperty(
         fc.record({
-          status: fc.constantFrom('PENDING', 'RUNNING', 'COMPLETED', 'FAILED'),
-          limit: fc.integer({ min: 1, max: 100 }),
-          offset: fc.integer({ min: 0, max: 1000 }),
+          sourceType: fc.constantFrom('WEB_SCRAPER', 'RSS_FEED'),
+          sourceId: fc.uuid(),
         }),
-        ({ status, limit, offset }) => {
-          const query = new GetJobsByStatusQuery(status, limit, offset);
+        async (data) => {
+          // Reset mocks
+          jest.clearAllMocks();
 
-          // Verify types are preserved
-          expect(typeof query.status).toBe('string');
-          expect(typeof query.limit).toBe('number');
-          expect(typeof query.offset).toBe('number');
+          // Mock empty array return (no results)
+          mockSourceRepository.find.mockResolvedValue([]);
+          mockContentRepository.find.mockResolvedValue([]);
 
-          // Verify no type coercion
-          expect(query.limit).toBe(limit);
-          expect(query.offset).toBe(offset);
-          expect(Number.isInteger(query.limit)).toBe(true);
-          expect(Number.isInteger(query.offset)).toBe(true);
+          // Execute collection queries
+          const sourcesByType = await sourceReadRepository.findByType(
+            data.sourceType,
+          );
+          const activeSources = await sourceReadRepository.findActive();
+          const contentBySource =
+            await contentItemReadRepository.findBySourceId(data.sourceId);
+
+          // Verify empty arrays are returned
+          expect(sourcesByType).toEqual([]);
+          expect(activeSources).toEqual([]);
+          expect(contentBySource).toEqual([]);
+
+          expect(Array.isArray(sourcesByType)).toBe(true);
+          expect(Array.isArray(activeSources)).toBe(true);
+          expect(Array.isArray(contentBySource)).toBe(true);
+
+          // Verify NO write operations occurred
+          expect(mockSourceRepository.save).not.toHaveBeenCalled();
+          expect(mockSourceRepository.update).not.toHaveBeenCalled();
+          expect(mockSourceRepository.delete).not.toHaveBeenCalled();
+
+          expect(mockContentRepository.save).not.toHaveBeenCalled();
+          expect(mockContentRepository.update).not.toHaveBeenCalled();
+          expect(mockContentRepository.delete).not.toHaveBeenCalled();
         },
       ),
-      { numRuns: 20 },
+      { numRuns: 100 },
     );
   });
 });

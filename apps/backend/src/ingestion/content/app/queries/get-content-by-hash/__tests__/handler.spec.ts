@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { GetContentByHashQueryHandler } from '../handler';
 import { GetContentByHashQuery } from '../query';
 import { IContentItemReadRepository } from '@/ingestion/content/domain/interfaces/repositories/content-item-read';
-import { ContentItemReadModel } from '@/ingestion/content/domain/read-models/content-item';
+import { ContentItemReadModel } from '@/ingestion/content/app/queries/read-models/content-item';
 import { ContentHash } from '@/ingestion/content/domain/value-objects/content-hash';
 
 /**

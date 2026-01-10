@@ -146,6 +146,14 @@ export class ContentCollectedEventHandler implements IEventHandler<ContentCollec
         contentItem.sourceId,
         event.jobId,
         contentItem.contentHash.toString(),
+        normalizedContent,
+        {
+          title: metadata.title ?? undefined,
+          author: metadata.author ?? undefined,
+          publishedAt: metadata.publishedAt ?? undefined,
+          language: metadata.language ?? undefined,
+          sourceUrl: metadata.sourceUrl ?? undefined,
+        },
         contentItem.assetTags.map((tag) => tag.symbol),
         contentItem.collectedAt,
       );

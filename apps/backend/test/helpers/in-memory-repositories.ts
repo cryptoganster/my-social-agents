@@ -21,7 +21,7 @@ import { ContentItem } from '@/ingestion/content/domain/aggregates/content-item'
 import { IContentItemWriteRepository } from '@/ingestion/content/domain/interfaces/repositories/content-item-write';
 import { IngestionStatus } from '@/ingestion/job/domain/value-objects/ingestion-status';
 import { JobMetrics } from '@/ingestion/job/domain/value-objects/job-metrics';
-import { ErrorRecord } from '@/ingestion/shared/entities/error-record';
+import { ErrorRecord } from '@/ingestion/shared/domain/entities/error-record';
 
 interface StoredJob {
   jobId: string;

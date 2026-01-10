@@ -30,6 +30,8 @@ describe('ContentIngestedEventHandler', () => {
         'source-456',
         'job-789',
         'abc123def456',
+        'Normalized content text',
+        { title: 'Test Article' },
         ['BTC', 'ETH'],
         new Date('2025-01-09T10:00:00Z'),
       );
@@ -58,6 +60,8 @@ describe('ContentIngestedEventHandler', () => {
         'source-456',
         'job-789',
         'abc123def456',
+        'Content',
+        {},
         ['BTC'],
         new Date(),
       );
@@ -86,6 +90,8 @@ describe('ContentIngestedEventHandler', () => {
         'source-456',
         'job-789',
         'abc123def456',
+        'Content',
+        {},
         ['BTC'],
         new Date(),
       );
@@ -107,6 +113,8 @@ describe('ContentIngestedEventHandler', () => {
         'source-456',
         'job-789',
         'abc123def456',
+        'Content',
+        {},
         ['BTC'],
         new Date(),
       );
@@ -127,6 +135,8 @@ describe('ContentIngestedEventHandler', () => {
         'source-456',
         'job-789',
         'abc123def456',
+        'Content',
+        {},
         ['BTC'],
         new Date(),
       );
@@ -155,6 +165,8 @@ describe('ContentIngestedEventHandler', () => {
         'source-456',
         'job-789',
         'abc123def456',
+        'Content',
+        {},
         ['BTC'],
         new Date(),
       );
@@ -182,6 +194,8 @@ describe('ContentIngestedEventHandler', () => {
         'source-1',
         'job-1',
         'hash-1',
+        'Content 1',
+        {},
         ['BTC'],
         new Date(),
       );
@@ -190,6 +204,8 @@ describe('ContentIngestedEventHandler', () => {
         'source-2',
         'job-2',
         'hash-2',
+        'Content 2',
+        {},
         ['ETH'],
         new Date(),
       );
@@ -198,6 +214,8 @@ describe('ContentIngestedEventHandler', () => {
         'source-3',
         'job-3',
         'hash-3',
+        'Content 3',
+        {},
         ['SOL'],
         new Date(),
       );
@@ -227,6 +245,8 @@ describe('ContentIngestedEventHandler', () => {
         'source-1',
         'job-1',
         'hash-1',
+        'Content 1',
+        {},
         ['BTC'],
         new Date(),
       );
@@ -235,6 +255,8 @@ describe('ContentIngestedEventHandler', () => {
         'source-2',
         'job-2',
         'hash-2',
+        'Content 2',
+        {},
         ['ETH'],
         new Date(),
       );
@@ -260,6 +282,8 @@ describe('ContentIngestedEventHandler', () => {
         'source-456',
         'job-789',
         'abc123def456',
+        'Content',
+        {},
         ['BTC'],
         new Date(),
       );

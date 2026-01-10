@@ -12,3 +12,20 @@ export {
 } from './aggregate';
 export type { DomainEvent, EventPublisher } from './domain-event';
 export type { IJobScheduler, JobCallback } from './job-scheduler';
+
+// Read Model Infrastructure
+export type { ReadModel, IReadModelRepository } from './read-model';
+
+// Event Versioning
+export {
+  EventVersion,
+  EventVersionRegistry,
+  EventUpgraderChain,
+} from './event-versioning';
+export type { VersionedEvent, IEventUpgrader } from './event-versioning';
+
+// Read Model Updaters
+export {
+  ReadModelUpdater,
+  IdempotentReadModelUpdater,
+} from './read-model-updater';

@@ -10,7 +10,7 @@ import { SourceConfiguration } from '@/ingestion/source/domain/aggregates/source
 import {
   ErrorRecord,
   ErrorType,
-} from '@/ingestion/shared/entities/error-record';
+} from '@/ingestion/shared/domain/entities/error-record';
 
 describe('IngestionJob', () => {
   // Helper to create a valid source configuration

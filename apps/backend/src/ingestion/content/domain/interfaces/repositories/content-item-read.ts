@@ -1,4 +1,4 @@
-import { ContentItemReadModel } from '../../read-models/content-item';
+import { ContentItemReadModel } from '@/ingestion/content/app/queries/read-models/content-item';
 import { ContentHash } from '../../value-objects/content-hash';
 
 /**
