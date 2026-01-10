@@ -15,7 +15,7 @@ import * as fc from 'fast-check';
 import { SourceConfiguredEvent } from '@/ingestion/source/domain/events/source-configured';
 import { SourceHealthUpdatedEvent } from '@/ingestion/source/domain/events/source-health-updated';
 import { ContentCollectionRequestedEvent } from '@/ingestion/job/domain/events/content-collection-requested';
-import { ContentIngestedEvent } from '@/ingestion/content/domain/events/content-ingested';
+import { ContentIngested } from '@/ingestion/content/domain/events/content-ingested';
 import { JobMetricsUpdateRequestedEvent } from '@/ingestion/content/domain/events/job-metrics-update-requested';
 
 describe('Property: Event-Carried State Completeness', () => {
@@ -259,7 +259,7 @@ describe('Property: Event-Carried State Completeness', () => {
   });
 
   /**
-   * Property 4: ContentIngestedEvent contains complete content data
+   * Property 4: ContentIngested contains complete content data
    *
    * For any ingested content, the event must contain:
    * - contentId (identity)
@@ -270,10 +270,11 @@ describe('Property: Event-Carried State Completeness', () => {
    * - metadata (complete metadata object)
    * - assetTags (extracted tags)
    * - collectedAt (temporal context)
+   * - persistedAt (persistence timestamp)
    *
    * Refinement context should NOT need to query Ingestion context for content data.
    */
-  it('ContentIngestedEvent should contain complete content data', () => {
+  it('ContentIngested should contain complete content data', () => {
     fc.assert(
       fc.property(
         fc.record({
@@ -320,10 +321,11 @@ describe('Property: Event-Carried State Completeness', () => {
             { minLength: 0, maxLength: 5 },
           ),
           collectedAt: fc.date(),
+          persistedAt: fc.date(),
         }),
         (data) => {
           // Create event with generated data
-          const event = new ContentIngestedEvent(
+          const event = new ContentIngested(
             data.contentId,
             data.sourceId,
             data.jobId,
@@ -338,6 +340,7 @@ describe('Property: Event-Carried State Completeness', () => {
             },
             data.assetTags,
             data.collectedAt,
+            data.persistedAt,
           );
 
           // Verify all required fields are present
@@ -481,7 +484,7 @@ describe('Property: Event-Carried State Completeness', () => {
    *
    * For any cross-context event, the event must include a timestamp
    * to provide temporal context for event ordering and debugging.
-   * Note: ContentIngestedEvent uses 'collectedAt' instead of 'occurredAt'.
+   * Note: ContentIngested uses 'collectedAt' and 'persistedAt' instead of 'occurredAt'.
    */
   it('all cross-context events should include temporal timestamp', () => {
     fc.assert(
@@ -522,7 +525,7 @@ describe('Property: Event-Carried State Completeness', () => {
             data.occurredAt,
           );
 
-          const contentIngestedEvent = new ContentIngestedEvent(
+          const contentIngestedEvent = new ContentIngested(
             data.contentId,
             data.sourceId,
             data.jobId,
@@ -530,7 +533,8 @@ describe('Property: Event-Carried State Completeness', () => {
             'Test content',
             {},
             [],
-            data.occurredAt, // Uses collectedAt
+            data.occurredAt, // collectedAt
+            data.occurredAt, // persistedAt
           );
 
           const metricsEvent = new JobMetricsUpdateRequestedEvent(
@@ -556,7 +560,7 @@ describe('Property: Event-Carried State Completeness', () => {
           expect(metricsEvent.occurredAt).toBeInstanceOf(Date);
           expect(metricsEvent.occurredAt).toBe(data.occurredAt);
 
-          // ContentIngestedEvent uses collectedAt
+          // ContentIngested uses collectedAt
           expect(contentIngestedEvent.collectedAt).toBeDefined();
           expect(contentIngestedEvent.collectedAt).toBeInstanceOf(Date);
           expect(contentIngestedEvent.collectedAt).toBe(data.occurredAt);

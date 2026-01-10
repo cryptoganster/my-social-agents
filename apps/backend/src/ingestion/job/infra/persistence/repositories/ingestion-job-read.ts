@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { IngestionJobReadModel } from '@/ingestion/job/domain/read-models/ingestion-job';
-import { IIngestionJobReadRepository } from '@/ingestion/job/domain/interfaces/repositories/ingestion-job-read';
+import { IngestionJobReadModel } from '@/ingestion/job/app/queries/read-models/ingestion-job';
+import { IIngestionJobReadRepository } from '@/ingestion/job/app/queries/repositories/ingestion-job-read';
 import { IngestionJobEntity } from '../entities/ingestion-job';
 
 /**

@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { HashService } from './hash';
+import { CredentialEncryptionService } from './credential-encryption';
+import { EncryptionKeyProvider } from '../security/encryption-key-provider';
 
 /**
  * SharedExternalModule
@@ -10,6 +12,8 @@ import { HashService } from './hash';
  *
  * Services:
  * - IHashService: SHA-256 cryptographic hashing
+ * - ICredentialEncryption: AES-256-GCM credential encryption/decryption
+ * - IEncryptionKeyProvider: Encryption key management
  *
  * Usage:
  * ```typescript
@@ -22,6 +26,8 @@ import { HashService } from './hash';
  *
  * All services are registered with interface tokens for dependency injection:
  * - 'IHashService' → HashService
+ * - 'ICredentialEncryption' → CredentialEncryptionService
+ * - 'IEncryptionKeyProvider' → EncryptionKeyProvider
  */
 @Module({
   providers: [
@@ -30,7 +36,17 @@ import { HashService } from './hash';
       provide: 'IHashService',
       useClass: HashService,
     },
+    // Credential Encryption with Interface Token
+    {
+      provide: 'ICredentialEncryption',
+      useClass: CredentialEncryptionService,
+    },
+    // Encryption Key Provider with Interface Token
+    {
+      provide: 'IEncryptionKeyProvider',
+      useClass: EncryptionKeyProvider,
+    },
   ],
-  exports: ['IHashService'],
+  exports: ['IHashService', 'ICredentialEncryption', 'IEncryptionKeyProvider'],
 })
 export class SharedExternalModule {}

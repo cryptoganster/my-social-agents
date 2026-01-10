@@ -2,7 +2,7 @@ import { CommandHandler, ICommandHandler, EventBus } from '@nestjs/cqrs';
 import { Logger, Inject } from '@nestjs/common';
 import { ISourceConfigurationFactory } from '@/ingestion/source/domain/interfaces/factories/source-configuration-factory';
 import { AdapterRegistry } from '@/ingestion/source/domain/services/adapter-registry';
-import { ContentCollectedEvent } from '@/ingestion/content/domain/events';
+import { ContentCollected } from '@/ingestion/content/domain/events';
 import { IngestContentCommand } from './command';
 import { IngestContentResult } from './result';
 
@@ -104,7 +104,7 @@ export class IngestContentCommandHandler implements ICommandHandler<
       // Event handlers will process each item asynchronously
       for (const rawContent of rawContentItems) {
         try {
-          const event = new ContentCollectedEvent(
+          const event = new ContentCollected(
             command.sourceId,
             '', // jobId - will be set by ExecuteJobCommand in future refactoring
             rawContent.content,

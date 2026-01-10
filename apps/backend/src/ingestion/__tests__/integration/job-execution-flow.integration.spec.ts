@@ -2,10 +2,10 @@
  * Job Execution Flow Integration Test
  *
  * Tests the complete job execution flow:
- * - Schedule job → JobScheduledEvent
- * - Execute job → JobStartedEvent
+ * - Schedule job → JobScheduled
+ * - Execute job → JobStarted
  * - Content collection and ingestion
- * - Job completion → JobCompletedEvent
+ * - Job completion → JobCompleted
  * - Metrics aggregation
  * - Source health updates
  *
@@ -20,10 +20,11 @@ import { DataSource } from 'typeorm';
 import { ScheduleJobCommand } from '@/ingestion/job/app/commands/schedule-job/command';
 import { ScheduleJobResult } from '@/ingestion/job/app/commands/schedule-job/result';
 import { GetJobByIdQuery } from '@/ingestion/job/app/queries/get-job-by-id/query';
-import { IngestionJobReadModel } from '@/ingestion/job/domain/read-models/ingestion-job';
+import { IngestionJobReadModel } from '@/ingestion/job/app/queries/read-models/ingestion-job';
 import { GetSourceByIdQuery } from '@/ingestion/source/app/queries/get-source-by-id/query';
-import { ConfigureSourceCommand } from '@/ingestion/source/app/commands/configure-source/command';
-import { IngestionSharedModule } from '@/ingestion/shared/ingestion-shared.module';
+import { CreateSourceCommand } from '@/ingestion/source/app/commands/create-source/command';
+import { CreateSourceResult } from '@/ingestion/source/app/commands/create-source/result';
+import { SharedModule } from '@/shared/shared.module';
 import { IngestionSourceModule } from '@/ingestion/source/ingestion-source.module';
 import { IngestionJobModule } from '@/ingestion/job/ingestion-job.module';
 import { IngestionContentModule } from '@/ingestion/content/ingestion-content.module';
@@ -63,7 +64,7 @@ describe('Integration: Job Execution Flow', () => {
           logging: false,
         }),
         CqrsModule,
-        IngestionSharedModule,
+        SharedModule,
         IngestionSourceModule,
         IngestionJobModule,
         IngestionContentModule,
@@ -109,9 +110,11 @@ describe('Integration: Job Execution Flow', () => {
       jest.spyOn(adapterRegistry, 'getAdapter').mockReturnValue(mockAdapter);
 
       // 1. Configure a test source
-      const configureResult = await commandBus.execute(
-        new ConfigureSourceCommand(
-          undefined, // sourceId - undefined for new source
+      const configureResult = await commandBus.execute<
+        CreateSourceCommand,
+        CreateSourceResult
+      >(
+        new CreateSourceCommand(
           SourceTypeEnum.WEB,
           'Test Web Source',
           {
@@ -121,8 +124,8 @@ describe('Integration: Job Execution Flow', () => {
               content: 'article',
             },
           },
-          undefined, // credentials
-          true, // isActive
+          undefined,
+          true,
         ),
       );
 
@@ -151,7 +154,7 @@ describe('Integration: Job Execution Flow', () => {
       expect(scheduleResult.scheduledAt).toBeInstanceOf(Date);
 
       // 4. Wait for automatic job execution to complete
-      // JobScheduledEventHandler automatically triggers execution
+      // StartJobOnJobScheduled automatically triggers execution
       const jobAfterExecution = await pollUntil<IngestionJobReadModel>(
         queryBus,
         new GetJobByIdQuery(scheduleResult.jobId),
@@ -196,9 +199,11 @@ describe('Integration: Job Execution Flow', () => {
       jest.spyOn(adapterRegistry, 'getAdapter').mockReturnValue(mockAdapter);
 
       // 1. Configure a source with invalid configuration (will cause failure)
-      const configureResult = await commandBus.execute(
-        new ConfigureSourceCommand(
-          undefined,
+      const configureResult = await commandBus.execute<
+        CreateSourceCommand,
+        CreateSourceResult
+      >(
+        new CreateSourceCommand(
           SourceTypeEnum.WEB,
           'Test Failing Source',
           {
@@ -223,7 +228,7 @@ describe('Integration: Job Execution Flow', () => {
         },
       );
 
-      // 3. Wait for automatic job execution (triggered by JobScheduledEventHandler)
+      // 3. Wait for automatic job execution (triggered by StartJobOnJobScheduled)
       const jobAfterExecution = await pollUntil<IngestionJobReadModel>(
         queryBus,
         new GetJobByIdQuery(scheduleResult.jobId),
@@ -248,7 +253,7 @@ describe('Integration: Job Execution Flow', () => {
   });
 
   describe('Event Publication', () => {
-    it('should publish JobScheduledEvent when job is scheduled', async () => {
+    it('should publish JobScheduled when job is scheduled', async () => {
       // Mock the adapter
       const mockAdapter = {
         collect: jest.fn().mockResolvedValue([]),
@@ -265,9 +270,11 @@ describe('Integration: Job Execution Flow', () => {
       });
 
       // 1. Configure source
-      const configureResult = await commandBus.execute(
-        new ConfigureSourceCommand(
-          undefined,
+      const configureResult = await commandBus.execute<
+        CreateSourceCommand,
+        CreateSourceResult
+      >(
+        new CreateSourceCommand(
           SourceTypeEnum.RSS,
           'Test RSS Source',
           {
@@ -291,9 +298,9 @@ describe('Integration: Job Execution Flow', () => {
       // Wait for events to be processed
       await waitForEvents(1000);
 
-      // 3. Verify JobScheduledEvent was published
+      // 3. Verify JobScheduled was published
       const jobScheduledEvents = publishedEvents.filter(
-        (e) => e.constructor.name === 'JobScheduledEvent',
+        (e) => e.constructor.name === 'JobScheduled',
       );
       expect(jobScheduledEvents.length).toBeGreaterThan(0);
 
@@ -321,9 +328,11 @@ describe('Integration: Job Execution Flow', () => {
       jest.spyOn(adapterRegistry, 'getAdapter').mockReturnValue(mockAdapter);
 
       // 1. Configure source
-      const configureResult = await commandBus.execute(
-        new ConfigureSourceCommand(
-          undefined,
+      const configureResult = await commandBus.execute<
+        CreateSourceCommand,
+        CreateSourceResult
+      >(
+        new CreateSourceCommand(
           SourceTypeEnum.WEB,
           'Test Metrics Source',
           {
@@ -338,7 +347,7 @@ describe('Integration: Job Execution Flow', () => {
         ),
       );
 
-      // 2. Schedule and execute job (automatic via JobScheduledEventHandler)
+      // 2. Schedule and execute job (automatic via StartJobOnJobScheduled)
       const scheduleResult = await executeWithRetry<ScheduleJobResult>(
         commandBus,
         new ScheduleJobCommand(configureResult.sourceId),

@@ -137,41 +137,51 @@ export class ContentValidationService implements IContentValidationService {
    * Validates content against all quality thresholds
    *
    * This is a convenience method that performs all validations
-   * and returns a detailed result.
+   * and returns a detailed result with a quality score.
    */
   validateQuality(
     content: string,
     metadata: ContentMetadata,
   ): ValidationResult {
     const errors: string[] = [];
+    let qualityScore = 1.0;
 
     if (!this.meetsMinimumLength(content)) {
       errors.push(
         `Content is too short (minimum ${this.MIN_CONTENT_LENGTH} characters)`,
       );
+      qualityScore -= 0.3;
     }
 
     if (content.length > this.MAX_CONTENT_LENGTH) {
       errors.push(
         `Content exceeds maximum length (${this.MAX_CONTENT_LENGTH} characters)`,
       );
+      qualityScore -= 0.2;
     }
 
     if (!this.hasValidEncoding(content)) {
       errors.push('Content contains invalid encoding or characters');
+      qualityScore -= 0.3;
     }
 
     if (!this.hasRequiredMetadata(metadata)) {
       errors.push('Metadata is missing required fields (title or sourceUrl)');
+      qualityScore -= 0.2;
     }
 
     if (content.trim().length === 0) {
       errors.push('Content cannot be empty or only whitespace');
+      qualityScore = 0;
     }
+
+    // Ensure quality score is between 0 and 1
+    qualityScore = Math.max(0, Math.min(1, qualityScore));
 
     return {
       isValid: errors.length === 0,
       errors,
+      qualityScore,
     };
   }
 

@@ -7,13 +7,13 @@
 
 import { IngestionJob } from '@/ingestion/job/domain/aggregates/ingestion-job';
 import { IIngestionJobWriteRepository } from '@/ingestion/job/domain/interfaces/repositories/ingestion-job-write';
-import { IIngestionJobReadRepository } from '@/ingestion/job/domain/interfaces/repositories/ingestion-job-read';
-import { IngestionJobReadModel } from '@/ingestion/job/domain/read-models/ingestion-job';
+import { IIngestionJobReadRepository } from '@/ingestion/job/app/queries/repositories/ingestion-job-read';
+import { IngestionJobReadModel } from '@/ingestion/job/app/queries/read-models/ingestion-job';
 import { IIngestionJobFactory } from '@/ingestion/job/domain/interfaces/factories/ingestion-job-factory';
 import { SourceConfiguration } from '@/ingestion/source/domain/aggregates/source-configuration';
 import { ISourceConfigurationWriteRepository } from '@/ingestion/source/domain/interfaces/repositories/source-configuration-write';
-import { ISourceConfigurationReadRepository } from '@/ingestion/source/domain/interfaces/repositories/source-configuration-read';
-import { SourceConfigurationReadModel } from '@/ingestion/source/domain/read-models/source-configuration';
+import { ISourceConfigurationReadRepository } from '@/ingestion/source/app/queries/repositories/source-configuration-read';
+import { SourceConfigurationReadModel } from '@/ingestion/source/app/queries/read-models/source-configuration';
 import { GetSourceByIdResult } from '@/ingestion/source/app/queries/get-source-by-id/query';
 import { ISourceConfigurationFactory } from '@/ingestion/source/domain/interfaces/factories/source-configuration-factory';
 import { SourceType } from '@/ingestion/source/domain/value-objects/source-type';
@@ -21,7 +21,7 @@ import { ContentItem } from '@/ingestion/content/domain/aggregates/content-item'
 import { IContentItemWriteRepository } from '@/ingestion/content/domain/interfaces/repositories/content-item-write';
 import { IngestionStatus } from '@/ingestion/job/domain/value-objects/ingestion-status';
 import { JobMetrics } from '@/ingestion/job/domain/value-objects/job-metrics';
-import { ErrorRecord } from '@/ingestion/shared/domain/entities/error-record';
+import { ErrorRecord } from '@/ingestion/job/domain/entities/error-record';
 
 interface StoredJob {
   jobId: string;

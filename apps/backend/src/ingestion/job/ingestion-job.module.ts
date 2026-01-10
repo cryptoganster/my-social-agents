@@ -1,19 +1,31 @@
 import { Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ScheduleModule } from '@/shared/infra/scheduling';
-import { IngestionSharedModule } from '@/ingestion/shared/ingestion-shared.module';
+import { SharedModule } from '@/shared/shared.module';
 import { IngestionSourceModule } from '@/ingestion/source/ingestion-source.module';
+
+// Command Handlers
 import { ScheduleJobCommandHandler } from './app/commands/schedule-job/handler';
-import { ExecuteIngestionJobCommandHandler } from './app/commands/execute-job/handler';
+import { StartJobCommandHandler } from './app/commands/start-job/handler';
+import { CompleteJobCommandHandler } from './app/commands/complete-job/handler';
+import { FailJobCommandHandler } from './app/commands/fail-job/handler';
 import { UpdateJobMetricsCommandHandler } from './app/commands/update-job-metrics/handler';
+
+// Query Handlers
 import { GetJobByIdQueryHandler } from './app/queries/get-job-by-id/handler';
 import { GetJobsByStatusQueryHandler } from './app/queries/get-jobs-by-status/handler';
 import { GetJobHistoryQueryHandler } from './app/queries/get-job-history/handler';
-import { JobScheduledEventHandler } from './app/events/job-scheduled/handler';
-import { JobCompletedEventHandler } from './app/events/job-completed/handler';
-import { JobFailedEventHandler } from './app/events/job-failed/handler';
+
+// Event Handlers
+import { StartJobOnJobScheduled } from './app/events/start-job-on-job-scheduled';
+import { IngestContentOnJobStarted } from './app/events/ingest-content-on-job-started';
+import { UpdateSourceHealthOnJobCompleted } from './app/events/update-source-health-on-job-completed';
+import { UpdateSourceHealthOnJobFailed } from './app/events/update-source-health-on-job-failed';
+
+// Domain Services
 import { JobMetricsCalculator } from './domain/services/job-metrics-calculator';
+
+// Infrastructure
 import { TypeOrmIngestionJobWriteRepository } from './infra/persistence/repositories/ingestion-job-write';
 import { TypeOrmIngestionJobFactory } from './infra/persistence/factories/ingestion-job-factory';
 import { TypeOrmIngestionJobReadRepository } from './infra/persistence/repositories/ingestion-job-read';
@@ -25,14 +37,14 @@ import { IngestionJobEntity } from './infra/persistence/entities/ingestion-job';
  * NestJS module for the Job sub-context within Content Ingestion.
  * Handles ingestion job scheduling, execution, and lifecycle management.
  *
- * Responsibilities:
- * - Job scheduling (ScheduleIngestionJobCommand)
- * - Job execution (ExecuteIngestionJobCommand)
- * - Job persistence (write repository)
- * - Job queries (read repository)
- * - Job reconstitution (factory)
+ * Job Execution Pipeline (Event-Driven):
+ * 1. ScheduleJobCommand → JobScheduled
+ * 2. StartJobOnJobScheduled → StartJobCommand → JobStarted
+ * 3. IngestContentOnJobStarted → IngestContentCommand
+ * 4. Content pipeline processes items, updates metrics via UpdateJobMetricsCommand
+ * 5. CompleteJobCommand or FailJobCommand finalizes job
  *
- * Dependencies (to be provided by parent module):
+ * Dependencies (provided by parent module or imports):
  * - ISourceConfigurationFactory (from source sub-context)
  * - IRetryService (from shared sub-context)
  * - ICircuitBreaker (from shared sub-context)
@@ -43,43 +55,45 @@ import { IngestionJobEntity } from './infra/persistence/entities/ingestion-job';
 @Module({
   imports: [
     CqrsModule,
-    ScheduleModule, // Provides IJobScheduler
-    IngestionSharedModule,
+    SharedModule,
     IngestionSourceModule,
     TypeOrmModule.forFeature([IngestionJobEntity]),
   ],
   providers: [
-    // Command Handlers
+    // ===== Command Handlers =====
     ScheduleJobCommandHandler,
-    ExecuteIngestionJobCommandHandler,
+    StartJobCommandHandler,
+    CompleteJobCommandHandler,
+    FailJobCommandHandler,
     UpdateJobMetricsCommandHandler,
 
-    // Query Handlers
+    // ===== Query Handlers =====
     GetJobByIdQueryHandler,
     GetJobsByStatusQueryHandler,
     GetJobHistoryQueryHandler,
 
-    // Event Handlers
-    JobScheduledEventHandler,
-    JobCompletedEventHandler,
-    JobFailedEventHandler,
+    // ===== Event Handlers =====
+    StartJobOnJobScheduled,
+    IngestContentOnJobStarted,
+    UpdateSourceHealthOnJobCompleted,
+    UpdateSourceHealthOnJobFailed,
 
-    // Domain Services
+    // ===== Domain Services =====
     JobMetricsCalculator,
 
-    // Write Repository with Interface Token
+    // ===== Write Repository =====
     {
       provide: 'IIngestionJobWriteRepository',
       useClass: TypeOrmIngestionJobWriteRepository,
     },
 
-    // Factory with Interface Token
+    // ===== Factory =====
     {
       provide: 'IIngestionJobFactory',
       useClass: TypeOrmIngestionJobFactory,
     },
 
-    // Read Repository - Register both class and interface token
+    // ===== Read Repository =====
     TypeOrmIngestionJobReadRepository,
     {
       provide: 'IIngestionJobReadRepository',
@@ -89,7 +103,9 @@ import { IngestionJobEntity } from './infra/persistence/entities/ingestion-job';
   exports: [
     // Export command handlers for use in other modules
     ScheduleJobCommandHandler,
-    ExecuteIngestionJobCommandHandler,
+    StartJobCommandHandler,
+    CompleteJobCommandHandler,
+    FailJobCommandHandler,
 
     // Export query handlers for use in other modules
     GetJobByIdQueryHandler,

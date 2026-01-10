@@ -20,7 +20,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { CqrsModule } from '@nestjs/cqrs';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
-import { IngestionSharedModule } from '@/ingestion/shared/ingestion-shared.module';
+import { SharedModule } from '@/shared/shared.module';
 import { IngestionContentModule } from '@/ingestion/content/ingestion-content.module';
 import { ContentHashGenerator } from '@/ingestion/content/domain/services/content-hash-generator';
 import { createTestDataSource } from '@/../test/setup';
@@ -49,7 +49,7 @@ describe('Property: Deduplication Correctness', () => {
           logging: false,
         }),
         CqrsModule,
-        IngestionSharedModule,
+        SharedModule,
         IngestionContentModule,
       ],
     }).compile();

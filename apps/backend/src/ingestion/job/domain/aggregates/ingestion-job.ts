@@ -7,7 +7,7 @@ import { SourceConfiguration } from '@/ingestion/source/domain/aggregates/source
 import {
   ErrorRecord,
   ErrorType,
-} from '@/ingestion/shared/domain/entities/error-record';
+} from '@/ingestion/job/domain/entities/error-record';
 import { AggregateRoot, AggregateVersion } from '@/shared/kernel';
 
 /**

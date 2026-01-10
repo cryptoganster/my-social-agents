@@ -16,7 +16,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { CommandBus, QueryBus, EventBus, CqrsModule } from '@nestjs/cqrs';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
-import { ConfigureSourceCommand } from '@/ingestion/source/app/commands/configure-source/command';
+import { CreateSourceCommand } from '@/ingestion/source/app/commands/create-source/command';
+import { CreateSourceResult } from '@/ingestion/source/app/commands/create-source/result';
 import { UpdateSourceHealthCommand } from '@/ingestion/source/app/commands/update-source-health/command';
 import {
   GetSourceByIdQuery,
@@ -27,7 +28,7 @@ import {
   GetJobByIdQuery,
   GetJobByIdResult,
 } from '@/ingestion/job/app/queries/get-job-by-id/query';
-import { IngestionSharedModule } from '@/ingestion/shared/ingestion-shared.module';
+import { SharedModule } from '@/shared/shared.module';
 import { IngestionSourceModule } from '@/ingestion/source/ingestion-source.module';
 import { IngestionJobModule } from '@/ingestion/job/ingestion-job.module';
 import { IngestionContentModule } from '@/ingestion/content/ingestion-content.module';
@@ -68,7 +69,7 @@ describe('Integration: Source Health Tracking', () => {
           logging: false,
         }),
         CqrsModule,
-        IngestionSharedModule,
+        SharedModule,
         IngestionSourceModule,
         IngestionJobModule,
         IngestionContentModule,
@@ -94,9 +95,11 @@ describe('Integration: Source Health Tracking', () => {
   describe('Health Metrics Updates', () => {
     it('should update health metrics after successful job', async () => {
       // 1. Configure source
-      const configureResult = await commandBus.execute(
-        new ConfigureSourceCommand(
-          undefined,
+      const configureResult = await commandBus.execute<
+        CreateSourceCommand,
+        CreateSourceResult
+      >(
+        new CreateSourceCommand(
           SourceTypeEnum.WEB,
           'Test Health Source',
           {
@@ -148,9 +151,11 @@ describe('Integration: Source Health Tracking', () => {
 
     it('should track consecutive failures', async () => {
       // 1. Configure source
-      const configureResult = await commandBus.execute(
-        new ConfigureSourceCommand(
-          undefined,
+      const configureResult = await commandBus.execute<
+        CreateSourceCommand,
+        CreateSourceResult
+      >(
+        new CreateSourceCommand(
           SourceTypeEnum.WEB,
           'Test Failure Tracking',
           {
@@ -219,9 +224,11 @@ describe('Integration: Source Health Tracking', () => {
 
     it('should reset consecutive failures on success', async () => {
       // 1. Configure source
-      const configureResult = await commandBus.execute(
-        new ConfigureSourceCommand(
-          undefined,
+      const configureResult = await commandBus.execute<
+        CreateSourceCommand,
+        CreateSourceResult
+      >(
+        new CreateSourceCommand(
           SourceTypeEnum.RSS,
           'Test Failure Reset',
           {
@@ -286,9 +293,11 @@ describe('Integration: Source Health Tracking', () => {
   describe('Success Rate Calculation', () => {
     it('should calculate success rate correctly', async () => {
       // 1. Configure source
-      const configureResult = await commandBus.execute(
-        new ConfigureSourceCommand(
-          undefined,
+      const configureResult = await commandBus.execute<
+        CreateSourceCommand,
+        CreateSourceResult
+      >(
+        new CreateSourceCommand(
           SourceTypeEnum.WEB,
           'Test Success Rate',
           {
@@ -355,9 +364,11 @@ describe('Integration: Source Health Tracking', () => {
       });
 
       // 1. Configure source
-      const configureResult = await commandBus.execute(
-        new ConfigureSourceCommand(
-          undefined,
+      const configureResult = await commandBus.execute<
+        CreateSourceCommand,
+        CreateSourceResult
+      >(
+        new CreateSourceCommand(
           SourceTypeEnum.WEB,
           'Test Unhealthy Detection',
           {
@@ -405,9 +416,11 @@ describe('Integration: Source Health Tracking', () => {
 
     it('should automatically disable unhealthy source', async () => {
       // 1. Configure source
-      const configureResult = await commandBus.execute(
-        new ConfigureSourceCommand(
-          undefined,
+      const configureResult = await commandBus.execute<
+        CreateSourceCommand,
+        CreateSourceResult
+      >(
+        new CreateSourceCommand(
           SourceTypeEnum.WEB,
           'Test Auto Disable',
           {
@@ -481,9 +494,11 @@ describe('Integration: Source Health Tracking', () => {
       jest.spyOn(adapterRegistry, 'getAdapter').mockReturnValue(mockAdapter);
 
       // 1. Configure source
-      const configureResult = await commandBus.execute(
-        new ConfigureSourceCommand(
-          undefined,
+      const configureResult = await commandBus.execute<
+        CreateSourceCommand,
+        CreateSourceResult
+      >(
+        new CreateSourceCommand(
           SourceTypeEnum.WEB,
           'Test Job Health',
           {
@@ -500,7 +515,7 @@ describe('Integration: Source Health Tracking', () => {
 
       const sourceId = configureResult.sourceId;
 
-      // 2. Schedule job (will be auto-executed by JobScheduledEventHandler)
+      // 2. Schedule job (will be auto-executed by StartJobOnJobScheduled)
       const scheduleResult = await executeWithRetry<{ jobId: string }>(
         commandBus,
         new ScheduleJobCommand(sourceId),
@@ -552,9 +567,11 @@ describe('Integration: Source Health Tracking', () => {
       jest.spyOn(adapterRegistry, 'getAdapter').mockReturnValue(mockAdapter);
 
       // 1. Configure source
-      const configureResult = await commandBus.execute(
-        new ConfigureSourceCommand(
-          undefined,
+      const configureResult = await commandBus.execute<
+        CreateSourceCommand,
+        CreateSourceResult
+      >(
+        new CreateSourceCommand(
           SourceTypeEnum.RSS,
           'Test Multiple Jobs Health',
           {
@@ -567,7 +584,7 @@ describe('Integration: Source Health Tracking', () => {
 
       const sourceId = configureResult.sourceId;
 
-      // 2. Execute multiple jobs sequentially (auto-executed by JobScheduledEventHandler)
+      // 2. Execute multiple jobs sequentially (auto-executed by StartJobOnJobScheduled)
       const jobIds: string[] = [];
 
       for (let i = 0; i < 3; i++) {

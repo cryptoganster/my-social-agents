@@ -1,7 +1,7 @@
 import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 import { Inject } from '@nestjs/common';
 import { GetContentByHashQuery, GetContentByHashResult } from './query';
-import { IContentItemReadRepository } from '@/ingestion/content/domain/interfaces/repositories/content-item-read';
+import { IContentItemReadRepository } from '@/ingestion/content/app/queries/repositories/content-item';
 import { ContentHash } from '@/ingestion/content/domain/value-objects/content-hash';
 
 /**

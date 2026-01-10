@@ -1,5 +1,5 @@
 /**
- * ContentIngestedEvent
+ * ContentIngested
  *
  * Domain event published when content has been successfully ingested
  * (validated, normalized, deduplicated, and persisted).
@@ -9,7 +9,7 @@
  *
  * Requirements: 1.1, 1.4, 2.1, 2.2, 3.5, 5.1, 5.4
  */
-export class ContentIngestedEvent {
+export class ContentIngested {
   constructor(
     public readonly contentId: string,
     public readonly sourceId: string,
@@ -25,5 +25,6 @@ export class ContentIngestedEvent {
     },
     public readonly assetTags: string[],
     public readonly collectedAt: Date,
+    public readonly persistedAt: Date,
   ) {}
 }

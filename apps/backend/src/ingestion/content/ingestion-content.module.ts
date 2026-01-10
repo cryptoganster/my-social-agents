@@ -1,17 +1,36 @@
 import { Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { IngestionSharedModule } from '@/ingestion/shared/ingestion-shared.module';
+import { SharedModule } from '@/shared/shared.module';
 import { IngestionSourceModule } from '@/ingestion/source/ingestion-source.module';
+
+// Command Handlers
 import { IngestContentCommandHandler } from './app/commands/ingest-content/handler';
-import { ContentCollectedEventHandler } from './app/events/content-collected/handler';
-import { ContentIngestedEventHandler } from './app/events/content-ingested/handler';
-import { ContentValidationFailedEventHandler } from './app/events/content-validation-failed/handler';
+import { NormalizeRawContentHandler } from './app/commands/normalize-raw-content/handler';
+import { ValidateContentQualityHandler } from './app/commands/validate-content-quality/handler';
+import { SaveContentItemHandler } from './app/commands/save-content-item/handler';
+
+// Event Handlers (pipeline)
+import { NormalizeRawContentOnContentCollected } from './app/events/normalize-raw-content-on-content-collected';
+import { ValidateContentQualityOnContentNormalized } from './app/events/validate-content-quality-on-content-normalized';
+import { CheckDuplicateAndPublishOnContentQualityValidated } from './app/events/check-duplicate-and-publish-on-content-quality-validated';
+import { SaveContentItemOnContentDeduplicationChecked } from './app/events/save-content-item-on-content-deduplication-checked';
+
+// Event Handlers (metrics)
+import { IncrementJobMetricsOnContentIngested } from './app/events/increment-job-metrics-on-content-ingested';
+import { RecordValidationErrorInJobMetricsOnContentValidationFailed } from './app/events/record-validation-error-in-job-metrics-on-content-validation-failed';
+
+// Query Handlers
 import { GetContentByHashQueryHandler } from './app/queries/get-content-by-hash/handler';
+import { CheckContentDuplicateHandler } from './app/queries/check-content-duplicate/handler';
+
+// Domain Services
 import { ContentValidationService } from './domain/services/content-validation';
 import { ContentNormalizationService } from './domain/services/content-normalization';
 import { DuplicateDetectionService } from './domain/services/duplicate-detection';
 import { ContentHashGenerator } from './domain/services/content-hash-generator';
+
+// Infrastructure
 import { ContentItemEntity } from './infra/persistence/entities/content-item';
 import { TypeOrmContentItemReadRepository } from './infra/persistence/repositories/content-item-read';
 import { TypeOrmContentItemWriteRepository } from './infra/persistence/repositories/content-item-write';
@@ -23,54 +42,47 @@ import { TypeOrmContentItemFactory } from './infra/persistence/factories/content
  * NestJS module for the Content sub-context within Content Ingestion.
  * Handles content collection, normalization, validation, and persistence.
  *
- * Responsibilities:
- * - Content ingestion (IngestContentCommand)
- * - Content processing (ContentCollectedEvent → ContentIngestedEvent)
- * - Content validation and normalization
- * - Duplicate detection
- * - Content persistence (write repository)
- * - Content queries (read repository)
- * - Content reconstitution (factory)
+ * Content Processing Pipeline:
+ * 1. ContentCollected → NormalizeRawContentOnContentCollected → NormalizeRawContentCommand
+ * 2. ContentNormalized → ValidateContentQualityOnContentNormalized → ValidateContentQualityCommand
+ * 3. ContentQualityValidated → CheckDuplicateAndPublishOnContentQualityValidated → CheckContentDuplicateQuery → ContentDeduplicationChecked
+ * 4. ContentDeduplicationChecked → SaveContentItemOnContentDeduplicationChecked → SaveContentItemCommand
+ * 5. ContentIngested → IncrementJobMetricsOnContentIngested (metrics update)
  *
- * Architecture:
- * - Commands: IngestContentCommand (collection phase)
- * - Events: ContentCollectedEvent → ContentIngestedEvent (processing phase)
- * - Handlers: IngestContentCommandHandler, ContentCollectedEventHandler
- * - Domain Services: ContentValidationService, ContentNormalizationService, DuplicateDetectionService
- *
- * CQRS + Event-Driven Benefits:
- * - Clear separation between write (commands) and read (queries)
- * - Asynchronous processing via events
- * - Better scalability and error isolation
- * - Easier to add new event handlers without modifying existing code
- *
- * Dependencies (from other modules):
- * - ISourceConfigurationFactory (from IngestionSourceModule)
- * - IHashService (from IngestionSharedModule)
- * - SourceAdapter[] (from IngestionSourceModule)
+ * Each step is a separate command/query with single responsibility.
+ * Event handlers are thin adapters that trigger commands/queries and publish events.
  *
  * Requirements: 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 3.3
  */
 @Module({
   imports: [
     CqrsModule,
-    IngestionSharedModule,
-    IngestionSourceModule, // This exports the adapters
+    SharedModule,
+    IngestionSourceModule,
     TypeOrmModule.forFeature([ContentItemEntity]),
   ],
   providers: [
-    // Command Handlers
+    // ===== Command Handlers =====
     IngestContentCommandHandler,
+    NormalizeRawContentHandler,
+    ValidateContentQualityHandler,
+    SaveContentItemHandler,
 
-    // Event Handlers
-    ContentCollectedEventHandler,
-    ContentIngestedEventHandler,
-    ContentValidationFailedEventHandler,
+    // ===== Event Handlers (Pipeline) =====
+    NormalizeRawContentOnContentCollected,
+    ValidateContentQualityOnContentNormalized,
+    CheckDuplicateAndPublishOnContentQualityValidated,
+    SaveContentItemOnContentDeduplicationChecked,
 
-    // Query Handlers
+    // ===== Event Handlers (Metrics) =====
+    IncrementJobMetricsOnContentIngested,
+    RecordValidationErrorInJobMetricsOnContentValidationFailed,
+
+    // ===== Query Handlers =====
     GetContentByHashQueryHandler,
+    CheckContentDuplicateHandler,
 
-    // Domain Services with Interface Tokens
+    // ===== Domain Services =====
     {
       provide: 'IContentValidationService',
       useClass: ContentValidationService,
@@ -83,11 +95,9 @@ import { TypeOrmContentItemFactory } from './infra/persistence/factories/content
       provide: 'IDuplicateDetectionService',
       useClass: DuplicateDetectionService,
     },
-
-    // Supporting Services
     ContentHashGenerator,
 
-    // Content Item Infrastructure - Register both class and interface token
+    // ===== Infrastructure =====
     TypeOrmContentItemReadRepository,
     {
       provide: 'IContentItemReadRepository',
@@ -103,23 +113,30 @@ import { TypeOrmContentItemFactory } from './infra/persistence/factories/content
     },
   ],
   exports: [
-    // Export command handler for use in other modules
+    // Command Handlers
     IngestContentCommandHandler,
+    NormalizeRawContentHandler,
+    ValidateContentQualityHandler,
+    SaveContentItemHandler,
 
-    // Export event handlers for use in other modules
-    ContentCollectedEventHandler,
-    ContentIngestedEventHandler,
-    ContentValidationFailedEventHandler,
+    // Event Handlers
+    NormalizeRawContentOnContentCollected,
+    ValidateContentQualityOnContentNormalized,
+    CheckDuplicateAndPublishOnContentQualityValidated,
+    SaveContentItemOnContentDeduplicationChecked,
+    IncrementJobMetricsOnContentIngested,
+    RecordValidationErrorInJobMetricsOnContentValidationFailed,
 
-    // Export query handlers for use in other modules
+    // Query Handlers
     GetContentByHashQueryHandler,
+    CheckContentDuplicateHandler,
 
-    // Export domain services for use in other bounded contexts
+    // Domain Services
     'IContentValidationService',
     'IContentNormalizationService',
     'IDuplicateDetectionService',
 
-    // Export content item infrastructure
+    // Infrastructure
     'IContentItemReadRepository',
     'IContentItemWriteRepository',
     'IContentItemFactory',

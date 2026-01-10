@@ -17,8 +17,9 @@ import { CommandBus, QueryBus, CqrsModule } from '@nestjs/cqrs';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { ScheduleJobCommand } from '@/ingestion/job/app/commands/schedule-job/command';
 import { GetJobByIdQuery } from '@/ingestion/job/app/queries/get-job-by-id/query';
-import { ConfigureSourceCommand } from '@/ingestion/source/app/commands/configure-source/command';
-import { IngestionSharedModule } from '@/ingestion/shared/ingestion-shared.module';
+import { CreateSourceCommand } from '@/ingestion/source/app/commands/create-source/command';
+import { CreateSourceResult } from '@/ingestion/source/app/commands/create-source/result';
+import { SharedModule } from '@/shared/shared.module';
 import { IngestionSourceModule } from '@/ingestion/source/ingestion-source.module';
 import { IngestionJobModule } from '@/ingestion/job/ingestion-job.module';
 import { IngestionContentModule } from '@/ingestion/content/ingestion-content.module';
@@ -76,7 +77,7 @@ describe('Property: Job Lifecycle Progression', () => {
     module = await Test.createTestingModule({
       imports: [
         CqrsModule,
-        IngestionSharedModule,
+        SharedModule,
         IngestionSourceModule,
         IngestionJobModule,
         IngestionContentModule,
@@ -194,9 +195,11 @@ describe('Property: Job Lifecycle Progression', () => {
             .mockReturnValue(mockAdapter);
 
           // 1. Configure a source
-          const configResult = await commandBus.execute(
-            new ConfigureSourceCommand(
-              undefined,
+          const configResult = await commandBus.execute<
+            CreateSourceCommand,
+            CreateSourceResult
+          >(
+            new CreateSourceCommand(
               sourceType,
               sourceName,
               sourceType === SourceTypeEnum.WEB
@@ -235,7 +238,7 @@ describe('Property: Job Lifecycle Progression', () => {
             jobAfterSchedule!.status,
           );
 
-          // 3. Wait for job to be executed by JobScheduledEventHandler
+          // 3. Wait for job to be executed by StartJobOnJobScheduled
           // Poll until job reaches terminal state with longer timeout
           let jobAfterExecution = await queryBus.execute(
             new GetJobByIdQuery(scheduleResult.jobId),
@@ -321,9 +324,11 @@ describe('Property: Job Lifecycle Progression', () => {
             .mockReturnValue(mockAdapter);
 
           // 1. Create and execute a job to completion
-          const configResult = await commandBus.execute(
-            new ConfigureSourceCommand(
-              undefined,
+          const configResult = await commandBus.execute<
+            CreateSourceCommand,
+            CreateSourceResult
+          >(
+            new CreateSourceCommand(
               SourceTypeEnum.WEB,
               sourceName,
               {
@@ -339,7 +344,7 @@ describe('Property: Job Lifecycle Progression', () => {
             new ScheduleJobCommand(configResult.sourceId),
           );
 
-          // Wait for job to be executed by JobScheduledEventHandler (max 4 seconds)
+          // Wait for job to be executed by StartJobOnJobScheduled (max 4 seconds)
           let jobAfterCompletion = await queryBus.execute(
             new GetJobByIdQuery(scheduleResult.jobId),
           );

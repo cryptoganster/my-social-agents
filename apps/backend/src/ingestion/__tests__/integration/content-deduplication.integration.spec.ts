@@ -18,10 +18,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { IngestContentCommand } from '@/ingestion/content/app/commands/ingest-content/command';
 import { IngestContentResult } from '@/ingestion/content/app/commands/ingest-content/result';
-import { ConfigureSourceCommand } from '@/ingestion/source/app/commands/configure-source/command';
-import { ConfigureSourceResult } from '@/ingestion/source/app/commands/configure-source/result';
+import { CreateSourceCommand } from '@/ingestion/source/app/commands/create-source/command';
+import { CreateSourceResult } from '@/ingestion/source/app/commands/create-source/result';
 import { GetContentByHashQuery } from '@/ingestion/content/app/queries/get-content-by-hash/query';
-import { IngestionSharedModule } from '@/ingestion/shared/ingestion-shared.module';
+import { SharedModule } from '@/shared/shared.module';
 import { IngestionSourceModule } from '@/ingestion/source/ingestion-source.module';
 import { IngestionJobModule } from '@/ingestion/job/ingestion-job.module';
 import { IngestionContentModule } from '@/ingestion/content/ingestion-content.module';
@@ -57,7 +57,7 @@ describe('Integration: Content Deduplication', () => {
           logging: false,
         }),
         CqrsModule,
-        IngestionSharedModule,
+        SharedModule,
         IngestionSourceModule,
         IngestionJobModule,
         IngestionContentModule,
@@ -105,11 +105,10 @@ describe('Integration: Content Deduplication', () => {
 
       // 1. Configure a test source
       const configureResult = await commandBus.execute<
-        ConfigureSourceCommand,
-        ConfigureSourceResult
+        CreateSourceCommand,
+        CreateSourceResult
       >(
-        new ConfigureSourceCommand(
-          undefined,
+        new CreateSourceCommand(
           SourceTypeEnum.WEB,
           'Test Deduplication Source',
           {
@@ -193,9 +192,11 @@ describe('Integration: Content Deduplication', () => {
       jest.spyOn(adapterRegistry, 'getAdapter').mockReturnValue(mockAdapter);
 
       // 1. Configure source
-      const configureResult = await commandBus.execute(
-        new ConfigureSourceCommand(
-          undefined,
+      const configureResult = await commandBus.execute<
+        CreateSourceCommand,
+        CreateSourceResult
+      >(
+        new CreateSourceCommand(
           SourceTypeEnum.RSS,
           'Test RSS Deduplication',
           {
@@ -261,9 +262,11 @@ describe('Integration: Content Deduplication', () => {
       jest.spyOn(adapterRegistry, 'getAdapter').mockReturnValue(mockAdapter);
 
       // 1. Configure source
-      const configureResult = await commandBus.execute(
-        new ConfigureSourceCommand(
-          undefined,
+      const configureResult = await commandBus.execute<
+        CreateSourceCommand,
+        CreateSourceResult
+      >(
+        new CreateSourceCommand(
           SourceTypeEnum.WEB,
           'Test Duplicate Counter',
           {
@@ -346,9 +349,11 @@ describe('Integration: Content Deduplication', () => {
   describe('Deduplication Across Sources', () => {
     it('should detect duplicates even from different sources', async () => {
       // 1. Configure first source
-      const source1Result = await commandBus.execute(
-        new ConfigureSourceCommand(
-          undefined,
+      const source1Result = await commandBus.execute<
+        CreateSourceCommand,
+        CreateSourceResult
+      >(
+        new CreateSourceCommand(
           SourceTypeEnum.WEB,
           'Source 1',
           {
@@ -361,9 +366,11 @@ describe('Integration: Content Deduplication', () => {
       );
 
       // 2. Configure second source
-      const source2Result = await commandBus.execute(
-        new ConfigureSourceCommand(
-          undefined,
+      const source2Result = await commandBus.execute<
+        CreateSourceCommand,
+        CreateSourceResult
+      >(
+        new CreateSourceCommand(
           SourceTypeEnum.RSS,
           'Source 2',
           {

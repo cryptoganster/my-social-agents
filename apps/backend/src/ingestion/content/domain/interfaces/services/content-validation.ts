@@ -9,6 +9,7 @@ import { ContentMetadata } from '../../value-objects';
 export interface ValidationResult {
   isValid: boolean;
   errors: string[];
+  qualityScore?: number;
 }
 
 /**

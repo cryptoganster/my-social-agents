@@ -10,9 +10,11 @@ import { SharedExternalModule } from './infra/external/shared-external.module';
  * across all bounded contexts.
  *
  * Includes:
- * - ResilienceModule: Retry and Circuit Breaker services
+ * - ResilienceModule: Retry (IRetryService) and Circuit Breaker (ICircuitBreaker) services
  * - ScheduleModule: Job scheduling infrastructure
- * - SharedExternalModule: Cryptographic hashing and external services
+ * - SharedExternalModule: Cryptographic hashing (IHashService) and encryption (ICredentialEncryption)
+ *
+ * Note: Event publishing uses @nestjs/cqrs EventBus directly.
  *
  * Usage:
  * ```typescript

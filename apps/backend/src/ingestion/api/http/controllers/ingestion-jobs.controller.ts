@@ -16,8 +16,8 @@ import {
   GetJobsByStatusQuery,
   GetJobsByStatusResult,
 } from '@/ingestion/job/app/queries/get-jobs-by-status/query';
-import { IIngestionJobReadRepository } from '@/ingestion/job/domain/interfaces/repositories/ingestion-job-read';
-import { IngestionJobReadModel } from '@/ingestion/job/domain/read-models/ingestion-job';
+import { IIngestionJobReadRepository } from '@/ingestion/job/app/queries/repositories/ingestion-job-read';
+import { IngestionJobReadModel } from '@/ingestion/job/app/queries/read-models/ingestion-job';
 import { ScheduleJobDto } from '../dto/schedule-job.dto';
 
 /**

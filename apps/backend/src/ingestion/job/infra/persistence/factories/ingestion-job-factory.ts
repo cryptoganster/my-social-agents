@@ -10,8 +10,8 @@ import { SourceType } from '@/ingestion/source/domain/value-objects/source-type'
 import {
   ErrorRecord,
   ErrorType,
-} from '@/ingestion/shared/domain/entities/error-record';
-import { IIngestionJobReadRepository } from '@/ingestion/job/domain/interfaces/repositories/ingestion-job-read';
+} from '@/ingestion/job/domain/entities/error-record';
+import { IIngestionJobReadRepository } from '@/ingestion/job/app/queries/repositories/ingestion-job-read';
 
 /**
  * TypeORM IngestionJobFactory Implementation

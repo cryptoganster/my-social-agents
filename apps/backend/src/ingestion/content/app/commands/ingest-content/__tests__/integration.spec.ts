@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { EventBus } from '@nestjs/cqrs';
 import { IngestContentCommandHandler } from '../handler';
 import { IngestContentCommand } from '../command';
-import { ContentCollectedEvent } from '@/ingestion/content/domain/events';
+import { ContentCollected } from '@/ingestion/content/domain/events';
 import {
   SourceAdapter,
   RawContent,
@@ -159,8 +159,8 @@ describe('IngestContentCommandHandler - Integration Tests', () => {
 
       // Verify event structure
       const firstEvent = mockEventBus.publish.mock
-        .calls[0]?.[0] as ContentCollectedEvent;
-      expect(firstEvent).toBeInstanceOf(ContentCollectedEvent);
+        .calls[0]?.[0] as ContentCollected;
+      expect(firstEvent).toBeInstanceOf(ContentCollected);
       expect(firstEvent.sourceId).toBe('test-source-1');
       expect(firstEvent.rawContent).toBe('Bitcoin price reaches new high');
       expect(firstEvent.metadata.title).toBe('BTC News');
@@ -446,8 +446,7 @@ describe('IngestContentCommandHandler - Integration Tests', () => {
       await handler.execute(new IngestContentCommand('metadata-source'));
 
       // Assert
-      const event = mockEventBus.publish.mock
-        .calls[0][0] as ContentCollectedEvent;
+      const event = mockEventBus.publish.mock.calls[0][0] as ContentCollected;
       expect(event.metadata.title).toBe('Complete Article');
       expect(event.metadata.author).toBe('John Doe');
       expect(event.metadata.publishedAt).toEqual(publishedDate);
@@ -483,8 +482,7 @@ describe('IngestContentCommandHandler - Integration Tests', () => {
       await handler.execute(new IngestContentCommand('partial-metadata'));
 
       // Assert
-      const event = mockEventBus.publish.mock
-        .calls[0][0] as ContentCollectedEvent;
+      const event = mockEventBus.publish.mock.calls[0][0] as ContentCollected;
       expect(event.metadata.title).toBe('Tweet');
       expect(event.metadata.author).toBeUndefined();
       expect(event.metadata.publishedAt).toBeUndefined();

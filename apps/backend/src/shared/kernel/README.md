@@ -61,26 +61,26 @@ Abstract base class providing:
 
 ```typescript
 @EventsHandler(SourceConfiguredEvent)
-export class SourceConfiguredEventHandler
-  extends ReadModelUpdater<SourceConfiguredEvent, SourceReadModel>
+export class UpdateSourceReadModelOnSourceConfigured
+  extends ReadModelUpdater<SourceConfiguredEvent, SourceConfigurationReadModel>
   implements IEventHandler<SourceConfiguredEvent>
 {
   constructor(
-    @Inject('ISourceReadRepository')
-    repository: IReadModelRepository<SourceReadModel>,
+    @Inject('ISourceConfigurationReadRepository')
+    repository: IReadModelRepository<SourceConfigurationReadModel>,
   ) {
-    super(repository, 'SourceConfiguredEventHandler');
+    super(repository, 'UpdateSourceReadModelOnSourceConfigured');
   }
 
   protected async updateReadModel(event: SourceConfiguredEvent): Promise<void> {
     const existing = await this.repository.findById(event.sourceId);
 
-    const readModel: SourceReadModel = {
-      id: event.sourceId,
+    const readModel: SourceConfigurationReadModel = {
+      sourceId: event.sourceId,
       sourceType: event.sourceType,
       name: event.name,
       isActive: event.isActive,
-      configSummary: event.configSummary,
+      config: event.config,
       updatedAt: event.occurredAt,
       version: existing ? existing.version + 1 : 1,
     };

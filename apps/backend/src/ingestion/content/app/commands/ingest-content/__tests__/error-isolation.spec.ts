@@ -12,7 +12,7 @@ import {
   SourceType,
   SourceTypeEnum,
 } from '@/ingestion/source/domain/value-objects/source-type';
-import { ContentCollectedEvent } from '@/ingestion/content/domain/events';
+import { ContentCollected } from '@/ingestion/content/domain/events';
 import { ISourceConfigurationFactory } from '@/ingestion/source/domain/interfaces/factories/source-configuration-factory';
 import { AdapterRegistry } from '@/ingestion/source/domain/services/adapter-registry';
 
@@ -249,8 +249,8 @@ describe('IngestContentCommandHandler - Error Isolation Property', () => {
           // Verify: Each call was with ContentCollectedEvent
           for (let i = 0; i < contentItems.length; i++) {
             const call = mockEventBus.publish.mock.calls[i];
-            const event = call?.[0] as ContentCollectedEvent;
-            expect(event).toBeInstanceOf(ContentCollectedEvent);
+            const event = call?.[0] as ContentCollected;
+            expect(event).toBeInstanceOf(ContentCollected);
             expect(event.sourceId).toBe('test-source');
             expect(event.rawContent).toBe(contentItems[i]);
           }

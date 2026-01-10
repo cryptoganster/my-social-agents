@@ -1,5 +1,5 @@
 import { Query } from '@nestjs/cqrs';
-import { IngestionJobReadModel } from '@/ingestion/job/domain/read-models/ingestion-job';
+import { IngestionJobReadModel } from '@/ingestion/job/app/queries/read-models/ingestion-job';
 
 /**
  * GetJobsByStatusQuery
