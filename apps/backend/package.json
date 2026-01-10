@@ -47,6 +47,7 @@
     "center-align": "^1.0.1",
     "chalk": "^4.1.2",
     "chalk-animation": "^2.0.3",
+    "cheerio": "^1.1.2",
     "clear": "^0.1.0",
     "cli-cursor": "^5.0.0",
     "dotenv": "^16.6.1",
@@ -57,9 +58,11 @@
     "ora": "^5.4.1",
     "pg": "^8.16.3",
     "reflect-metadata": "^0.2.2",
+    "rss-parser": "^3.13.0",
     "rxjs": "^7.8.1",
     "string-width": "^7.2.0",
     "term-size": "^3.0.2",
+    "turndown": "^7.2.2",
     "typeorm": "^0.3.28"
   },
   "devDependencies": {
@@ -75,6 +78,7 @@
     "@types/jest": "^30.0.0",
     "@types/node": "^22.10.7",
     "@types/supertest": "^6.0.2",
+    "@types/turndown": "^5.0.6",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-import": "^2.32.0",
