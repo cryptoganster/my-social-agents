@@ -9,6 +9,7 @@ export interface ParsingOptions {
   readonly codeBlockStyle?: 'fenced' | 'indented';
   readonly headingStyle?: 'atx' | 'setext';
   readonly removeSelectors?: string[];
+  readonly url?: string; // URL for Firecrawl fallback
 }
 
 /**

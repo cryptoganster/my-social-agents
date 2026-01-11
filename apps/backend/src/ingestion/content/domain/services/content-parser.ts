@@ -1,4 +1,4 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, Optional, Logger } from '@nestjs/common';
 import {
   IContentParser,
   ParsedContent,
@@ -14,6 +14,7 @@ import {
   SourceTypeEnum,
 } from '@/ingestion/source/domain/value-objects/source-type';
 import { ContentMetadata } from '../value-objects/content-metadata';
+import { IJsRenderingDetector } from '../interfaces/services/js-rendering-detector';
 
 /**
  * UnsupportedSourceTypeError
@@ -37,6 +38,7 @@ export class UnsupportedSourceTypeError extends Error {
  */
 @Injectable()
 export class ContentParser implements IContentParser {
+  private readonly logger = new Logger(ContentParser.name);
   private readonly strategyMap: Map<SourceTypeEnum, IParsingStrategy>;
 
   constructor(
@@ -44,6 +46,12 @@ export class ContentParser implements IContentParser {
     private readonly htmlStrategy: IParsingStrategy,
     @Inject('IRssParsingStrategy')
     private readonly rssStrategy: IParsingStrategy,
+    @Optional()
+    @Inject('IFirecrawlParsingStrategy')
+    private readonly firecrawlStrategy: IParsingStrategy | null = null,
+    @Optional()
+    @Inject('IJsRenderingDetector')
+    private readonly jsDetector: IJsRenderingDetector | null = null,
   ) {
     this.strategyMap = new Map([
       [SourceTypeEnum.WEB, this.htmlStrategy],
@@ -68,10 +76,44 @@ export class ContentParser implements IContentParser {
       headingStyle: 'atx',
     };
 
-    const [markdown, extractedMetadata] = await Promise.all([
+    let [markdown, extractedMetadata] = await Promise.all([
       strategy.parse(rawContent, options),
       strategy.extractMetadata(rawContent),
     ]);
+
+    // Fallback logic for WEB sources with minimal content
+    if (
+      this.shouldFallbackToFirecrawl(rawContent, markdown, sourceType, metadata)
+    ) {
+      this.logger.debug(
+        `Falling back to Firecrawl for URL: ${metadata?.sourceUrl || 'unknown'}`,
+      );
+
+      try {
+        // Use Firecrawl strategy with URL from metadata
+        const firecrawlOptions: ParsingOptions = {
+          ...options,
+          url: metadata?.sourceUrl ?? undefined,
+        };
+
+        const [firecrawlMarkdown, firecrawlMetadata] = await Promise.all([
+          this.firecrawlStrategy!.parse(rawContent, firecrawlOptions),
+          this.firecrawlStrategy!.extractMetadata(rawContent),
+        ]);
+
+        markdown = firecrawlMarkdown;
+        extractedMetadata = firecrawlMetadata;
+
+        this.logger.debug(
+          `Firecrawl fallback successful for URL: ${metadata?.sourceUrl || 'unknown'}`,
+        );
+      } catch (error) {
+        this.logger.warn(
+          `Firecrawl fallback failed for URL: ${metadata?.sourceUrl || 'unknown'}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        );
+        // Continue with original markdown if fallback fails
+      }
+    }
 
     const conversionTimeMs = Date.now() - startTime;
 
@@ -97,6 +139,32 @@ export class ContentParser implements IContentParser {
       );
     }
     return strategy;
+  }
+
+  private shouldFallbackToFirecrawl(
+    rawContent: string,
+    markdown: string,
+    sourceType: SourceType,
+    metadata?: ContentMetadata,
+  ): boolean {
+    // Only fallback for WEB sources
+    if (sourceType.getValue() !== SourceTypeEnum.WEB) {
+      return false;
+    }
+
+    // Fallback not available if dependencies are missing
+    if (!this.firecrawlStrategy || !this.jsDetector) {
+      return false;
+    }
+
+    // Check if content is minimal (less than 200 characters)
+    if (markdown.length >= 200) {
+      return false;
+    }
+
+    // Use JS rendering detector to decide
+    const url = metadata?.sourceUrl || '';
+    return this.jsDetector.needsJsRendering(rawContent, url);
   }
 
   private getOriginalFormat(sourceType: SourceType): string {
