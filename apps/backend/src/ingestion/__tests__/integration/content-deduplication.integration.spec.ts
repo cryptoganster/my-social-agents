@@ -15,6 +15,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CommandBus, QueryBus, CqrsModule } from '@nestjs/cqrs';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ConfigModule } from '@nestjs/config';
 import { DataSource } from 'typeorm';
 import { IngestContentCommand } from '@/ingestion/content/app/commands/ingest-content/command';
 import { IngestContentResult } from '@/ingestion/content/app/commands/ingest-content/result';
@@ -44,6 +45,10 @@ describe('Integration: Content Deduplication', () => {
     // Create test module with all required modules
     module = await Test.createTestingModule({
       imports: [
+        ConfigModule.forRoot({
+          isGlobal: true,
+          envFilePath: '.env.test',
+        }),
         TypeOrmModule.forRoot({
           type: 'postgres',
           host: process.env.DB_HOST ?? 'localhost',

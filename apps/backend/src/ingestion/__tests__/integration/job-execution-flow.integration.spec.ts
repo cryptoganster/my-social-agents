@@ -16,6 +16,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CommandBus, QueryBus, EventBus, CqrsModule } from '@nestjs/cqrs';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ConfigModule } from '@nestjs/config';
 import { DataSource } from 'typeorm';
 import { ScheduleJobCommand } from '@/ingestion/job/app/commands/schedule-job/command';
 import { ScheduleJobResult } from '@/ingestion/job/app/commands/schedule-job/result';
@@ -51,6 +52,10 @@ describe('Integration: Job Execution Flow', () => {
     // Create test module with all required modules
     module = await Test.createTestingModule({
       imports: [
+        ConfigModule.forRoot({
+          isGlobal: true,
+          envFilePath: '.env.test',
+        }),
         TypeOrmModule.forRoot({
           type: 'postgres',
           host: process.env.DB_HOST ?? 'localhost',

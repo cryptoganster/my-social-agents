@@ -15,6 +15,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CommandBus, QueryBus, EventBus, CqrsModule } from '@nestjs/cqrs';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ConfigModule } from '@nestjs/config';
 import { DataSource } from 'typeorm';
 import { CreateSourceCommand } from '@/ingestion/source/app/commands/create-source/command';
 import { CreateSourceResult } from '@/ingestion/source/app/commands/create-source/result';
@@ -56,6 +57,10 @@ describe('Integration: Source Health Tracking', () => {
     // Create test module with all required modules
     module = await Test.createTestingModule({
       imports: [
+        ConfigModule.forRoot({
+          isGlobal: true,
+          envFilePath: '.env.test',
+        }),
         TypeOrmModule.forRoot({
           type: 'postgres',
           host: process.env.DB_HOST ?? 'localhost',
