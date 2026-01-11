@@ -1,0 +1,13 @@
+{
+  "folders": [
+    {
+      "name": "my-social-agents",
+      "path": "."
+    },
+    {
+      "name": "firecrawl",
+      "path": "apps/firecrawl"
+    }
+  ],
+  "settings": {}
+}

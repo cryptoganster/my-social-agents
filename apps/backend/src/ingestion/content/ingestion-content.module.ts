@@ -29,12 +29,17 @@ import { ContentValidationService } from './domain/services/content-validation';
 import { ContentNormalizationService } from './domain/services/content-normalization';
 import { DuplicateDetectionService } from './domain/services/duplicate-detection';
 import { ContentHashGenerator } from './domain/services/content-hash-generator';
+import { ContentParser } from './domain/services/content-parser';
 
-// Infrastructure
+// Infrastructure - Persistence
 import { ContentItemEntity } from './infra/persistence/entities/content-item';
 import { TypeOrmContentItemReadRepository } from './infra/persistence/repositories/content-item-read';
 import { TypeOrmContentItemWriteRepository } from './infra/persistence/repositories/content-item-write';
 import { TypeOrmContentItemFactory } from './infra/persistence/factories/content-item-factory';
+
+// Infrastructure - Parsing Strategies
+import { HtmlParsingStrategy } from './infra/parsing/html-parsing-strategy';
+import { RssParsingStrategy } from './infra/parsing/rss-parsing-strategy';
 
 /**
  * IngestionContentModule
@@ -97,6 +102,20 @@ import { TypeOrmContentItemFactory } from './infra/persistence/factories/content
     },
     ContentHashGenerator,
 
+    // ===== Parsing Strategies =====
+    {
+      provide: 'IHtmlParsingStrategy',
+      useClass: HtmlParsingStrategy,
+    },
+    {
+      provide: 'IRssParsingStrategy',
+      useClass: RssParsingStrategy,
+    },
+    {
+      provide: 'IContentParser',
+      useClass: ContentParser,
+    },
+
     // ===== Infrastructure =====
     TypeOrmContentItemReadRepository,
     {
@@ -135,6 +154,9 @@ import { TypeOrmContentItemFactory } from './infra/persistence/factories/content
     'IContentValidationService',
     'IContentNormalizationService',
     'IDuplicateDetectionService',
+
+    // Parsing Services
+    'IContentParser',
 
     // Infrastructure
     'IContentItemReadRepository',

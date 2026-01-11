@@ -4,7 +4,8 @@
 FROM postgres:17-alpine
 
 # Install pg_cron extension
-RUN apk add --no-cache postgresql17-pg_cron
+# Note: pg_cron is available in Alpine's community repository
+RUN apk add --no-cache --repository=http://dl-cdn.alpinelinux.org/alpine/edge/community pg_cron
 
 # Configure PostgreSQL to load pg_cron
 # Set cron.database_name to 'firecrawl' so pg_cron works in the firecrawl database
@@ -16,3 +17,4 @@ RUN echo "shared_preload_libraries = 'pg_cron'" >> /usr/share/postgresql/postgre
 
 # Note: Custom init scripts in init-scripts/ will be copied via docker-compose
 # and will run AFTER Firecrawl's scripts (numbered 999-*)
+
