@@ -226,9 +226,7 @@ services:
       - crypto-network
     volumes:
       - firecrawl_postgres_data:/var/lib/postgresql/data
-      # Mount Firecrawl's original init scripts from submodule
-      - ../firecrawl/apps/nuq-postgres/nuq.sql:/docker-entrypoint-initdb.d/001-nuq.sql:ro
-      # Mount our custom init scripts (999- runs last)
+      # Mount all init scripts (includes Firecrawl's nuq.sql + our custom scripts)
       - ./firecrawl-overrides/postgres/init-scripts:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U ${FIRECRAWL_POSTGRES_USER:-firecrawl}']
