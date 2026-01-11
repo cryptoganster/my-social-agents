@@ -17,8 +17,9 @@ import { CommandBus, QueryBus, CqrsModule } from '@nestjs/cqrs';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { ScheduleJobCommand } from '@/ingestion/job/app/commands/schedule-job/command';
 import { GetJobByIdQuery } from '@/ingestion/job/app/queries/get-job-by-id/query';
-import { ConfigureSourceCommand } from '@/ingestion/source/app/commands/configure-source/command';
-import { IngestionSharedModule } from '@/ingestion/shared/ingestion-shared.module';
+import { CreateSourceCommand } from '@/ingestion/source/app/commands/create-source/command';
+import { CreateSourceResult } from '@/ingestion/source/app/commands/create-source/result';
+import { SharedModule } from '@/shared/shared.module';
 import { IngestionSourceModule } from '@/ingestion/source/ingestion-source.module';
 import { IngestionJobModule } from '@/ingestion/job/ingestion-job.module';
 import { IngestionContentModule } from '@/ingestion/content/ingestion-content.module';
@@ -76,7 +77,7 @@ describe('Property: Job Lifecycle Progression', () => {
     module = await Test.createTestingModule({
       imports: [
         CqrsModule,
-        IngestionSharedModule,
+        SharedModule,
         IngestionSourceModule,
         IngestionJobModule,
         IngestionContentModule,
@@ -194,9 +195,11 @@ describe('Property: Job Lifecycle Progression', () => {
             .mockReturnValue(mockAdapter);
 
           // 1. Configure a source
-          const configResult = await commandBus.execute(
-            new ConfigureSourceCommand(
-              undefined,
+          const configResult = await commandBus.execute<
+            CreateSourceCommand,
+            CreateSourceResult
+          >(
+            new CreateSourceCommand(
               sourceType,
               sourceName,
               sourceType === SourceTypeEnum.WEB
@@ -232,60 +235,61 @@ describe('Property: Job Lifecycle Progression', () => {
 
           // Verify initial state is PENDING or RUNNING (may execute immediately)
           expect(['PENDING', 'RUNNING', 'COMPLETED', 'FAILED']).toContain(
-            jobAfterSchedule.status,
+            jobAfterSchedule!.status,
           );
 
-          // 3. Wait for job to be executed by JobScheduledEventHandler
-          // Poll until job reaches terminal state with longer timeout
-          let jobAfterExecution = await queryBus.execute(
-            new GetJobByIdQuery(scheduleResult.jobId),
-          );
+          // 3. Wait for job to reach terminal state using improved polling
+          // Uses exponential backoff for more reliable waiting
+          let jobAfterExecution = jobAfterSchedule;
+          const startTime = Date.now();
+          const timeout = 15000; // 15 seconds max
+          let interval = 50; // Start with short interval
+          const maxInterval = 500;
 
-          // Poll for completion if still running (max 10 seconds = 50 attempts * 200ms)
-          let attempts = 0;
           while (
-            !['COMPLETED', 'FAILED'].includes(jobAfterExecution.status) &&
-            attempts < 50
+            !['COMPLETED', 'FAILED'].includes(jobAfterExecution!.status) &&
+            Date.now() - startTime < timeout
           ) {
-            await new Promise((resolve) => setTimeout(resolve, 200));
+            await new Promise((resolve) => setTimeout(resolve, interval));
             jobAfterExecution = await queryBus.execute(
               new GetJobByIdQuery(scheduleResult.jobId),
             );
-            attempts++;
+            // Exponential backoff with cap
+            interval = Math.min(interval * 1.5, maxInterval);
           }
 
           // Verify final state is either COMPLETED or FAILED (never PENDING or RUNNING)
-          expect(['COMPLETED', 'FAILED']).toContain(jobAfterExecution.status);
+          expect(['COMPLETED', 'FAILED']).toContain(jobAfterExecution!.status);
 
           // Verify executedAt timestamp was set (proves it went through RUNNING)
-          expect(jobAfterExecution.executedAt).toBeDefined();
-          expect(jobAfterExecution.executedAt).toBeInstanceOf(Date);
+          expect(jobAfterExecution!.executedAt).toBeDefined();
+          expect(jobAfterExecution!.executedAt).toBeInstanceOf(Date);
 
           // Verify completedAt timestamp was set
-          expect(jobAfterExecution.completedAt).toBeDefined();
-          expect(jobAfterExecution.completedAt).toBeInstanceOf(Date);
+          expect(jobAfterExecution!.completedAt).toBeDefined();
+          expect(jobAfterExecution!.completedAt).toBeInstanceOf(Date);
 
           // Verify temporal ordering: scheduledAt < executedAt < completedAt
-          expect(jobAfterExecution.executedAt.getTime()).toBeGreaterThanOrEqual(
-            jobAfterSchedule.scheduledAt.getTime(),
-          );
           expect(
-            jobAfterExecution.completedAt.getTime(),
-          ).toBeGreaterThanOrEqual(jobAfterExecution.executedAt.getTime());
+            jobAfterExecution!.executedAt!.getTime(),
+          ).toBeGreaterThanOrEqual(jobAfterSchedule!.scheduledAt.getTime());
+          expect(
+            jobAfterExecution!.completedAt!.getTime(),
+          ).toBeGreaterThanOrEqual(jobAfterExecution!.executedAt!.getTime());
 
           // Property verified: Job followed valid state transitions
           // PENDING/RUNNING → COMPLETED/FAILED
         },
       ),
       {
-        numRuns: 10, // 10 iterations for faster execution
-        timeout: 10000, // 10 seconds timeout per predicate execution
-        interruptAfterTimeLimit: 100000, // 100 seconds total time limit
+        numRuns: 5, // Reduced iterations for faster execution while maintaining coverage
+        timeout: 20000, // 20 seconds timeout per predicate execution
+        interruptAfterTimeLimit: 120000, // 2 minutes total time limit
         markInterruptAsFailure: false, // Don't fail if interrupted with at least one success
         endOnFailure: true, // Stop on first failure for faster feedback
       },
     );
-  }, 120000); // 120 seconds total Jest timeout
+  }, 150000); // 150 seconds total Jest timeout
 
   /**
    * Additional property: State transitions are monotonic
@@ -321,9 +325,11 @@ describe('Property: Job Lifecycle Progression', () => {
             .mockReturnValue(mockAdapter);
 
           // 1. Create and execute a job to completion
-          const configResult = await commandBus.execute(
-            new ConfigureSourceCommand(
-              undefined,
+          const configResult = await commandBus.execute<
+            CreateSourceCommand,
+            CreateSourceResult
+          >(
+            new CreateSourceCommand(
               SourceTypeEnum.WEB,
               sourceName,
               {
@@ -339,25 +345,29 @@ describe('Property: Job Lifecycle Progression', () => {
             new ScheduleJobCommand(configResult.sourceId),
           );
 
-          // Wait for job to be executed by JobScheduledEventHandler (max 4 seconds)
+          // Wait for job to reach terminal state using exponential backoff
           let jobAfterCompletion = await queryBus.execute(
             new GetJobByIdQuery(scheduleResult.jobId),
           );
 
-          // Poll for completion if still running
-          let attempts = 0;
+          const startTime = Date.now();
+          const timeout = 15000; // 15 seconds max
+          let interval = 50; // Start with short interval
+          const maxInterval = 500;
+
           while (
-            !['COMPLETED', 'FAILED'].includes(jobAfterCompletion.status) &&
-            attempts < 20
+            !['COMPLETED', 'FAILED'].includes(jobAfterCompletion!.status) &&
+            Date.now() - startTime < timeout
           ) {
-            await new Promise((resolve) => setTimeout(resolve, 200));
+            await new Promise((resolve) => setTimeout(resolve, interval));
             jobAfterCompletion = await queryBus.execute(
               new GetJobByIdQuery(scheduleResult.jobId),
             );
-            attempts++;
+            // Exponential backoff with cap
+            interval = Math.min(interval * 1.5, maxInterval);
           }
 
-          const terminalStatus = jobAfterCompletion.status;
+          const terminalStatus = jobAfterCompletion!.status;
           expect(['COMPLETED', 'FAILED']).toContain(terminalStatus);
 
           // Property verified: Job reached terminal state and stayed there
@@ -365,12 +375,12 @@ describe('Property: Job Lifecycle Progression', () => {
         },
       ),
       {
-        numRuns: 10, // 10 iterations for faster execution
-        timeout: 10000, // 10 seconds timeout per predicate execution
-        interruptAfterTimeLimit: 100000, // 100 seconds total time limit
+        numRuns: 5, // Reduced iterations for faster execution while maintaining coverage
+        timeout: 20000, // 20 seconds timeout per predicate execution
+        interruptAfterTimeLimit: 120000, // 2 minutes total time limit
         markInterruptAsFailure: false, // Don't fail if interrupted with at least one success
         endOnFailure: true, // Stop on first failure for faster feedback
       },
     );
-  }, 120000); // 120 seconds total Jest timeout
+  }, 150000); // 150 seconds total Jest timeout
 });

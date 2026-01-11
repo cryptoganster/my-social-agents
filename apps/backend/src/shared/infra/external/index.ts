@@ -6,4 +6,5 @@
  * used by any bounded context.
  */
 export { HashService } from './hash';
+export { CredentialEncryptionService } from './credential-encryption';
 export { SharedExternalModule } from './shared-external.module';

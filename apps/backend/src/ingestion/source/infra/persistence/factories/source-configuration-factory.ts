@@ -2,7 +2,7 @@ import { Injectable, Inject } from '@nestjs/common';
 import { SourceConfiguration } from '@/ingestion/source/domain/aggregates/source-configuration';
 import { ISourceConfigurationFactory } from '@/ingestion/source/domain/interfaces/factories/source-configuration-factory';
 import { SourceType } from '@/ingestion/source/domain/value-objects/source-type';
-import { ISourceConfigurationReadRepository } from '@/ingestion/source/domain/interfaces/repositories/source-configuration-read';
+import { ISourceConfigurationReadRepository } from '@/ingestion/source/app/queries/repositories/source-configuration-read';
 
 /**
  * TypeORM SourceConfigurationFactory Implementation

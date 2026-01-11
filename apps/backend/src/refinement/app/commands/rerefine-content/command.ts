@@ -1,4 +1,6 @@
+import { Command } from '@nestjs/cqrs';
 import { RefinementConfig } from '@refinement/domain/value-objects/refinement-config';
+import { RerefineContentResult } from './result';
 
 /**
  * RerefineContentCommand
@@ -12,10 +14,12 @@ import { RefinementConfig } from '@refinement/domain/value-objects/refinement-co
  *
  * The command includes a reason to track why reprocessing was requested.
  *
+ * Extends Command<RerefineContentResult> for automatic type inference.
+ *
  * Requirements: Refinement 11
  * Design: Application Layer - Commands
  */
-export class RerefineContentCommand {
+export class RerefineContentCommand extends Command<RerefineContentResult> {
   /**
    * Creates a new RerefineContentCommand
    *
@@ -28,6 +32,7 @@ export class RerefineContentCommand {
     public readonly reason: string,
     public readonly config?: RefinementConfig,
   ) {
+    super();
     this.validate();
   }
 

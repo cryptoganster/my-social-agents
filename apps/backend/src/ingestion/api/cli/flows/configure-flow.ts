@@ -3,7 +3,10 @@ import { CommandBus } from '@nestjs/cqrs';
 import chalk from 'chalk';
 import ora from 'ora';
 import inquirer from 'inquirer';
-import { ConfigureSourceCommand } from '@/ingestion/source/app/commands/configure-source/command';
+import { CreateSourceCommand } from '@/ingestion/source/app/commands/create-source/command';
+import { CreateSourceResult } from '@/ingestion/source/app/commands/create-source/result';
+import { UpdateSourceCommand } from '@/ingestion/source/app/commands/update-source/command';
+import { UpdateSourceResult } from '@/ingestion/source/app/commands/update-source/result';
 import { SourceTypeEnum } from '@/ingestion/source/domain/value-objects/source-type';
 import { TemplateSelectionFlow } from './template-selection-flow';
 import { JsonEditorFlow } from './json-editor-flow';
@@ -21,7 +24,7 @@ import { FlowResult } from '../types';
  * 4. Handles JSON editor integration
  * 5. Collects credentials (optional)
  * 6. Confirms action
- * 7. Executes ConfigureSourceCommand
+ * 7. Executes CreateSourceCommand or UpdateSourceCommand
  * 8. Displays configuration details
  * 9. Handles errors gracefully
  *
@@ -292,19 +295,48 @@ export async function configureFlow(
   }).start();
 
   try {
-    const command = new ConfigureSourceCommand(
-      sourceId,
-      type,
-      name,
-      config,
-      credentials,
-      isActive,
-    );
+    let result: { sourceId: string; isActive: boolean; isNew: boolean };
 
-    const result = await commandBus.execute<
-      ConfigureSourceCommand,
-      { sourceId: string; isNew: boolean; isActive: boolean }
-    >(command);
+    if (action === 'create') {
+      const command = new CreateSourceCommand(
+        type,
+        name,
+        config,
+        credentials,
+        isActive,
+      );
+
+      const createResult = await commandBus.execute<
+        CreateSourceCommand,
+        CreateSourceResult
+      >(command);
+
+      result = {
+        sourceId: createResult.sourceId,
+        isActive: createResult.isActive,
+        isNew: true,
+      };
+    } else {
+      const command = new UpdateSourceCommand(
+        sourceId!,
+        type,
+        name,
+        config,
+        credentials,
+        isActive,
+      );
+
+      const updateResult = await commandBus.execute<
+        UpdateSourceCommand,
+        UpdateSourceResult
+      >(command);
+
+      result = {
+        sourceId: updateResult.sourceId,
+        isActive: updateResult.isActive,
+        isNew: false,
+      };
+    }
 
     spinner.succeed(chalk.green('Source configured successfully'));
     console.log();

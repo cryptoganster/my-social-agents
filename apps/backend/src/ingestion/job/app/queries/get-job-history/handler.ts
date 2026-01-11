@@ -1,7 +1,7 @@
 import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 import { Inject, Injectable } from '@nestjs/common';
 import { GetJobHistoryQuery, GetJobHistoryResult } from './query';
-import { IIngestionJobReadRepository } from '@/ingestion/job/domain/interfaces/repositories/ingestion-job-read';
+import { IIngestionJobReadRepository } from '@/ingestion/job/app/queries/repositories/ingestion-job-read';
 
 /**
  * GetJobHistoryQueryHandler

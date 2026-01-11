@@ -1,12 +1,12 @@
 /**
- * ContentCollectedEvent
+ * ContentCollected
  *
  * Domain event published when raw content is collected from a source.
  * Triggers the content processing pipeline (validation, normalization, persistence).
  *
  * Requirements: 1.6, 2.1, 2.2
  */
-export class ContentCollectedEvent {
+export class ContentCollected {
   constructor(
     public readonly sourceId: string,
     public readonly jobId: string,

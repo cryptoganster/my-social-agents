@@ -1,0 +1,3 @@
+[submodule "apps/firecrawl"]
+	path = apps/firecrawl
+	url = https://github.com/cryptoganster/firecrawl.git

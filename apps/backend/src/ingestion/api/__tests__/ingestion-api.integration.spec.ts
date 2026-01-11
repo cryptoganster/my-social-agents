@@ -3,9 +3,9 @@ import { IngestionJobsController } from '../http/controllers/ingestion-jobs.cont
 import { SourcesController } from '../http/controllers/sources.controller';
 import { ScheduleJobDto } from '../http/dto/schedule-job.dto';
 import { ConfigureSourceDto } from '../http/dto/configure-source.dto';
-import { IIngestionJobReadRepository } from '@/ingestion/job/domain/interfaces/repositories/ingestion-job-read';
-import { ISourceConfigurationReadRepository } from '@/ingestion/source/domain/interfaces/repositories/source-configuration-read';
-import { SourceConfigurationReadModel } from '@/ingestion/source/domain/read-models/source-configuration';
+import { IIngestionJobReadRepository } from '@/ingestion/job/app/queries/repositories/ingestion-job-read';
+import { ISourceConfigurationReadRepository } from '@/ingestion/source/app/queries/repositories/source-configuration-read';
+import { SourceConfigurationReadModel } from '@/ingestion/source/app/queries/read-models/source-configuration';
 
 /**
  * Integration Tests for API Layer
@@ -197,8 +197,8 @@ describe('Ingestion API Integration Tests', () => {
       );
     });
 
-    describe('POST /sources - configureSource', () => {
-      it('should configure a new source successfully', async () => {
+    describe('POST /sources - createSource', () => {
+      it('should create a new source successfully', async () => {
         const dto: ConfigureSourceDto = {
           name: 'Test Source',
           type: 'WEB_SCRAPER',
@@ -208,39 +208,15 @@ describe('Ingestion API Integration Tests', () => {
 
         const expectedResult = {
           sourceId: 'source-789',
-          isNew: true,
           isActive: true,
         };
 
         mockCommandBus.execute.mockResolvedValue(expectedResult);
 
-        const result = await controller.configureSource(dto);
+        const result = await controller.createSource(dto);
 
         expect(result).toEqual(expectedResult);
         expect(mockCommandBus.execute).toHaveBeenCalledTimes(1);
-      });
-
-      it('should update an existing source', async () => {
-        const dto: ConfigureSourceDto = {
-          name: 'Updated Source',
-          type: 'RSS_FEED',
-          config: { feedUrl: 'https://example.com/feed' },
-          active: true,
-          sourceId: 'existing-source-123',
-        };
-
-        const expectedResult = {
-          sourceId: 'existing-source-123',
-          isNew: false,
-          isActive: true,
-        };
-
-        mockCommandBus.execute.mockResolvedValue(expectedResult);
-
-        const result = await controller.configureSource(dto);
-
-        expect(result).toEqual(expectedResult);
-        expect(result.isNew).toBe(false);
       });
 
       it('should throw 400 for invalid source type', async () => {
@@ -254,9 +230,32 @@ describe('Ingestion API Integration Tests', () => {
           new Error('Invalid source type: INVALID_TYPE'),
         );
 
-        await expect(controller.configureSource(dto)).rejects.toThrow(
+        await expect(controller.createSource(dto)).rejects.toThrow(
           'Invalid input',
         );
+      });
+    });
+
+    describe('PUT /sources/:id - updateSource', () => {
+      it('should update an existing source', async () => {
+        const sourceId = 'existing-source-123';
+        const dto: ConfigureSourceDto = {
+          name: 'Updated Source',
+          type: 'RSS_FEED',
+          config: { feedUrl: 'https://example.com/feed' },
+          active: true,
+        };
+
+        const expectedResult = {
+          sourceId: 'existing-source-123',
+          isActive: true,
+        };
+
+        mockCommandBus.execute.mockResolvedValue(expectedResult);
+
+        const result = await controller.updateSource(sourceId, dto);
+
+        expect(result).toEqual(expectedResult);
       });
     });
 
@@ -361,7 +360,7 @@ describe('Ingestion API Integration Tests', () => {
       );
     });
 
-    it('should handle unexpected errors in source configuration', async () => {
+    it('should handle unexpected errors in source creation', async () => {
       const dto: ConfigureSourceDto = {
         name: 'Test',
         type: 'WEB_SCRAPER',
@@ -370,8 +369,8 @@ describe('Ingestion API Integration Tests', () => {
 
       mockCommandBus.execute.mockRejectedValue(new Error('Unexpected error'));
 
-      await expect(sourcesController.configureSource(dto)).rejects.toThrow(
-        'Failed to configure source',
+      await expect(sourcesController.createSource(dto)).rejects.toThrow(
+        'Failed to create source',
       );
     });
   });

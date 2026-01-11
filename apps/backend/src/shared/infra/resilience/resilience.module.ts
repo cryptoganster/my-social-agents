@@ -9,8 +9,8 @@ import { CircuitBreakerService } from './circuit-breaker';
  * and preventing cascading failures across all bounded contexts.
  *
  * Services:
- * - RetryService: Executes operations with exponential backoff retry logic
- * - CircuitBreakerService: Prevents cascading failures by stopping requests to failing services
+ * - IRetryService: Executes operations with exponential backoff retry logic
+ * - ICircuitBreaker: Prevents cascading failures by stopping requests to failing services
  *
  * Usage:
  * ```typescript
@@ -24,15 +24,33 @@ import { CircuitBreakerService } from './circuit-breaker';
  * Then inject services in your classes:
  * ```typescript
  * constructor(
- *   private readonly retryService: RetryService,
- *   private readonly circuitBreaker: CircuitBreakerService,
+ *   @Inject('IRetryService')
+ *   private readonly retryService: IRetryService,
+ *   @Inject('ICircuitBreaker')
+ *   private readonly circuitBreaker: ICircuitBreaker,
  * ) {}
  * ```
- *
- * Requirements: 4.1, 4.2, 4.3, 4.4, 7.1, 7.2, 7.4
  */
 @Module({
   providers: [
+    // Retry Service with Interface Token
+    {
+      provide: 'IRetryService',
+      useClass: RetryService,
+    },
+    // Circuit Breaker with Interface Token and default configuration
+    {
+      provide: 'ICircuitBreaker',
+      useFactory: () => {
+        return new CircuitBreakerService({
+          failureThreshold: 5,
+          successThreshold: 2,
+          failureWindowMs: 60000,
+          resetTimeoutMs: 30000,
+        });
+      },
+    },
+    // Also export concrete classes for backward compatibility
     RetryService,
     {
       provide: CircuitBreakerService,
@@ -46,6 +64,11 @@ import { CircuitBreakerService } from './circuit-breaker';
       },
     },
   ],
-  exports: [RetryService, CircuitBreakerService],
+  exports: [
+    'IRetryService',
+    'ICircuitBreaker',
+    RetryService,
+    CircuitBreakerService,
+  ],
 })
 export class ResilienceModule {}

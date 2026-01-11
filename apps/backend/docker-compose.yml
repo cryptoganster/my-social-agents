@@ -1,6 +1,10 @@
 version: '3.8'
 
 services:
+  # ============================================================================
+  # Backend Services
+  # ============================================================================
+
   postgres:
     image: postgres:16-alpine
     container_name: crypto-knowledge-db
@@ -11,7 +15,7 @@ services:
       POSTGRES_DB: crypto_knowledge
       PGDATA: /var/lib/postgresql/data/pgdata
     ports:
-      - '5433:5432'
+      - '5433:5432' # Port 5433 to avoid conflict with Firecrawl's PostgreSQL
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -22,7 +26,6 @@ services:
     networks:
       - crypto-network
 
-  # Opcional: pgAdmin para administración visual de la base de datos
   pgadmin:
     image: dpage/pgadmin4:latest
     container_name: crypto-knowledge-pgadmin
@@ -40,10 +43,209 @@ services:
     networks:
       - crypto-network
 
+  # ============================================================================
+  # Firecrawl Services (Web Scraping)
+  # ============================================================================
+
+  firecrawl-playwright:
+    build:
+      context: ../firecrawl/apps/playwright-service-ts
+      dockerfile: Dockerfile
+    container_name: firecrawl-playwright
+    environment:
+      PORT: 3000
+      PROXY_SERVER: ${FIRECRAWL_PROXY_SERVER:-}
+      PROXY_USERNAME: ${FIRECRAWL_PROXY_USERNAME:-}
+      PROXY_PASSWORD: ${FIRECRAWL_PROXY_PASSWORD:-}
+      BLOCK_MEDIA: ${FIRECRAWL_BLOCK_MEDIA:-false}
+      MAX_CONCURRENT_PAGES: ${FIRECRAWL_CRAWL_CONCURRENT_REQUESTS:-10}
+    networks:
+      - crypto-network
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
+        max-file: '3'
+        compress: 'true'
+    tmpfs:
+      - /tmp/.cache:noexec,nosuid,size=1g
+
+  firecrawl-api:
+    build:
+      context: ../firecrawl/apps/api
+      dockerfile: Dockerfile
+    container_name: firecrawl-api
+    environment:
+      HOST: '0.0.0.0'
+      PORT: ${FIRECRAWL_PORT:-3002}
+      EXTRACT_WORKER_PORT: ${FIRECRAWL_EXTRACT_WORKER_PORT:-3004}
+      WORKER_PORT: ${FIRECRAWL_WORKER_PORT:-3005}
+
+      # Redis
+      REDIS_URL: redis://firecrawl-redis:6379
+      REDIS_RATE_LIMIT_URL: redis://firecrawl-redis:6379
+
+      # Playwright
+      PLAYWRIGHT_MICROSERVICE_URL: http://firecrawl-playwright:3000/scrape
+
+      # PostgreSQL (Firecrawl's own database)
+      POSTGRES_USER: ${FIRECRAWL_POSTGRES_USER:-firecrawl}
+      POSTGRES_PASSWORD: ${FIRECRAWL_POSTGRES_PASSWORD:-firecrawl_password}
+      POSTGRES_DB: ${FIRECRAWL_POSTGRES_DB:-firecrawl}
+      POSTGRES_HOST: firecrawl-postgres
+      POSTGRES_PORT: 5432
+
+      # RabbitMQ
+      NUQ_RABBITMQ_URL: amqp://firecrawl-rabbitmq:5672
+
+      # Configuration
+      USE_DB_AUTHENTICATION: ${FIRECRAWL_USE_DB_AUTHENTICATION:-false}
+      NUM_WORKERS_PER_QUEUE: ${FIRECRAWL_NUM_WORKERS_PER_QUEUE:-8}
+      CRAWL_CONCURRENT_REQUESTS: ${FIRECRAWL_CRAWL_CONCURRENT_REQUESTS:-10}
+      MAX_CONCURRENT_JOBS: ${FIRECRAWL_MAX_CONCURRENT_JOBS:-5}
+      BROWSER_POOL_SIZE: ${FIRECRAWL_BROWSER_POOL_SIZE:-5}
+
+      # Optional: AI Features
+      OPENAI_API_KEY: ${FIRECRAWL_OPENAI_API_KEY:-}
+      OPENAI_BASE_URL: ${FIRECRAWL_OPENAI_BASE_URL:-}
+      MODEL_NAME: ${FIRECRAWL_MODEL_NAME:-}
+
+      # Optional: Admin Panel
+      BULL_AUTH_KEY: ${FIRECRAWL_BULL_AUTH_KEY:-dev-admin-key}
+
+      # Environment
+      ENV: local
+    depends_on:
+      firecrawl-redis:
+        condition: service_healthy
+      firecrawl-playwright:
+        condition: service_started
+      firecrawl-rabbitmq:
+        condition: service_started
+      firecrawl-postgres:
+        condition: service_healthy
+    ports:
+      - '${FIRECRAWL_PORT:-3002}:${FIRECRAWL_PORT:-3002}'
+    networks:
+      - crypto-network
+    command: node dist/src/harness.js --start-docker
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          memory: 8G
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:3002/health']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
+        max-file: '3'
+        compress: 'true'
+
+  firecrawl-ui:
+    build:
+      context: ../firecrawl/apps/ui/ingestion-ui
+      # Use our custom Dockerfile for UI
+      dockerfile: ../../../../backend/firecrawl-overrides/ui/Dockerfile
+    container_name: firecrawl-ui
+    environment:
+      # API endpoint for the UI to connect to
+      VITE_API_URL: http://localhost:${FIRECRAWL_PORT:-3002}
+    depends_on:
+      firecrawl-api:
+        condition: service_healthy
+    ports:
+      - '5173:5173' # Vite dev server
+    networks:
+      - crypto-network
+    volumes:
+      # Mount source code for hot reload
+      - ../firecrawl/apps/ui/ingestion-ui/src:/app/src:ro
+      - ../firecrawl/apps/ui/ingestion-ui/public:/app/public:ro
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '5m'
+        max-file: '2'
+        compress: 'true'
+
+  firecrawl-redis:
+    image: redis:alpine
+    container_name: firecrawl-redis
+    command: redis-server --bind 0.0.0.0
+    networks:
+      - crypto-network
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '5m'
+        max-file: '2'
+        compress: 'true'
+
+  firecrawl-rabbitmq:
+    image: rabbitmq:3-management
+    container_name: firecrawl-rabbitmq
+    command: rabbitmq-server
+    networks:
+      - crypto-network
+    ports:
+      - '15672:15672' # Management UI
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '5m'
+        max-file: '2'
+        compress: 'true'
+
+  firecrawl-postgres:
+    build:
+      # Use our custom Dockerfile with pg_cron support
+      context: ./firecrawl-overrides/postgres
+      dockerfile: Dockerfile
+    container_name: firecrawl-postgres
+    environment:
+      POSTGRES_USER: ${FIRECRAWL_POSTGRES_USER:-firecrawl}
+      POSTGRES_PASSWORD: ${FIRECRAWL_POSTGRES_PASSWORD:-firecrawl_password}
+      POSTGRES_DB: ${FIRECRAWL_POSTGRES_DB:-firecrawl}
+    networks:
+      - crypto-network
+    volumes:
+      - firecrawl_postgres_data:/var/lib/postgresql/data
+      # Mount all init scripts (includes Firecrawl's nuq.sql + our custom scripts)
+      - ./firecrawl-overrides/postgres/init-scripts:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${FIRECRAWL_POSTGRES_USER:-firecrawl}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
+        max-file: '3'
+        compress: 'true'
+
 volumes:
   postgres_data:
     driver: local
   pgadmin_data:
+    driver: local
+  firecrawl_postgres_data:
     driver: local
 
 networks:

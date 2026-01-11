@@ -17,3 +17,7 @@ export * from './circuit-breaker';
 
 // Cryptographic service interfaces
 export * from './hash';
+export * from './credential-encryption';
+
+// Security service interfaces
+export * from './encryption-key-provider';

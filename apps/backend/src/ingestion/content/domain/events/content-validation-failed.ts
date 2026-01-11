@@ -1,12 +1,12 @@
 /**
- * ContentValidationFailedEvent
+ * ContentValidationFailed
  *
  * Domain event published when content fails validation.
  * Signals that content did not meet quality or completeness requirements.
  *
  * Requirements: 2.3, 9.2, 9.3, 9.4
  */
-export class ContentValidationFailedEvent {
+export class ContentValidationFailed {
   constructor(
     public readonly jobId: string,
     public readonly sourceId: string,

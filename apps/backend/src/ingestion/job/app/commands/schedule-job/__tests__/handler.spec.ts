@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { QueryBus, EventBus } from '@nestjs/cqrs';
+import { EventBus } from '@nestjs/cqrs';
 import { ScheduleJobCommandHandler } from '../handler';
 import { ScheduleJobCommand } from '../command';
 import { ISourceConfigurationFactory } from '@/ingestion/source/domain/interfaces/factories/source-configuration-factory';
@@ -12,17 +12,12 @@ import {
 
 describe('ScheduleJobCommandHandler', () => {
   let handler: ScheduleJobCommandHandler;
-  let queryBus: jest.Mocked<QueryBus>;
   let sourceConfigFactory: jest.Mocked<ISourceConfigurationFactory>;
   let jobWriteRepository: jest.Mocked<IIngestionJobWriteRepository>;
   let eventBus: jest.Mocked<EventBus>;
 
   beforeEach(async () => {
     // Create mocks
-    queryBus = {
-      execute: jest.fn(),
-    } as any;
-
     sourceConfigFactory = {
       load: jest.fn(),
     } as jest.Mocked<ISourceConfigurationFactory>;
@@ -39,10 +34,6 @@ describe('ScheduleJobCommandHandler', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ScheduleJobCommandHandler,
-        {
-          provide: QueryBus,
-          useValue: queryBus,
-        },
         {
           provide: 'ISourceConfigurationFactory',
           useValue: sourceConfigFactory,
@@ -79,21 +70,12 @@ describe('ScheduleJobCommandHandler', () => {
         updatedAt: new Date(),
         consecutiveFailures: 0,
         successRate: 95,
-        totalJobs: 0,
+        totalJobs: 10,
         lastSuccessAt: new Date(),
         lastFailureAt: null,
         version: 1,
       });
 
-      queryBus.execute.mockResolvedValue({
-        isActive: true,
-        healthMetrics: {
-          successRate: 95, // 95% as a number 0-100
-          consecutiveFailures: 0,
-          lastSuccessAt: new Date(),
-          lastFailureAt: null,
-        },
-      });
       sourceConfigFactory.load.mockResolvedValue(mockSourceConfig);
       jobWriteRepository.save.mockResolvedValue();
 
@@ -103,9 +85,7 @@ describe('ScheduleJobCommandHandler', () => {
       // Assert
       expect(result.jobId).toBeDefined();
       expect(result.scheduledAt).toEqual(scheduledAt);
-      expect(queryBus.execute).toHaveBeenCalledWith(
-        expect.objectContaining({ sourceId }),
-      );
+      expect(sourceConfigFactory.load).toHaveBeenCalledWith(sourceId);
       expect(jobWriteRepository.save).toHaveBeenCalledTimes(1);
       expect(eventBus.publish).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -131,21 +111,12 @@ describe('ScheduleJobCommandHandler', () => {
         updatedAt: new Date(),
         consecutiveFailures: 0,
         successRate: 95,
-        totalJobs: 0,
+        totalJobs: 10,
         lastSuccessAt: new Date(),
         lastFailureAt: null,
         version: 1,
       });
 
-      queryBus.execute.mockResolvedValue({
-        isActive: true,
-        healthMetrics: {
-          successRate: 95, // 95% as a number 0-100
-          consecutiveFailures: 0,
-          lastSuccessAt: new Date(),
-          lastFailureAt: null,
-        },
-      });
       sourceConfigFactory.load.mockResolvedValue(mockSourceConfig);
       jobWriteRepository.save.mockResolvedValue();
 
@@ -155,9 +126,7 @@ describe('ScheduleJobCommandHandler', () => {
       // Assert
       expect(result.jobId).toBeDefined();
       expect(result.scheduledAt).toBeDefined();
-      expect(queryBus.execute).toHaveBeenCalledWith(
-        expect.objectContaining({ sourceId }),
-      );
+      expect(sourceConfigFactory.load).toHaveBeenCalledWith(sourceId);
       expect(jobWriteRepository.save).toHaveBeenCalledTimes(1);
       expect(eventBus.publish).toHaveBeenCalledTimes(1);
     });
@@ -167,7 +136,7 @@ describe('ScheduleJobCommandHandler', () => {
       const sourceId = 'non-existent-source';
       const command = new ScheduleJobCommand(sourceId);
 
-      queryBus.execute.mockResolvedValue(null);
+      sourceConfigFactory.load.mockResolvedValue(null);
 
       // Act & Assert
       await expect(handler.execute(command)).rejects.toThrow(
@@ -183,15 +152,24 @@ describe('ScheduleJobCommandHandler', () => {
       const sourceId = 'source-123';
       const command = new ScheduleJobCommand(sourceId);
 
-      queryBus.execute.mockResolvedValue({
+      const mockSourceConfig = SourceConfiguration.reconstitute({
+        sourceId,
+        sourceType: SourceType.fromEnum(SourceTypeEnum.WEB),
+        name: 'Test Source',
+        config: { url: 'https://example.com' },
+        credentials: undefined,
         isActive: false, // Inactive
-        healthMetrics: {
-          successRate: 95, // 95% as a number 0-100
-          consecutiveFailures: 0,
-          lastSuccessAt: new Date(),
-          lastFailureAt: null,
-        },
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        consecutiveFailures: 0,
+        successRate: 95,
+        totalJobs: 10,
+        lastSuccessAt: new Date(),
+        lastFailureAt: null,
+        version: 1,
       });
+
+      sourceConfigFactory.load.mockResolvedValue(mockSourceConfig);
 
       // Act & Assert
       await expect(handler.execute(command)).rejects.toThrow(
@@ -202,20 +180,29 @@ describe('ScheduleJobCommandHandler', () => {
       expect(eventBus.publish).not.toHaveBeenCalled();
     });
 
-    it('should throw error when source configuration is unhealthy', async () => {
+    it('should throw error when source has too many consecutive failures', async () => {
       // Arrange
       const sourceId = 'source-123';
       const command = new ScheduleJobCommand(sourceId);
 
-      queryBus.execute.mockResolvedValue({
+      const mockSourceConfig = SourceConfiguration.reconstitute({
+        sourceId,
+        sourceType: SourceType.fromEnum(SourceTypeEnum.WEB),
+        name: 'Test Source',
+        config: { url: 'https://example.com' },
+        credentials: undefined,
         isActive: true,
-        healthMetrics: {
-          successRate: 30, // 30% as a number 0-100 (Low success rate)
-          consecutiveFailures: 5, // High consecutive failures
-          lastSuccessAt: new Date(Date.now() - 86400000),
-          lastFailureAt: new Date(),
-        },
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        consecutiveFailures: 5, // High consecutive failures
+        successRate: 80,
+        totalJobs: 10,
+        lastSuccessAt: new Date(Date.now() - 86400000),
+        lastFailureAt: new Date(),
+        version: 1,
       });
+
+      sourceConfigFactory.load.mockResolvedValue(mockSourceConfig);
 
       // Act & Assert
       await expect(handler.execute(command)).rejects.toThrow(
@@ -224,6 +211,73 @@ describe('ScheduleJobCommandHandler', () => {
 
       expect(jobWriteRepository.save).not.toHaveBeenCalled();
       expect(eventBus.publish).not.toHaveBeenCalled();
+    });
+
+    it('should throw error when source has low success rate', async () => {
+      // Arrange
+      const sourceId = 'source-123';
+      const command = new ScheduleJobCommand(sourceId);
+
+      const mockSourceConfig = SourceConfiguration.reconstitute({
+        sourceId,
+        sourceType: SourceType.fromEnum(SourceTypeEnum.WEB),
+        name: 'Test Source',
+        config: { url: 'https://example.com' },
+        credentials: undefined,
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        consecutiveFailures: 0,
+        successRate: 30, // Low success rate
+        totalJobs: 10, // Enough jobs to trigger threshold
+        lastSuccessAt: new Date(Date.now() - 86400000),
+        lastFailureAt: new Date(),
+        version: 1,
+      });
+
+      sourceConfigFactory.load.mockResolvedValue(mockSourceConfig);
+
+      // Act & Assert
+      await expect(handler.execute(command)).rejects.toThrow(
+        'Cannot schedule job for unhealthy source: source-123',
+      );
+
+      expect(jobWriteRepository.save).not.toHaveBeenCalled();
+      expect(eventBus.publish).not.toHaveBeenCalled();
+    });
+
+    it('should allow scheduling for new source with no job history', async () => {
+      // Arrange
+      const sourceId = 'source-123';
+      const command = new ScheduleJobCommand(sourceId);
+
+      const mockSourceConfig = SourceConfiguration.reconstitute({
+        sourceId,
+        sourceType: SourceType.fromEnum(SourceTypeEnum.WEB),
+        name: 'Test Source',
+        config: { url: 'https://example.com' },
+        credentials: undefined,
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        consecutiveFailures: 0,
+        successRate: 100, // Default for new sources
+        totalJobs: 0, // No job history
+        lastSuccessAt: null,
+        lastFailureAt: null,
+        version: 1,
+      });
+
+      sourceConfigFactory.load.mockResolvedValue(mockSourceConfig);
+      jobWriteRepository.save.mockResolvedValue();
+
+      // Act
+      const result = await handler.execute(command);
+
+      // Assert
+      expect(result.jobId).toBeDefined();
+      expect(jobWriteRepository.save).toHaveBeenCalledTimes(1);
+      expect(eventBus.publish).toHaveBeenCalledTimes(1);
     });
   });
 });

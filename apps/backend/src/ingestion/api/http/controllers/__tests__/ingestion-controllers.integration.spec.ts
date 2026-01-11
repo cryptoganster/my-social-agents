@@ -3,9 +3,9 @@ import { IngestionJobsController } from '../ingestion-jobs.controller';
 import { SourcesController } from '../sources.controller';
 import { GetJobsByStatusResult } from '@/ingestion/job/app/queries/get-jobs-by-status/query';
 import { GetJobHistoryResult } from '@/ingestion/job/app/queries/get-job-history/query';
-import { IIngestionJobReadRepository } from '@/ingestion/job/domain/interfaces/repositories/ingestion-job-read';
-import { ISourceConfigurationReadRepository } from '@/ingestion/source/domain/interfaces/repositories/source-configuration-read';
-import { IngestionJobReadModel } from '@/ingestion/job/domain/read-models/ingestion-job';
+import { IIngestionJobReadRepository } from '@/ingestion/job/app/queries/repositories/ingestion-job-read';
+import { ISourceConfigurationReadRepository } from '@/ingestion/source/app/queries/repositories/source-configuration-read';
+import { IngestionJobReadModel } from '@/ingestion/job/app/queries/read-models/ingestion-job';
 
 /**
  * Integration Tests for HTTP Query Endpoints

@@ -6,7 +6,7 @@ import { RefineContentCommandHandler } from './app/commands/refine-content/handl
 import { RerefineContentCommandHandler } from './app/commands/rerefine-content/handler';
 
 // ===== Event Handlers =====
-import { ContentIngestedEventHandler } from './app/events/content-ingested/handler';
+import { TriggerRefinementOnContentIngested } from './app/events/content-ingested/handler';
 
 // ===== Domain Services (Implementations) =====
 import { SemanticChunker } from './domain/services/semantic-chunker';
@@ -57,7 +57,7 @@ import { ContentQualityAnalyzer } from './domain/services/content-quality-analyz
     RerefineContentCommandHandler,
 
     // ===== Event Handlers =====
-    ContentIngestedEventHandler,
+    TriggerRefinementOnContentIngested,
 
     // ===== Domain Services with String Tokens =====
     // Note: SemanticChunker is registered with 'ISemanticChunker' token

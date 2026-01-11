@@ -16,7 +16,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { CommandBus, QueryBus, EventBus, CqrsModule } from '@nestjs/cqrs';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
-import { ConfigureSourceCommand } from '@/ingestion/source/app/commands/configure-source/command';
+import { CreateSourceCommand } from '@/ingestion/source/app/commands/create-source/command';
+import { CreateSourceResult } from '@/ingestion/source/app/commands/create-source/result';
 import { UpdateSourceHealthCommand } from '@/ingestion/source/app/commands/update-source-health/command';
 import {
   GetSourceByIdQuery,
@@ -27,7 +28,7 @@ import {
   GetJobByIdQuery,
   GetJobByIdResult,
 } from '@/ingestion/job/app/queries/get-job-by-id/query';
-import { IngestionSharedModule } from '@/ingestion/shared/ingestion-shared.module';
+import { SharedModule } from '@/shared/shared.module';
 import { IngestionSourceModule } from '@/ingestion/source/ingestion-source.module';
 import { IngestionJobModule } from '@/ingestion/job/ingestion-job.module';
 import { IngestionContentModule } from '@/ingestion/content/ingestion-content.module';
@@ -68,7 +69,7 @@ describe('Integration: Source Health Tracking', () => {
           logging: false,
         }),
         CqrsModule,
-        IngestionSharedModule,
+        SharedModule,
         IngestionSourceModule,
         IngestionJobModule,
         IngestionContentModule,
@@ -94,9 +95,11 @@ describe('Integration: Source Health Tracking', () => {
   describe('Health Metrics Updates', () => {
     it('should update health metrics after successful job', async () => {
       // 1. Configure source
-      const configureResult = await commandBus.execute(
-        new ConfigureSourceCommand(
-          undefined,
+      const configureResult = await commandBus.execute<
+        CreateSourceCommand,
+        CreateSourceResult
+      >(
+        new CreateSourceCommand(
           SourceTypeEnum.WEB,
           'Test Health Source',
           {
@@ -118,8 +121,9 @@ describe('Integration: Source Health Tracking', () => {
         new GetSourceByIdQuery(sourceId),
       );
 
-      expect(initialSource.healthMetrics).toBeDefined();
-      expect(initialSource.healthMetrics.consecutiveFailures).toBe(0);
+      expect(initialSource).toBeDefined();
+      expect(initialSource!.healthMetrics).toBeDefined();
+      expect(initialSource!.healthMetrics.consecutiveFailures).toBe(0);
 
       // 3. Wait to avoid concurrency issues
       await new Promise((resolve) => setTimeout(resolve, 100));
@@ -140,15 +144,18 @@ describe('Integration: Source Health Tracking', () => {
         new GetSourceByIdQuery(sourceId),
       );
 
-      expect(updatedSource.healthMetrics.consecutiveFailures).toBe(0);
-      expect(updatedSource.healthMetrics.lastSuccessAt).toBeDefined();
+      expect(updatedSource).toBeDefined();
+      expect(updatedSource!.healthMetrics.consecutiveFailures).toBe(0);
+      expect(updatedSource!.healthMetrics.lastSuccessAt).toBeDefined();
     }, 30000);
 
     it('should track consecutive failures', async () => {
       // 1. Configure source
-      const configureResult = await commandBus.execute(
-        new ConfigureSourceCommand(
-          undefined,
+      const configureResult = await commandBus.execute<
+        CreateSourceCommand,
+        CreateSourceResult
+      >(
+        new CreateSourceCommand(
           SourceTypeEnum.WEB,
           'Test Failure Tracking',
           {
@@ -217,9 +224,11 @@ describe('Integration: Source Health Tracking', () => {
 
     it('should reset consecutive failures on success', async () => {
       // 1. Configure source
-      const configureResult = await commandBus.execute(
-        new ConfigureSourceCommand(
-          undefined,
+      const configureResult = await commandBus.execute<
+        CreateSourceCommand,
+        CreateSourceResult
+      >(
+        new CreateSourceCommand(
           SourceTypeEnum.RSS,
           'Test Failure Reset',
           {
@@ -284,9 +293,11 @@ describe('Integration: Source Health Tracking', () => {
   describe('Success Rate Calculation', () => {
     it('should calculate success rate correctly', async () => {
       // 1. Configure source
-      const configureResult = await commandBus.execute(
-        new ConfigureSourceCommand(
-          undefined,
+      const configureResult = await commandBus.execute<
+        CreateSourceCommand,
+        CreateSourceResult
+      >(
+        new CreateSourceCommand(
           SourceTypeEnum.WEB,
           'Test Success Rate',
           {
@@ -353,9 +364,11 @@ describe('Integration: Source Health Tracking', () => {
       });
 
       // 1. Configure source
-      const configureResult = await commandBus.execute(
-        new ConfigureSourceCommand(
-          undefined,
+      const configureResult = await commandBus.execute<
+        CreateSourceCommand,
+        CreateSourceResult
+      >(
+        new CreateSourceCommand(
           SourceTypeEnum.WEB,
           'Test Unhealthy Detection',
           {
@@ -403,9 +416,11 @@ describe('Integration: Source Health Tracking', () => {
 
     it('should automatically disable unhealthy source', async () => {
       // 1. Configure source
-      const configureResult = await commandBus.execute(
-        new ConfigureSourceCommand(
-          undefined,
+      const configureResult = await commandBus.execute<
+        CreateSourceCommand,
+        CreateSourceResult
+      >(
+        new CreateSourceCommand(
           SourceTypeEnum.WEB,
           'Test Auto Disable',
           {
@@ -424,7 +439,7 @@ describe('Integration: Source Health Tracking', () => {
 
       // 2. Verify source is initially active
       let source = await queryBus.execute(new GetSourceByIdQuery(sourceId));
-      expect(source.isActive).toBe(true);
+      expect(source!.isActive).toBe(true);
 
       // 3. Record multiple failures sequentially to avoid concurrency
       await executeSequentially(
@@ -479,9 +494,11 @@ describe('Integration: Source Health Tracking', () => {
       jest.spyOn(adapterRegistry, 'getAdapter').mockReturnValue(mockAdapter);
 
       // 1. Configure source
-      const configureResult = await commandBus.execute(
-        new ConfigureSourceCommand(
-          undefined,
+      const configureResult = await commandBus.execute<
+        CreateSourceCommand,
+        CreateSourceResult
+      >(
+        new CreateSourceCommand(
           SourceTypeEnum.WEB,
           'Test Job Health',
           {
@@ -498,7 +515,7 @@ describe('Integration: Source Health Tracking', () => {
 
       const sourceId = configureResult.sourceId;
 
-      // 2. Schedule job (will be auto-executed by JobScheduledEventHandler)
+      // 2. Schedule job (will be auto-executed by StartJobOnJobScheduled)
       const scheduleResult = await executeWithRetry<{ jobId: string }>(
         commandBus,
         new ScheduleJobCommand(sourceId),
@@ -506,12 +523,13 @@ describe('Integration: Source Health Tracking', () => {
       );
 
       // 3. Poll for job completion (auto-executed by event handler)
+      // Using improved pollUntil with exponential backoff
       const job = await pollUntil<GetJobByIdResult>(
         queryBus,
         new GetJobByIdQuery(scheduleResult.jobId),
         (j): j is NonNullable<GetJobByIdResult> =>
           j !== null && ['COMPLETED', 'FAILED'].includes(j.status),
-        { interval: 200, timeout: 5000 },
+        { interval: 50, maxInterval: 500, timeout: 15000 },
       );
 
       expect(job).toBeDefined();
@@ -523,7 +541,7 @@ describe('Integration: Source Health Tracking', () => {
         new GetSourceByIdQuery(sourceId),
         (s): s is GetSourceByIdResult =>
           s !== null && s.healthMetrics.totalJobs >= 1,
-        { interval: 200, timeout: 5000 },
+        { interval: 50, maxInterval: 500, timeout: 10000 },
       );
 
       // Health metrics should reflect the job execution
@@ -550,9 +568,11 @@ describe('Integration: Source Health Tracking', () => {
       jest.spyOn(adapterRegistry, 'getAdapter').mockReturnValue(mockAdapter);
 
       // 1. Configure source
-      const configureResult = await commandBus.execute(
-        new ConfigureSourceCommand(
-          undefined,
+      const configureResult = await commandBus.execute<
+        CreateSourceCommand,
+        CreateSourceResult
+      >(
+        new CreateSourceCommand(
           SourceTypeEnum.RSS,
           'Test Multiple Jobs Health',
           {
@@ -565,7 +585,7 @@ describe('Integration: Source Health Tracking', () => {
 
       const sourceId = configureResult.sourceId;
 
-      // 2. Execute multiple jobs sequentially (auto-executed by JobScheduledEventHandler)
+      // 2. Execute multiple jobs sequentially (auto-executed by StartJobOnJobScheduled)
       const jobIds: string[] = [];
 
       for (let i = 0; i < 3; i++) {
@@ -578,12 +598,13 @@ describe('Integration: Source Health Tracking', () => {
         jobIds.push(scheduleResult.jobId);
 
         // Poll for this job to complete before starting next
+        // Using improved pollUntil with exponential backoff
         await pollUntil<GetJobByIdResult>(
           queryBus,
           new GetJobByIdQuery(scheduleResult.jobId),
           (j): j is NonNullable<GetJobByIdResult> =>
             j !== null && ['COMPLETED', 'FAILED'].includes(j.status),
-          { interval: 200, timeout: 5000 },
+          { interval: 50, maxInterval: 500, timeout: 15000 },
         );
 
         // Wait between jobs to avoid race conditions
@@ -594,7 +615,7 @@ describe('Integration: Source Health Tracking', () => {
       for (const jobId of jobIds) {
         const job = await queryBus.execute(new GetJobByIdQuery(jobId));
         expect(job).toBeDefined();
-        expect(['COMPLETED', 'FAILED']).toContain(job.status);
+        expect(['COMPLETED', 'FAILED']).toContain(job!.status);
       }
 
       // 4. Poll for source health to reflect all executions
@@ -603,7 +624,7 @@ describe('Integration: Source Health Tracking', () => {
         new GetSourceByIdQuery(sourceId),
         (s): s is GetSourceByIdResult =>
           s !== null && s.healthMetrics.totalJobs >= 3,
-        { interval: 200, timeout: 5000 },
+        { interval: 50, maxInterval: 500, timeout: 10000 },
       );
 
       expect(source!.healthMetrics).toBeDefined();

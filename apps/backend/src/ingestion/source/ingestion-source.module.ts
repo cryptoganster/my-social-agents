@@ -1,11 +1,15 @@
 import { Module, ClassProvider } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { IngestionSharedModule } from '@/ingestion/shared/ingestion-shared.module';
-import { ConfigureSourceCommandHandler } from './app/commands/configure-source/handler';
+import { SharedModule } from '@/shared/shared.module';
+import { CreateSourceCommandHandler } from './app/commands/create-source/handler';
+import { UpdateSourceCommandHandler } from './app/commands/update-source/handler';
 import { UpdateSourceHealthCommandHandler } from './app/commands/update-source-health/handler';
+import { DisableSourceHandler } from './app/commands/disable-source/handler';
 import { GetSourceByIdQueryHandler } from './app/queries/get-source-by-id/handler';
-import { SourceUnhealthyEventHandler } from './app/events/source-unhealthy/handler';
+import { DisableSourceOnSourceUnhealthy } from './app/events/disable-source-on-source-unhealthy';
+import { LogHealthMetricsOnSourceUnhealthy } from './app/events/log-health-metrics-on-source-unhealthy';
+import { NotifyAdminsOnSourceUnhealthy } from './app/events/notify-admins-on-source-unhealthy';
 import { TypeOrmSourceConfigurationWriteRepository } from './infra/persistence/repositories/source-configuration-write';
 import { TypeOrmSourceConfigurationFactory } from './infra/persistence/factories/source-configuration-factory';
 import { TypeOrmSourceConfigurationReadRepository } from './infra/persistence/repositories/source-configuration-read';
@@ -27,7 +31,8 @@ import { SourceType, SourceTypeEnum } from './domain/value-objects/source-type';
  * Handles source configuration management and provides pluggable source adapters.
  *
  * Responsibilities:
- * - Source configuration (ConfigureSourceCommand)
+ * - Source creation (CreateSourceCommand)
+ * - Source updates (UpdateSourceCommand)
  * - Source persistence (write repository)
  * - Source queries (read repository)
  * - Source reconstitution (factory)
@@ -42,19 +47,23 @@ import { SourceType, SourceTypeEnum } from './domain/value-objects/source-type';
 @Module({
   imports: [
     CqrsModule,
-    IngestionSharedModule,
+    SharedModule,
     TypeOrmModule.forFeature([SourceConfigurationEntity, IngestionJobEntity]),
   ],
   providers: [
     // Command Handlers
-    ConfigureSourceCommandHandler,
+    CreateSourceCommandHandler,
+    UpdateSourceCommandHandler,
     UpdateSourceHealthCommandHandler,
+    DisableSourceHandler,
 
     // Query Handlers
     GetSourceByIdQueryHandler,
 
-    // Event Handlers
-    SourceUnhealthyEventHandler,
+    // Event Handlers (one responsibility per handler)
+    DisableSourceOnSourceUnhealthy,
+    LogHealthMetricsOnSourceUnhealthy,
+    NotifyAdminsOnSourceUnhealthy,
 
     // Write Repository with Interface Token
     {
@@ -155,8 +164,9 @@ import { SourceType, SourceTypeEnum } from './domain/value-objects/source-type';
     } as ClassProvider,
   ],
   exports: [
-    // Export command handler for use in other modules
-    ConfigureSourceCommandHandler,
+    // Export command handlers for use in other modules
+    CreateSourceCommandHandler,
+    UpdateSourceCommandHandler,
 
     // Export repository tokens for use in other modules
     'ISourceConfigurationWriteRepository',

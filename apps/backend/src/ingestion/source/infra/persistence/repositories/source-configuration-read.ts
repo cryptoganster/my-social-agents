@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { SourceConfigurationReadModel } from '@/ingestion/source/domain/read-models/source-configuration';
-import { ISourceConfigurationReadRepository } from '@/ingestion/source/domain/interfaces/repositories/source-configuration-read';
+import { SourceConfigurationReadModel } from '@/ingestion/source/app/queries/read-models/source-configuration';
+import { ISourceConfigurationReadRepository } from '@/ingestion/source/app/queries/repositories/source-configuration-read';
 import { SourceConfigurationEntity } from '../entities/source-configuration';
 import { GetSourceByIdResult } from '@/ingestion/source/app/queries/get-source-by-id/query';
 

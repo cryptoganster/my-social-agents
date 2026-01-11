@@ -16,7 +16,7 @@ module.exports = {
     node: true,
     jest: true,
   },
-  ignorePatterns: ['.eslintrc.js', 'dist/', 'node_modules/'],
+  ignorePatterns: ['.eslintrc.js', 'dist/', 'node_modules/', 'apps/firecrawl/'],
   rules: {
     '@typescript-eslint/no-unused-vars': ['error', { 
       argsIgnorePattern: '^_',

@@ -28,4 +28,3 @@
 export * from './job/domain';
 export * from './content/domain';
 export * from './source/domain';
-export * from './shared';

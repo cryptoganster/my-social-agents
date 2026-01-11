@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { GetJobByIdQueryHandler } from '../handler';
 import { GetJobByIdQuery } from '../query';
-import { IIngestionJobReadRepository } from '@/ingestion/job/domain/interfaces/repositories/ingestion-job-read';
-import { IngestionJobReadModel } from '@/ingestion/job/domain/read-models/ingestion-job';
+import { IIngestionJobReadRepository } from '@/ingestion/job/app/queries/repositories/ingestion-job-read';
+import { IngestionJobReadModel } from '@/ingestion/job/app/queries/read-models/ingestion-job';
 
 describe('GetJobByIdQueryHandler', () => {
   let handler: GetJobByIdQueryHandler;

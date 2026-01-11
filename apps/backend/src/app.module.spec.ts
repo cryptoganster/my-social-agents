@@ -35,13 +35,6 @@ import { IngestionModule } from './ingestion/ingestion.module';
         sha256: jest.fn().mockReturnValue('a'.repeat(64)),
       },
     },
-    {
-      provide: 'IEventPublisher',
-      useValue: {
-        publish: jest.fn(),
-        publishBatch: jest.fn(),
-      },
-    },
     // Source configuration
     {
       provide: 'ISourceConfigurationWriteRepository',
@@ -115,7 +108,6 @@ import { IngestionModule } from './ingestion/ingestion.module';
     'ICircuitBreaker',
     'ICredentialEncryption',
     'IHashService',
-    'IEventPublisher',
     'ISourceConfigurationWriteRepository',
     'ISourceConfigurationFactory',
     'ISourceConfigurationReadRepository',

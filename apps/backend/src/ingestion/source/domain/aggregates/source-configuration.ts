@@ -356,6 +356,15 @@ export class SourceConfiguration extends AggregateRoot<string> {
   }
 
   /**
+   * Checks if the source is healthy and can be scheduled
+   * A source is healthy if it's not unhealthy
+   * Requirements: 4.5, 4.6, 4.7
+   */
+  isHealthy(): boolean {
+    return !this.isUnhealthy();
+  }
+
+  /**
    * Disables the source with a reason
    * Requirements: 4.5, 4.6
    */

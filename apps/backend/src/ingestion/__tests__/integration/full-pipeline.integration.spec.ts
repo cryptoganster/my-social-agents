@@ -32,12 +32,12 @@ describe('Full Pipeline Integration', () => {
 
   describe('Dependency Injection', () => {
     it('should have all shared services registered', () => {
-      // Validates that IngestionSharedModule exports:
+      // Validates that SharedModule exports:
       // - IRetryService
       // - ICircuitBreaker
       // - ICredentialEncryption
       // - IHashService
-      // - IEventPublisher
+      // Note: Event publishing uses @nestjs/cqrs EventBus directly
       expect(true).toBe(true);
     });
 
@@ -75,12 +75,11 @@ describe('Full Pipeline Integration', () => {
   describe('Module Dependency Order', () => {
     it('should import modules in correct order', () => {
       // Validates that AppModule imports in correct order:
-      // 1. ScheduleModule (shared scheduling)
-      // 2. IngestionSharedModule (shared infrastructure)
-      // 3. IngestionSourceModule (source configuration)
-      // 4. IngestionJobModule (job scheduling)
-      // 5. IngestionContentModule (content ingestion)
-      // 6. IngestionApiModule (API layer)
+      // 1. SharedModule (shared infrastructure: resilience, scheduling, cryptographic, events)
+      // 2. IngestionSourceModule (source configuration)
+      // 3. IngestionJobModule (job scheduling)
+      // 4. IngestionContentModule (content ingestion)
+      // 5. IngestionApiModule (API layer)
       expect(true).toBe(true);
     });
   });
@@ -106,7 +105,7 @@ describe('Full Pipeline Integration', () => {
  *          host: process.env.TEST_DB_HOST,
  *          // ... other config
  *        }),
- *        IngestionSharedModule,
+ *        SharedModule,
  *        IngestionSourceModule,
  *        IngestionJobModule,
  *        IngestionContentModule,
@@ -134,7 +133,7 @@ describe('Full Pipeline Integration', () => {
  *     module = await Test.createTestingModule({
  *       imports: [
  *         TypeOrmModule.forRoot(testDbConfig),
- *         IngestionSharedModule,
+ *         SharedModule,
  *         IngestionSourceModule,
  *         IngestionJobModule,
  *         IngestionContentModule,

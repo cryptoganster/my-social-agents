@@ -3,7 +3,7 @@ import { Repository, InsertResult, SelectQueryBuilder } from 'typeorm';
 import { SourceConfiguration } from '@/ingestion/source/domain/aggregates/source-configuration';
 import { SourceType } from '@/ingestion/source/domain/value-objects/source-type';
 import { SourceTypeEnum } from '@/ingestion/source/domain/value-objects/source-type';
-import { ContentItemReadModel } from '@/ingestion/content/domain/read-models/content-item';
+import { ContentItemReadModel } from '@/ingestion/content/app/queries/read-models/content-item';
 import { TypeOrmSourceConfigurationWriteRepository } from '../repositories/source-configuration-write';
 import { TypeOrmSourceConfigurationReadRepository } from '../repositories/source-configuration-read';
 import { TypeOrmSourceConfigurationFactory } from '../factories/source-configuration-factory';

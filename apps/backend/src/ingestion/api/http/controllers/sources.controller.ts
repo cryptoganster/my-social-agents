@@ -2,6 +2,7 @@ import {
   Controller,
   Post,
   Get,
+  Put,
   Body,
   Param,
   Query,
@@ -11,14 +12,17 @@ import {
   Inject,
 } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
-import { ConfigureSourceCommand } from '@/ingestion/source/app/commands/configure-source/command';
+import { CreateSourceCommand } from '@/ingestion/source/app/commands/create-source/command';
+import { CreateSourceResult } from '@/ingestion/source/app/commands/create-source/result';
+import { UpdateSourceCommand } from '@/ingestion/source/app/commands/update-source/command';
+import { UpdateSourceResult } from '@/ingestion/source/app/commands/update-source/result';
 import {
   GetJobHistoryQuery,
   GetJobHistoryResult,
 } from '@/ingestion/job/app/queries/get-job-history/query';
 import { SourceTypeEnum } from '@/ingestion/source/domain/value-objects/source-type';
-import { ISourceConfigurationReadRepository } from '@/ingestion/source/domain/interfaces/repositories/source-configuration-read';
-import { SourceConfigurationReadModel } from '@/ingestion/source/domain/read-models/source-configuration';
+import { ISourceConfigurationReadRepository } from '@/ingestion/source/app/queries/repositories/source-configuration-read';
+import { SourceConfigurationReadModel } from '@/ingestion/source/app/queries/read-models/source-configuration';
 import { ConfigureSourceDto } from '../dto/configure-source.dto';
 
 /**
@@ -49,17 +53,16 @@ export class SourcesController {
 
   /**
    * POST /sources
-   * Configure a new or existing source
+   * Create a new source configuration
    */
   @Post()
-  async configureSource(
+  async createSource(
     @Body() dto: ConfigureSourceDto,
-  ): Promise<{ sourceId: string; isNew: boolean; isActive: boolean }> {
+  ): Promise<{ sourceId: string; isActive: boolean }> {
     try {
-      this.logger.log(`Configuring source: ${dto.name}`);
+      this.logger.log(`Creating source: ${dto.name}`);
 
-      const command = new ConfigureSourceCommand(
-        dto.sourceId, // undefined for new sources
+      const command = new CreateSourceCommand(
         dto.type as SourceTypeEnum,
         dto.name,
         dto.config,
@@ -68,24 +71,79 @@ export class SourcesController {
       );
 
       const result = await this.commandBus.execute<
-        ConfigureSourceCommand,
-        { sourceId: string; isNew: boolean; isActive: boolean }
+        CreateSourceCommand,
+        CreateSourceResult
       >(command);
 
-      this.logger.log(`Source configured successfully: ${result.sourceId}`);
+      this.logger.log(`Source created successfully: ${result.sourceId}`);
 
       return {
         sourceId: result.sourceId,
-        isNew: result.isNew,
         isActive: result.isActive,
       };
     } catch (error) {
       this.logger.error(
-        `Failed to configure source: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        `Failed to create source: ${error instanceof Error ? error.message : 'Unknown error'}`,
         error instanceof Error ? error.stack : undefined,
       );
 
-      // Map domain errors to HTTP status codes
+      if (error instanceof Error) {
+        if (
+          error.message.includes('invalid') ||
+          error.message.includes('Invalid')
+        ) {
+          throw new HttpException(
+            `Invalid input: ${error.message}`,
+            HttpStatus.BAD_REQUEST,
+          );
+        }
+      }
+
+      throw new HttpException(
+        'Failed to create source',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * PUT /sources/:id
+   * Update an existing source configuration
+   */
+  @Put(':id')
+  async updateSource(
+    @Param('id') sourceId: string,
+    @Body() dto: ConfigureSourceDto,
+  ): Promise<{ sourceId: string; isActive: boolean }> {
+    try {
+      this.logger.log(`Updating source: ${sourceId}`);
+
+      const command = new UpdateSourceCommand(
+        sourceId,
+        dto.type as SourceTypeEnum,
+        dto.name,
+        dto.config,
+        dto.credentials,
+        dto.active,
+      );
+
+      const result = await this.commandBus.execute<
+        UpdateSourceCommand,
+        UpdateSourceResult
+      >(command);
+
+      this.logger.log(`Source updated successfully: ${result.sourceId}`);
+
+      return {
+        sourceId: result.sourceId,
+        isActive: result.isActive,
+      };
+    } catch (error) {
+      this.logger.error(
+        `Failed to update source: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        error instanceof Error ? error.stack : undefined,
+      );
+
       if (error instanceof Error) {
         if (error.message.includes('not found')) {
           throw new HttpException('Source not found', HttpStatus.NOT_FOUND);
@@ -103,7 +161,7 @@ export class SourcesController {
       }
 
       throw new HttpException(
-        'Failed to configure source',
+        'Failed to update source',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }

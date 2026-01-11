@@ -1,4 +1,6 @@
+import { Command } from '@nestjs/cqrs';
 import { RefinementConfig } from '@refinement/domain/value-objects/refinement-config';
+import { RefineContentResult } from './result';
 
 /**
  * RefineContentCommand
@@ -13,14 +15,17 @@ import { RefinementConfig } from '@refinement/domain/value-objects/refinement-co
  * - Validate content quality
  * - Generate structured metadata
  *
+ * Extends Command<RefineContentResult> for automatic type inference.
+ *
  * Requirements: Refinement 1, 2, 3, 4, 5, 7
  * Design: Application Layer - Commands
  */
-export class RefineContentCommand {
+export class RefineContentCommand extends Command<RefineContentResult> {
   constructor(
     public readonly contentItemId: string,
     public readonly config?: RefinementConfig,
   ) {
+    super();
     this.validate();
   }
 

@@ -1,4 +1,12 @@
-export class JobFailedEvent {
+/**
+ * JobFailed Domain Event
+ *
+ * Represents the fact that an ingestion job has failed.
+ * Published when a job transitions to FAILED state.
+ *
+ * Requirements: 4.6
+ */
+export class JobFailed {
   constructor(
     public readonly jobId: string,
     public readonly sourceId: string,

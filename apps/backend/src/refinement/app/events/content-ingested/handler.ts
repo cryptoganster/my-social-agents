@@ -1,13 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { EventsHandler, IEventHandler, CommandBus } from '@nestjs/cqrs';
-import { ContentIngestedEvent } from '@/ingestion/content/domain/events/content-ingested';
+import { ContentIngested } from '@/ingestion/content/domain/events/content-ingested';
 import { RefineContentCommand } from '@refinement/app/commands/refine-content/command';
 import { RefinementConfig } from '@refinement/domain/value-objects/refinement-config';
 
 /**
- * ContentIngestedEventHandler
+ * TriggerRefinementOnContentIngested
  *
- * Listens to ContentIngestedEvent from the Ingestion bounded context
+ * Listens to ContentIngested from the Ingestion bounded context
  * and automatically triggers content refinement.
  *
  * This is the primary mechanism for cross-context communication,
@@ -21,23 +21,23 @@ import { RefinementConfig } from '@refinement/domain/value-objects/refinement-co
  * Steering: 14-event-driven-architecture.md - Pattern 1: Event → Command
  */
 @Injectable()
-@EventsHandler(ContentIngestedEvent)
-export class ContentIngestedEventHandler implements IEventHandler<ContentIngestedEvent> {
-  private readonly logger = new Logger(ContentIngestedEventHandler.name);
+@EventsHandler(ContentIngested)
+export class TriggerRefinementOnContentIngested implements IEventHandler<ContentIngested> {
+  private readonly logger = new Logger(TriggerRefinementOnContentIngested.name);
 
   constructor(private readonly commandBus: CommandBus) {}
 
   /**
-   * Handles ContentIngestedEvent by triggering refinement
+   * Handles ContentIngested by triggering refinement
    *
    * Error Isolation: Errors are logged but not rethrown to allow
    * other event handlers to continue processing.
    *
    * @param event - The content ingested event from ingestion context
    */
-  async handle(event: ContentIngestedEvent): Promise<void> {
+  async handle(event: ContentIngested): Promise<void> {
     try {
-      this.logger.debug(`Processing ContentIngestedEvent: ${event.contentId}`);
+      this.logger.debug(`Processing ContentIngested: ${event.contentId}`);
 
       // Trigger refinement command with default configuration
       await this.commandBus.execute(
@@ -49,7 +49,7 @@ export class ContentIngestedEventHandler implements IEventHandler<ContentIngeste
       // Error isolation: log but don't rethrow
       // This allows other event handlers to continue processing
       this.logger.error(
-        `Error processing ContentIngestedEvent for ${event.contentId}: ${
+        `Error processing ContentIngested for ${event.contentId}: ${
           error instanceof Error ? error.message : String(error)
         }`,
         error instanceof Error ? error.stack : undefined,
