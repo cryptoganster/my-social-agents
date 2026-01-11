@@ -14,6 +14,7 @@
 import * as fc from 'fast-check';
 import { Test, TestingModule } from '@nestjs/testing';
 import { CommandBus, QueryBus, CqrsModule } from '@nestjs/cqrs';
+import { ConfigModule } from '@nestjs/config';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { ScheduleJobCommand } from '@/ingestion/job/app/commands/schedule-job/command';
 import { GetJobByIdQuery } from '@/ingestion/job/app/queries/get-job-by-id/query';
@@ -76,6 +77,10 @@ describe('Property: Job Lifecycle Progression', () => {
 
     module = await Test.createTestingModule({
       imports: [
+        ConfigModule.forRoot({
+          isGlobal: true,
+          envFilePath: '.env.test',
+        }),
         CqrsModule,
         SharedModule,
         IngestionSourceModule,

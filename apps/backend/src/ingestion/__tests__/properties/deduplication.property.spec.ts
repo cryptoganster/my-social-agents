@@ -19,6 +19,7 @@ import * as fc from 'fast-check';
 import { Test, TestingModule } from '@nestjs/testing';
 import { CqrsModule } from '@nestjs/cqrs';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ConfigModule } from '@nestjs/config';
 import { DataSource } from 'typeorm';
 import { SharedModule } from '@/shared/shared.module';
 import { IngestionContentModule } from '@/ingestion/content/ingestion-content.module';
@@ -36,6 +37,10 @@ describe('Property: Deduplication Correctness', () => {
 
     module = await Test.createTestingModule({
       imports: [
+        ConfigModule.forRoot({
+          isGlobal: true,
+          envFilePath: '.env.test',
+        }),
         TypeOrmModule.forRoot({
           type: 'postgres',
           host: process.env.DB_HOST ?? 'localhost',
