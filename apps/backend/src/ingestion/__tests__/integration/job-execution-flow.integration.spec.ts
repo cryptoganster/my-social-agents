@@ -88,7 +88,7 @@ describe('Integration: Job Execution Flow', () => {
   });
 
   describe('Complete Job Lifecycle', () => {
-    it.skip('should execute complete flow: schedule → execute → complete', async () => {
+    it('should execute complete flow: schedule → execute → complete', async () => {
       // Mock the adapter to avoid real HTTP requests
       const mockAdapter = {
         collect: jest.fn().mockResolvedValue([
@@ -155,13 +155,15 @@ describe('Integration: Job Execution Flow', () => {
 
       // 4. Wait for automatic job execution to complete
       // StartJobOnJobScheduled automatically triggers execution
+      // Using improved pollUntil with exponential backoff
       const jobAfterExecution = await pollUntil<IngestionJobReadModel>(
         queryBus,
         new GetJobByIdQuery(scheduleResult.jobId),
         (job) => job !== null && ['COMPLETED', 'FAILED'].includes(job.status),
         {
-          interval: 200,
-          timeout: 10000,
+          interval: 50,
+          maxInterval: 500,
+          timeout: 15000,
           errorMessage: 'Job did not complete within timeout',
         },
       );
@@ -188,7 +190,7 @@ describe('Integration: Job Execution Flow', () => {
       // Note: Actual values depend on whether the job succeeded or failed
     }, 30000); // 30 second timeout for integration test
 
-    it.skip('should handle job failure and update source health', async () => {
+    it('should handle job failure and update source health', async () => {
       // Mock the adapter to simulate failure
       const mockAdapter = {
         collect: jest.fn().mockRejectedValue(new Error('Network error')),
@@ -229,13 +231,15 @@ describe('Integration: Job Execution Flow', () => {
       );
 
       // 3. Wait for automatic job execution (triggered by StartJobOnJobScheduled)
+      // Using improved pollUntil with exponential backoff
       const jobAfterExecution = await pollUntil<IngestionJobReadModel>(
         queryBus,
         new GetJobByIdQuery(scheduleResult.jobId),
         (job) => job !== null && ['COMPLETED', 'FAILED'].includes(job.status),
         {
-          interval: 200,
-          timeout: 10000,
+          interval: 50,
+          maxInterval: 500,
+          timeout: 15000,
         },
       );
 
@@ -310,7 +314,7 @@ describe('Integration: Job Execution Flow', () => {
   });
 
   describe('Metrics Aggregation', () => {
-    it.skip('should aggregate metrics correctly during job execution', async () => {
+    it('should aggregate metrics correctly during job execution', async () => {
       // Mock the adapter
       const mockAdapter = {
         collect: jest.fn().mockResolvedValue([
@@ -358,13 +362,15 @@ describe('Integration: Job Execution Flow', () => {
       );
 
       // Wait for automatic execution and event processing
+      // Using improved pollUntil with exponential backoff
       await pollUntil<IngestionJobReadModel>(
         queryBus,
         new GetJobByIdQuery(scheduleResult.jobId),
         (job) => job !== null && ['COMPLETED', 'FAILED'].includes(job.status),
         {
-          interval: 200,
-          timeout: 10000,
+          interval: 50,
+          maxInterval: 500,
+          timeout: 15000,
         },
       );
 

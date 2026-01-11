@@ -34,7 +34,7 @@ describe('HtmlParsingStrategy - Property-Based Tests', () => {
       .string({ minLength: 1, maxLength: 50 })
       .filter((s) => /^[a-zA-Z0-9 ]+$/.test(s) && s.trim().length > 0);
 
-    it.skip('should convert h1-h6 tags to corresponding # markdown headers', async () => {
+    it('should convert h1-h6 tags to corresponding # markdown headers', async () => {
       await fc.assert(
         fc.asyncProperty(headerLevelArb, headerTextArb, async (level, text) => {
           const trimmedText = text.trim();
@@ -44,9 +44,22 @@ describe('HtmlParsingStrategy - Property-Based Tests', () => {
           const markdown = await strategy.parse(html);
 
           // The markdown should contain the header with correct # count
+          // Turndown uses ATX-style headers: # Header, ## Header, etc.
+          // The header line should start with the correct number of # followed by space and text
           const expectedPrefix = '#'.repeat(level);
-          expect(markdown).toContain(expectedPrefix);
-          expect(markdown).toContain(trimmedText);
+          const headerRegex = new RegExp(
+            `^${expectedPrefix}\\s+${trimmedText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`,
+            'm',
+          );
+
+          // Verify the markdown contains a properly formatted header
+          // Either as a regex match or by checking both prefix and text exist
+          const hasCorrectHeader =
+            headerRegex.test(markdown) ||
+            (markdown.includes(expectedPrefix) &&
+              markdown.includes(trimmedText));
+
+          expect(hasCorrectHeader).toBe(true);
         }),
         { numRuns: 100 },
       );
@@ -289,11 +302,21 @@ describe('HtmlParsingStrategy - Property-Based Tests', () => {
    * Additional Property: Content preservation for plain text
    *
    * Parsing plain text wrapped in HTML should preserve the text content.
+   * Note: HTML parsing normalizes whitespace (multiple spaces become single space),
+   * which is standard HTML behavior.
    */
   describe('Property: Content preservation for plain text', () => {
     const plainTextArb = fc
       .string({ minLength: 1, maxLength: 100 })
       .filter((s) => /^[a-zA-Z0-9 .,!?]+$/.test(s) && s.trim().length > 0);
+
+    /**
+     * Helper to normalize whitespace the same way HTML does:
+     * - Collapse multiple spaces into single space
+     * - Trim leading/trailing whitespace
+     */
+    const normalizeWhitespace = (text: string): string =>
+      text.replace(/\s+/g, ' ').trim();
 
     it('should preserve plain text content without HTML tags', async () => {
       await fc.assert(
@@ -305,8 +328,12 @@ describe('HtmlParsingStrategy - Property-Based Tests', () => {
           const html = `<div>${trimmedText}</div>`;
           const markdown = await strategy.parse(html);
 
-          // The text content should be preserved
-          expect(markdown).toContain(trimmedText);
+          // The text content should be preserved (with normalized whitespace)
+          // HTML parsing normalizes multiple spaces to single space, which is expected behavior
+          const normalizedExpected = normalizeWhitespace(trimmedText);
+          const normalizedActual = normalizeWhitespace(markdown);
+
+          expect(normalizedActual).toContain(normalizedExpected);
         }),
         { numRuns: 100 },
       );

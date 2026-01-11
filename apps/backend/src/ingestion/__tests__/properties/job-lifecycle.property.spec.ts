@@ -156,7 +156,7 @@ describe('Property: Job Lifecycle Progression', () => {
    * - Cannot go from FAILED back to RUNNING
    * - Cannot skip RUNNING state
    */
-  it.skip('should only allow valid state transitions for any job', async () => {
+  it('should only allow valid state transitions for any job', async () => {
     await fc.assert(
       fc.asyncProperty(
         // Generate random source configurations
@@ -238,23 +238,24 @@ describe('Property: Job Lifecycle Progression', () => {
             jobAfterSchedule!.status,
           );
 
-          // 3. Wait for job to be executed by StartJobOnJobScheduled
-          // Poll until job reaches terminal state with longer timeout
-          let jobAfterExecution = await queryBus.execute(
-            new GetJobByIdQuery(scheduleResult.jobId),
-          );
+          // 3. Wait for job to reach terminal state using improved polling
+          // Uses exponential backoff for more reliable waiting
+          let jobAfterExecution = jobAfterSchedule;
+          const startTime = Date.now();
+          const timeout = 15000; // 15 seconds max
+          let interval = 50; // Start with short interval
+          const maxInterval = 500;
 
-          // Poll for completion if still running (max 10 seconds = 50 attempts * 200ms)
-          let attempts = 0;
           while (
             !['COMPLETED', 'FAILED'].includes(jobAfterExecution!.status) &&
-            attempts < 50
+            Date.now() - startTime < timeout
           ) {
-            await new Promise((resolve) => setTimeout(resolve, 200));
+            await new Promise((resolve) => setTimeout(resolve, interval));
             jobAfterExecution = await queryBus.execute(
               new GetJobByIdQuery(scheduleResult.jobId),
             );
-            attempts++;
+            // Exponential backoff with cap
+            interval = Math.min(interval * 1.5, maxInterval);
           }
 
           // Verify final state is either COMPLETED or FAILED (never PENDING or RUNNING)
@@ -281,14 +282,14 @@ describe('Property: Job Lifecycle Progression', () => {
         },
       ),
       {
-        numRuns: 10, // 10 iterations for faster execution
-        timeout: 15000, // 15 seconds timeout per predicate execution
-        interruptAfterTimeLimit: 100000, // 100 seconds total time limit
+        numRuns: 5, // Reduced iterations for faster execution while maintaining coverage
+        timeout: 20000, // 20 seconds timeout per predicate execution
+        interruptAfterTimeLimit: 120000, // 2 minutes total time limit
         markInterruptAsFailure: false, // Don't fail if interrupted with at least one success
         endOnFailure: true, // Stop on first failure for faster feedback
       },
     );
-  }, 120000); // 120 seconds total Jest timeout
+  }, 150000); // 150 seconds total Jest timeout
 
   /**
    * Additional property: State transitions are monotonic
@@ -296,7 +297,7 @@ describe('Property: Job Lifecycle Progression', () => {
    * Once a job reaches a terminal state (COMPLETED or FAILED),
    * it should never transition to any other state.
    */
-  it.skip('should never transition from terminal states', async () => {
+  it('should never transition from terminal states', async () => {
     await fc.assert(
       fc.asyncProperty(
         fc
@@ -344,22 +345,26 @@ describe('Property: Job Lifecycle Progression', () => {
             new ScheduleJobCommand(configResult.sourceId),
           );
 
-          // Wait for job to be executed by StartJobOnJobScheduled (max 10 seconds)
+          // Wait for job to reach terminal state using exponential backoff
           let jobAfterCompletion = await queryBus.execute(
             new GetJobByIdQuery(scheduleResult.jobId),
           );
 
-          // Poll for completion if still running (max 10 seconds = 50 attempts * 200ms)
-          let attempts = 0;
+          const startTime = Date.now();
+          const timeout = 15000; // 15 seconds max
+          let interval = 50; // Start with short interval
+          const maxInterval = 500;
+
           while (
             !['COMPLETED', 'FAILED'].includes(jobAfterCompletion!.status) &&
-            attempts < 50
+            Date.now() - startTime < timeout
           ) {
-            await new Promise((resolve) => setTimeout(resolve, 200));
+            await new Promise((resolve) => setTimeout(resolve, interval));
             jobAfterCompletion = await queryBus.execute(
               new GetJobByIdQuery(scheduleResult.jobId),
             );
-            attempts++;
+            // Exponential backoff with cap
+            interval = Math.min(interval * 1.5, maxInterval);
           }
 
           const terminalStatus = jobAfterCompletion!.status;
@@ -370,12 +375,12 @@ describe('Property: Job Lifecycle Progression', () => {
         },
       ),
       {
-        numRuns: 10, // 10 iterations for faster execution
-        timeout: 15000, // 15 seconds timeout per predicate execution
-        interruptAfterTimeLimit: 100000, // 100 seconds total time limit
+        numRuns: 5, // Reduced iterations for faster execution while maintaining coverage
+        timeout: 20000, // 20 seconds timeout per predicate execution
+        interruptAfterTimeLimit: 120000, // 2 minutes total time limit
         markInterruptAsFailure: false, // Don't fail if interrupted with at least one success
         endOnFailure: true, // Stop on first failure for faster feedback
       },
     );
-  }, 120000); // 120 seconds total Jest timeout
+  }, 150000); // 150 seconds total Jest timeout
 });

@@ -475,7 +475,7 @@ describe('Integration: Source Health Tracking', () => {
   });
 
   describe('Health Tracking Through Job Execution', () => {
-    it.skip('should update health metrics after job completion', async () => {
+    it('should update health metrics after job completion', async () => {
       // Mock adapter
       const mockAdapter = {
         collect: jest.fn().mockResolvedValue([
@@ -523,12 +523,13 @@ describe('Integration: Source Health Tracking', () => {
       );
 
       // 3. Poll for job completion (auto-executed by event handler)
+      // Using improved pollUntil with exponential backoff
       const job = await pollUntil<GetJobByIdResult>(
         queryBus,
         new GetJobByIdQuery(scheduleResult.jobId),
         (j): j is NonNullable<GetJobByIdResult> =>
           j !== null && ['COMPLETED', 'FAILED'].includes(j.status),
-        { interval: 200, timeout: 5000 },
+        { interval: 50, maxInterval: 500, timeout: 15000 },
       );
 
       expect(job).toBeDefined();
@@ -540,7 +541,7 @@ describe('Integration: Source Health Tracking', () => {
         new GetSourceByIdQuery(sourceId),
         (s): s is GetSourceByIdResult =>
           s !== null && s.healthMetrics.totalJobs >= 1,
-        { interval: 200, timeout: 5000 },
+        { interval: 50, maxInterval: 500, timeout: 10000 },
       );
 
       // Health metrics should reflect the job execution
@@ -548,7 +549,7 @@ describe('Integration: Source Health Tracking', () => {
       expect(source!.healthMetrics.totalJobs).toBeGreaterThanOrEqual(1);
     }, 30000);
 
-    it.skip('should track health across multiple job executions', async () => {
+    it('should track health across multiple job executions', async () => {
       // Mock adapter
       const mockAdapter = {
         collect: jest.fn().mockResolvedValue([
@@ -597,12 +598,13 @@ describe('Integration: Source Health Tracking', () => {
         jobIds.push(scheduleResult.jobId);
 
         // Poll for this job to complete before starting next
+        // Using improved pollUntil with exponential backoff
         await pollUntil<GetJobByIdResult>(
           queryBus,
           new GetJobByIdQuery(scheduleResult.jobId),
           (j): j is NonNullable<GetJobByIdResult> =>
             j !== null && ['COMPLETED', 'FAILED'].includes(j.status),
-          { interval: 200, timeout: 5000 },
+          { interval: 50, maxInterval: 500, timeout: 15000 },
         );
 
         // Wait between jobs to avoid race conditions
@@ -622,7 +624,7 @@ describe('Integration: Source Health Tracking', () => {
         new GetSourceByIdQuery(sourceId),
         (s): s is GetSourceByIdResult =>
           s !== null && s.healthMetrics.totalJobs >= 3,
-        { interval: 200, timeout: 5000 },
+        { interval: 50, maxInterval: 500, timeout: 10000 },
       );
 
       expect(source!.healthMetrics).toBeDefined();
