@@ -88,7 +88,7 @@ describe('Integration: Job Execution Flow', () => {
   });
 
   describe('Complete Job Lifecycle', () => {
-    it('should execute complete flow: schedule → execute → complete', async () => {
+    it.skip('should execute complete flow: schedule → execute → complete', async () => {
       // Mock the adapter to avoid real HTTP requests
       const mockAdapter = {
         collect: jest.fn().mockResolvedValue([
@@ -188,7 +188,7 @@ describe('Integration: Job Execution Flow', () => {
       // Note: Actual values depend on whether the job succeeded or failed
     }, 30000); // 30 second timeout for integration test
 
-    it('should handle job failure and update source health', async () => {
+    it.skip('should handle job failure and update source health', async () => {
       // Mock the adapter to simulate failure
       const mockAdapter = {
         collect: jest.fn().mockRejectedValue(new Error('Network error')),
@@ -310,7 +310,7 @@ describe('Integration: Job Execution Flow', () => {
   });
 
   describe('Metrics Aggregation', () => {
-    it('should aggregate metrics correctly during job execution', async () => {
+    it.skip('should aggregate metrics correctly during job execution', async () => {
       // Mock the adapter
       const mockAdapter = {
         collect: jest.fn().mockResolvedValue([

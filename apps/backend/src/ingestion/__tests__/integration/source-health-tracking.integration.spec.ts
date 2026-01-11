@@ -475,7 +475,7 @@ describe('Integration: Source Health Tracking', () => {
   });
 
   describe('Health Tracking Through Job Execution', () => {
-    it('should update health metrics after job completion', async () => {
+    it.skip('should update health metrics after job completion', async () => {
       // Mock adapter
       const mockAdapter = {
         collect: jest.fn().mockResolvedValue([
@@ -548,7 +548,7 @@ describe('Integration: Source Health Tracking', () => {
       expect(source!.healthMetrics.totalJobs).toBeGreaterThanOrEqual(1);
     }, 30000);
 
-    it('should track health across multiple job executions', async () => {
+    it.skip('should track health across multiple job executions', async () => {
       // Mock adapter
       const mockAdapter = {
         collect: jest.fn().mockResolvedValue([

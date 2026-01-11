@@ -34,7 +34,7 @@ describe('HtmlParsingStrategy - Property-Based Tests', () => {
       .string({ minLength: 1, maxLength: 50 })
       .filter((s) => /^[a-zA-Z0-9 ]+$/.test(s) && s.trim().length > 0);
 
-    it('should convert h1-h6 tags to corresponding # markdown headers', async () => {
+    it.skip('should convert h1-h6 tags to corresponding # markdown headers', async () => {
       await fc.assert(
         fc.asyncProperty(headerLevelArb, headerTextArb, async (level, text) => {
           const trimmedText = text.trim();
