@@ -155,7 +155,8 @@ services:
   firecrawl-ui:
     build:
       context: ../firecrawl/apps/ui/ingestion-ui
-      dockerfile: Dockerfile
+      # Use our custom Dockerfile for UI
+      dockerfile: ../../../../backend/firecrawl-overrides/ui/Dockerfile
     container_name: firecrawl-ui
     environment:
       # API endpoint for the UI to connect to
@@ -213,7 +214,8 @@ services:
 
   firecrawl-postgres:
     build:
-      context: ../firecrawl/apps/nuq-postgres
+      # Use our custom Dockerfile with pg_cron support
+      context: ./firecrawl-overrides/postgres
       dockerfile: Dockerfile
     container_name: firecrawl-postgres
     environment:
@@ -224,6 +226,10 @@ services:
       - crypto-network
     volumes:
       - firecrawl_postgres_data:/var/lib/postgresql/data
+      # Mount Firecrawl's original init scripts from submodule
+      - ../firecrawl/apps/nuq-postgres/nuq.sql:/docker-entrypoint-initdb.d/001-nuq.sql:ro
+      # Mount our custom init scripts (999- runs last)
+      - ./firecrawl-overrides/postgres/init-scripts:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U ${FIRECRAWL_POSTGRES_USER:-firecrawl}']
       interval: 10s
