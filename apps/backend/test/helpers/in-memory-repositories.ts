@@ -14,7 +14,6 @@ import { SourceConfiguration } from '@/ingestion/source/domain/aggregates/source
 import { ISourceConfigurationWriteRepository } from '@/ingestion/source/domain/interfaces/repositories/source-configuration-write';
 import { ISourceConfigurationReadRepository } from '@/ingestion/source/app/queries/repositories/source-configuration-read';
 import { SourceConfigurationReadModel } from '@/ingestion/source/app/queries/read-models/source-configuration';
-import { GetSourceByIdResult } from '@/ingestion/source/app/queries/get-source-by-id/query';
 import { ISourceConfigurationFactory } from '@/ingestion/source/domain/interfaces/factories/source-configuration-factory';
 import { SourceType } from '@/ingestion/source/domain/value-objects/source-type';
 import { ContentItem } from '@/ingestion/content/domain/aggregates/content-item';
@@ -366,7 +365,9 @@ export class InMemorySourceReadRepository implements ISourceConfigurationReadRep
     });
   }
 
-  findByIdWithHealth(sourceId: string): Promise<GetSourceByIdResult | null> {
+  findByIdWithHealth(
+    sourceId: string,
+  ): Promise<SourceConfigurationReadModel | null> {
     const sources = this.writeRepo.getAll();
     const source = sources.find((s) => s.sourceId === sourceId);
 
@@ -378,13 +379,14 @@ export class InMemorySourceReadRepository implements ISourceConfigurationReadRep
       sourceType: source.sourceType.toString(),
       config: source.config,
       isActive: source.isActive,
-      healthMetrics: {
-        successRate: source.successRate,
-        consecutiveFailures: source.consecutiveFailures,
-        totalJobs: source.totalJobs,
-        lastSuccessAt: source.lastSuccessAt,
-        lastFailureAt: source.lastFailureAt,
-      },
+      createdAt: source.createdAt,
+      updatedAt: source.updatedAt,
+      consecutiveFailures: source.consecutiveFailures,
+      successRate: source.successRate,
+      totalJobs: source.totalJobs,
+      lastSuccessAt: source.lastSuccessAt,
+      lastFailureAt: source.lastFailureAt,
+      version: source.version,
     });
   }
 
@@ -438,7 +440,7 @@ export class InMemorySourceReadRepository implements ISourceConfigurationReadRep
     );
   }
 
-  findUnhealthy(threshold: number): Promise<GetSourceByIdResult[]> {
+  findUnhealthy(threshold: number): Promise<SourceConfigurationReadModel[]> {
     const sources = this.writeRepo.getAll();
 
     return Promise.resolve(
@@ -450,13 +452,14 @@ export class InMemorySourceReadRepository implements ISourceConfigurationReadRep
           sourceType: source.sourceType.toString(),
           config: source.config,
           isActive: source.isActive,
-          healthMetrics: {
-            successRate: source.successRate,
-            consecutiveFailures: source.consecutiveFailures,
-            totalJobs: source.totalJobs,
-            lastSuccessAt: source.lastSuccessAt,
-            lastFailureAt: source.lastFailureAt,
-          },
+          createdAt: source.createdAt,
+          updatedAt: source.updatedAt,
+          consecutiveFailures: source.consecutiveFailures,
+          successRate: source.successRate,
+          totalJobs: source.totalJobs,
+          lastSuccessAt: source.lastSuccessAt,
+          lastFailureAt: source.lastFailureAt,
+          version: source.version,
         })),
     );
   }

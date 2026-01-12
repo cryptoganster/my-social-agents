@@ -140,9 +140,9 @@ describe('SourceConfiguration Repository Integration', () => {
       expect(found).toBeDefined();
       expect(found?.sourceId).toBe('read-test-1');
       expect(found?.name).toBe('Active Source');
-      expect(found?.healthMetrics).toBeDefined();
-      expect(found?.healthMetrics.successRate).toBeDefined();
-      expect(found?.healthMetrics.consecutiveFailures).toBeDefined();
+      expect(found?.successRate).toBeDefined();
+      expect(found?.consecutiveFailures).toBeDefined();
+      expect(found?.totalJobs).toBeDefined();
     });
 
     it('should return null for non-existent source', async () => {

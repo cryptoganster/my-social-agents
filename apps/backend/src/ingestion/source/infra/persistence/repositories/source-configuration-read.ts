@@ -4,7 +4,6 @@ import { Repository } from 'typeorm';
 import { SourceConfigurationReadModel } from '@/ingestion/source/app/queries/read-models/source-configuration';
 import { ISourceConfigurationReadRepository } from '@/ingestion/source/app/queries/repositories/source-configuration-read';
 import { SourceConfigurationEntity } from '../entities/source-configuration';
-import { GetSourceByIdResult } from '@/ingestion/source/app/queries/get-source-by-id/query';
 
 /**
  * TypeORM SourceConfigurationReadRepository Implementation
@@ -30,27 +29,14 @@ export class TypeOrmSourceConfigurationReadRepository implements ISourceConfigur
 
   async findByIdWithHealth(
     sourceId: string,
-  ): Promise<GetSourceByIdResult | null> {
+  ): Promise<SourceConfigurationReadModel | null> {
     const entity = await this.repository.findOne({ where: { sourceId } });
     if (!entity) {
       return null;
     }
 
-    // Return health metrics directly from the entity (stored in aggregate)
-    return {
-      sourceId: entity.sourceId,
-      name: entity.name,
-      sourceType: entity.sourceType,
-      isActive: entity.isActive,
-      config: entity.config,
-      healthMetrics: {
-        successRate: entity.successRate,
-        consecutiveFailures: entity.consecutiveFailures,
-        totalJobs: entity.totalJobs,
-        lastSuccessAt: entity.lastSuccessAt,
-        lastFailureAt: entity.lastFailureAt,
-      },
-    };
+    // Return ReadModel with flat structure (handler will map to Response)
+    return this.toReadModel(entity);
   }
 
   async findActive(): Promise<SourceConfigurationReadModel[]> {
@@ -69,7 +55,9 @@ export class TypeOrmSourceConfigurationReadRepository implements ISourceConfigur
     return entities.map((e) => this.toReadModel(e));
   }
 
-  async findUnhealthy(threshold: number): Promise<GetSourceByIdResult[]> {
+  async findUnhealthy(
+    threshold: number,
+  ): Promise<SourceConfigurationReadModel[]> {
     // Get all sources with consecutive failures >= threshold
     const sources = await this.repository.find({
       where: {
@@ -77,21 +65,8 @@ export class TypeOrmSourceConfigurationReadRepository implements ISourceConfigur
       },
     });
 
-    // Map to GetSourceByIdResult
-    return sources.map((source) => ({
-      sourceId: source.sourceId,
-      name: source.name,
-      sourceType: source.sourceType,
-      isActive: source.isActive,
-      config: source.config,
-      healthMetrics: {
-        successRate: source.successRate,
-        consecutiveFailures: source.consecutiveFailures,
-        totalJobs: source.totalJobs,
-        lastSuccessAt: source.lastSuccessAt,
-        lastFailureAt: source.lastFailureAt,
-      },
-    }));
+    // Map to SourceConfigurationReadModel (flat structure)
+    return sources.map((source) => this.toReadModel(source));
   }
 
   private toReadModel(

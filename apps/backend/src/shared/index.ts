@@ -15,3 +15,6 @@ export * from './interfaces';
 
 // Infrastructure exports
 export * from './infra';
+
+// Event Sourcing exports
+export * from './event-sourcing';

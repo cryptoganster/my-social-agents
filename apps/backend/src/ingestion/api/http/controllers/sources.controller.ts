@@ -18,7 +18,7 @@ import { UpdateSourceCommand } from '@/ingestion/source/app/commands/update-sour
 import { UpdateSourceResult } from '@/ingestion/source/app/commands/update-source/result';
 import {
   GetJobHistoryQuery,
-  GetJobHistoryResult,
+  GetJobHistoryResponse,
 } from '@/ingestion/job/app/queries/get-job-history/query';
 import { SourceTypeEnum } from '@/ingestion/source/domain/value-objects/source-type';
 import { ISourceConfigurationReadRepository } from '@/ingestion/source/app/queries/repositories/source-configuration-read';
@@ -201,7 +201,7 @@ export class SourcesController {
   async getJobHistory(
     @Param('id') sourceId: string,
     @Query('limit') limit?: string,
-  ): Promise<GetJobHistoryResult> {
+  ): Promise<GetJobHistoryResponse> {
     try {
       this.logger.debug(`Retrieving job history for source: ${sourceId}`);
 
@@ -212,7 +212,7 @@ export class SourcesController {
 
       const result = await this.queryBus.execute<
         GetJobHistoryQuery,
-        GetJobHistoryResult
+        GetJobHistoryResponse
       >(query);
 
       return result;

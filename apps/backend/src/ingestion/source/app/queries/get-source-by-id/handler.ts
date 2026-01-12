@@ -1,13 +1,15 @@
 import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 import { Inject, Injectable } from '@nestjs/common';
-import { GetSourceByIdQuery, GetSourceByIdResult } from './query';
+import { GetSourceByIdQuery } from './query';
+import { GetSourceByIdResponse } from './response';
 import { ISourceConfigurationReadRepository } from '@/ingestion/source/app/queries/repositories/source-configuration-read';
+import { SourceConfigurationReadModel } from '@/ingestion/source/app/queries/read-models/source-configuration';
 
 /**
  * GetSourceByIdQueryHandler
  *
  * Handles GetSourceByIdQuery by retrieving a source configuration from the read repository.
- * Returns a read model with health metrics for monitoring and validation.
+ * Maps ReadModel to query-specific Response type with health metrics.
  *
  * Requirements: 10.1, 10.2
  * Design: Queries - Source Queries
@@ -16,7 +18,7 @@ import { ISourceConfigurationReadRepository } from '@/ingestion/source/app/queri
 @QueryHandler(GetSourceByIdQuery)
 export class GetSourceByIdQueryHandler implements IQueryHandler<
   GetSourceByIdQuery,
-  GetSourceByIdResult | null
+  GetSourceByIdResponse | null
 > {
   constructor(
     @Inject('ISourceConfigurationReadRepository')
@@ -25,7 +27,30 @@ export class GetSourceByIdQueryHandler implements IQueryHandler<
 
   async execute(
     query: GetSourceByIdQuery,
-  ): Promise<GetSourceByIdResult | null> {
-    return await this.sourceReadRepository.findByIdWithHealth(query.sourceId);
+  ): Promise<GetSourceByIdResponse | null> {
+    const readModel = await this.sourceReadRepository.findById(query.sourceId);
+    return readModel ? this.toResponse(readModel) : null;
+  }
+
+  /**
+   * Maps SourceConfigurationReadModel to GetSourceByIdResponse
+   */
+  private toResponse(
+    readModel: SourceConfigurationReadModel,
+  ): GetSourceByIdResponse {
+    return {
+      sourceId: readModel.sourceId,
+      name: readModel.name,
+      sourceType: readModel.sourceType,
+      isActive: readModel.isActive,
+      config: readModel.config,
+      healthMetrics: {
+        successRate: readModel.successRate,
+        consecutiveFailures: readModel.consecutiveFailures,
+        totalJobs: readModel.totalJobs,
+        lastSuccessAt: readModel.lastSuccessAt,
+        lastFailureAt: readModel.lastFailureAt,
+      },
+    };
   }
 }

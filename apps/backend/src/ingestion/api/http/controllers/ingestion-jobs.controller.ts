@@ -14,7 +14,7 @@ import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { ScheduleJobCommand } from '@/ingestion/job/app/commands/schedule-job/command';
 import {
   GetJobsByStatusQuery,
-  GetJobsByStatusResult,
+  GetJobsByStatusResponse,
 } from '@/ingestion/job/app/queries/get-jobs-by-status/query';
 import { IIngestionJobReadRepository } from '@/ingestion/job/app/queries/repositories/ingestion-job-read';
 import { IngestionJobReadModel } from '@/ingestion/job/app/queries/read-models/ingestion-job';
@@ -120,7 +120,7 @@ export class IngestionJobsController {
     @Query('status') status: string,
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,
-  ): Promise<GetJobsByStatusResult> {
+  ): Promise<GetJobsByStatusResponse> {
     try {
       if (!status) {
         throw new HttpException(
@@ -139,7 +139,7 @@ export class IngestionJobsController {
 
       const result = await this.queryBus.execute<
         GetJobsByStatusQuery,
-        GetJobsByStatusResult
+        GetJobsByStatusResponse
       >(query);
 
       return result;

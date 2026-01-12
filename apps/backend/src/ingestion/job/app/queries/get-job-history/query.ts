@@ -1,5 +1,5 @@
 import { Query } from '@nestjs/cqrs';
-import { IngestionJobReadModel } from '@/ingestion/job/app/queries/read-models/ingestion-job';
+import { GetJobHistoryResponse } from './response';
 
 /**
  * GetJobHistoryQuery
@@ -7,12 +7,12 @@ import { IngestionJobReadModel } from '@/ingestion/job/app/queries/read-models/i
  * Query to retrieve job execution history for a specific source.
  * Returns jobs ordered by executedAt DESC (most recent first).
  *
- * Extends Query<GetJobHistoryResult> for automatic type inference.
+ * Extends Query<GetJobHistoryResponse> for automatic type inference.
  *
  * Requirements: 6.4
  * Design: Queries - Job Queries
  */
-export class GetJobHistoryQuery extends Query<GetJobHistoryResult> {
+export class GetJobHistoryQuery extends Query<GetJobHistoryResponse> {
   constructor(
     public readonly sourceId: string,
     public readonly limit?: number,
@@ -21,13 +21,5 @@ export class GetJobHistoryQuery extends Query<GetJobHistoryResult> {
   }
 }
 
-/**
- * GetJobHistoryResult
- *
- * Result interface for GetJobHistoryQuery.
- * Returns job history with total count.
- */
-export interface GetJobHistoryResult {
-  jobs: IngestionJobReadModel[];
-  total: number;
-}
+// Re-export Response for convenience
+export { GetJobHistoryResponse } from './response';
