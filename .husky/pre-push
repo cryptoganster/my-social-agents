@@ -1,5 +1,100 @@
-#!/bin/sh
+#!/usr/bin/env bash
 . "$(dirname "$0")/_/husky.sh"
+
+set -e
+
+# Get the command line arguments
+remote_name="$1"
+remote_url="$2"
+current_branch=$(git rev-parse --abbrev-ref HEAD)
+
+# ============================================================================
+# SAFETY CHECK 1: Verify branch is rebased on latest origin/master
+# ============================================================================
+
+# Skip checks for master branch (should never push to master directly anyway)
+if [ "$current_branch" != "master" ]; then
+  echo "🔍 Checking if branch is rebased on latest origin/master..."
+
+  # Fetch latest master silently
+  git fetch origin master --quiet 2>/dev/null || true
+
+  # Get merge base between current branch and origin/master
+  merge_base=$(git merge-base HEAD origin/master 2>/dev/null || echo "")
+  origin_master_sha=$(git rev-parse origin/master 2>/dev/null || echo "")
+
+  if [ -n "$merge_base" ] && [ -n "$origin_master_sha" ]; then
+    if [ "$merge_base" != "$origin_master_sha" ]; then
+      echo ""
+      echo "❌ ERROR: Branch is not rebased on latest origin/master!"
+      echo ""
+      echo "🚫 BLOCKED: Your branch is behind origin/master"
+      echo ""
+      echo "Your branch needs to be rebased on the latest master before pushing."
+      echo ""
+      echo "✅ REQUIRED STEPS:"
+      echo "   1. Fetch latest master:"
+      echo "      git fetch origin"
+      echo ""
+      echo "   2. Rebase your branch:"
+      echo "      git rebase origin/master"
+      echo ""
+      echo "   3. Resolve conflicts if any:"
+      echo "      # Edit conflicted files"
+      echo "      git add <resolved-files>"
+      echo "      git rebase --continue"
+      echo ""
+      echo "   4. Push with force-with-lease:"
+      echo "      git push --force-with-lease origin $current_branch"
+      echo ""
+      echo "Current state:"
+      echo "  Your branch base: $(git rev-parse --short $merge_base)"
+      echo "  Latest master:    $(git rev-parse --short $origin_master_sha)"
+      echo "  Commits behind:   $(git rev-list --count $merge_base..origin/master)"
+      echo ""
+      exit 1
+    fi
+  fi
+
+  echo "✅ Branch is properly rebased on origin/master"
+fi
+
+# ============================================================================
+# SAFETY CHECK 2: Block force push without --force-with-lease
+# ============================================================================
+
+# Read the push details from stdin
+while read local_ref local_sha remote_ref remote_sha; do
+  # Extract branch name from refs/heads/branch-name
+  branch_name=$(echo "$remote_ref" | sed 's|refs/heads/||')
+  
+  # Check if this is a force push
+  if [ "$remote_sha" != "0000000000000000000000000000000000000000" ]; then
+    if ! git merge-base --is-ancestor "$remote_sha" "$local_sha" 2>/dev/null; then
+      echo ""
+      echo "❌ ERROR: Force push detected!"
+      echo ""
+      echo "🚫 BLOCKED OPERATION: git push --force"
+      echo ""
+      echo "Force pushes are dangerous and can overwrite others' work."
+      echo ""
+      echo "✅ SAFE ALTERNATIVE:"
+      echo "   git push --force-with-lease origin $branch_name"
+      echo ""
+      echo "This ensures you don't overwrite changes you haven't seen."
+      echo ""
+      echo "If you're absolutely sure (e.g., after a rebase):"
+      echo "   1. Verify no one else pushed: git fetch origin"
+      echo "   2. Use: git push --force-with-lease origin $branch_name"
+      echo ""
+      exit 1
+    fi
+  fi
+done
+
+# ============================================================================
+# CODE QUALITY CHECKS
+# ============================================================================
 
 # Run fast checks only - tests run in CI
 echo "🔍 Running pre-push checks..."
