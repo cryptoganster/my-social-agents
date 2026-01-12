@@ -1,0 +1,63 @@
+name: Validate PR Source Branch
+
+on:
+  pull_request:
+    branches:
+      - main
+      - master
+
+jobs:
+  validate-source-branch:
+    name: Validate Source Branch
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check source branch
+        run: |
+          SOURCE_BRANCH="${{ github.head_ref }}"
+          echo "PR source branch: $SOURCE_BRANCH"
+
+          # Allowed branch patterns for rebase strategy
+          ALLOWED_PATTERNS=(
+            "^feat/.*"
+            "^feature/.*"
+            "^fix/.*"
+            "^refactor/.*"
+            "^test/.*"
+            "^docs/.*"
+            "^chore/.*"
+            "^hotfix/.*"
+            "^release/.*"
+          )
+
+          # Check if source branch matches any allowed pattern
+          MATCH_FOUND=false
+          for pattern in "${ALLOWED_PATTERNS[@]}"; do
+            if [[ "$SOURCE_BRANCH" =~ $pattern ]]; then
+              MATCH_FOUND=true
+              echo "✅ Branch '$SOURCE_BRANCH' matches allowed pattern: $pattern"
+              break
+            fi
+          done
+
+          if [ "$MATCH_FOUND" = false ]; then
+            echo "❌ ERROR: Branch '$SOURCE_BRANCH' is not allowed to merge to main"
+            echo ""
+            echo "Allowed branch patterns:"
+            echo "  - feat/* or feature/*"
+            echo "  - fix/*"
+            echo "  - refactor/*"
+            echo "  - test/*"
+            echo "  - docs/*"
+            echo "  - chore/*"
+            echo "  - hotfix/*"
+            echo "  - release/*"
+            echo ""
+            echo "Please create a feature branch following the naming convention."
+            echo ""
+            echo "Example:"
+            echo "  git checkout -b feat/my-feature"
+            echo "  git push -u origin feat/my-feature"
+            exit 1
+          fi
+
+          echo "✅ Source branch validation passed"
