@@ -278,15 +278,23 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: test-results
-          path: apps/backend/
+          path: ./
 
       - name: Check coverage thresholds
         run: |
+          # Verify coverage file exists
+          if [ ! -f "coverage/coverage-summary.json" ]; then
+            echo "❌ Coverage file not found at coverage/coverage-summary.json"
+            echo "Available files:"
+            find . -name "coverage-summary.json" -type f
+            exit 1
+          fi
+
           # Extract coverage percentages from coverage-summary.json
-          STATEMENTS=$(jq '.total.statements.pct' apps/backend/coverage/coverage-summary.json)
-          BRANCHES=$(jq '.total.branches.pct' apps/backend/coverage/coverage-summary.json)
-          FUNCTIONS=$(jq '.total.functions.pct' apps/backend/coverage/coverage-summary.json)
-          LINES=$(jq '.total.lines.pct' apps/backend/coverage/coverage-summary.json)
+          STATEMENTS=$(jq '.total.statements.pct' coverage/coverage-summary.json)
+          BRANCHES=$(jq '.total.branches.pct' coverage/coverage-summary.json)
+          FUNCTIONS=$(jq '.total.functions.pct' coverage/coverage-summary.json)
+          LINES=$(jq '.total.lines.pct' coverage/coverage-summary.json)
 
           echo "Coverage Report:"
           echo "  Statements: ${STATEMENTS}%"
