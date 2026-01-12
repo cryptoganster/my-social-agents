@@ -1,2 +1,16 @@
-# Run all tests
-npm run test
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+# Run fast checks only - tests run in CI
+echo "🔍 Running pre-push checks..."
+
+# Format check
+npm run format:check || exit 1
+
+# Lint check
+npm run lint:check || exit 1
+
+# Type check
+npm run typecheck || exit 1
+
+echo "✅ Pre-push checks passed!"
