@@ -1,90 +1,77 @@
-# GitHub Actions CI/CD
+# GitHub Actions Workflows
 
-## Overview
+This directory contains GitHub Actions workflows for CI/CD automation.
 
-This repository uses GitHub Actions for Continuous Integration (CI) and automated safety mechanisms. The workflows ensure code quality, run tests, perform security checks, and automatically protect the main branch from broken code.
+## Workflows Overview
 
-## Workflows
+### CI Pipeline (`ci.yml`)
 
-### 1. CI Pipeline (`.github/workflows/ci.yml`)
+Comprehensive continuous integration pipeline with 11 jobs:
 
-The main CI workflow runs on:
+**Setup & Quality Checks**:
 
-- Push to `main`, `master`, or `develop` branches
-- Pull requests targeting `main`, `master`, or `develop` branches
+1. **Setup & Cache** - Dependency caching for faster builds
+2. **Lint** - ESLint code quality checks
+3. **Format** - Prettier formatting with git diff validation
+4. **Type Check** - TypeScript type checking
+5. **License Check** - Validates dependency licenses (MIT, Apache-2.0, BSD, ISC, etc.)
+6. **Secret Scan** - TruffleHog secret detection
 
-#### Jobs
+**Testing**: 7. **Tests** - Unit and integration tests with PostgreSQL 8. **Coverage Check** - Enforces 70% coverage threshold
 
-1. **Code Quality** (`quality`)
-   - Runs linting checks
-   - Validates code formatting
-   - Performs TypeScript type checking
-   - Timeout: 10 minutes
+**Build & Security**: 9. **Build** - TypeScript compilation 10. **Security Audit** - npm audit with jq parsing (fails on critical/high) 11. **CI Success** - Summary job (all checks must pass)
 
-2. **Tests** (`test`)
-   - Runs unit tests with coverage
-   - Uploads coverage reports to Codecov
-   - Archives test results as artifacts
-   - Timeout: 15 minutes
-   - Depends on: `quality`
+**Triggers**:
 
-3. **Build** (`build`)
-   - Builds the project
-   - Archives build artifacts
-   - Timeout: 10 minutes
-   - Depends on: `quality`
+- Push to `main`, `master`, `develop`
+- Pull requests to `main`, `master`, `develop`
 
-4. **Security Audit** (`security`)
-   - Runs npm audit for vulnerabilities
-   - Checks for known security issues
-   - Timeout: 10 minutes
-   - Non-blocking (continues on error)
+**Concurrency**: Cancels in-progress runs for same workflow/branch
 
-5. **CI Success** (`ci-success`)
-   - Summary job that verifies all required checks passed
-   - Required for branch protection
-   - Depends on: `quality`, `test`, `build`, `security`
+---
 
-### 2. CodeQL Security Analysis (`.github/workflows/codeql.yml`)
+### Security Analysis (`codeql.yml`)
 
-Automated security vulnerability scanning:
+Automated security vulnerability detection using GitHub CodeQL.
 
-- Runs on push to `main`/`master`
+**Features**:
+
+- Runs on push to main/master
 - Runs on pull requests
-- Scheduled weekly (Monday 00:00 UTC)
+- Weekly scheduled scan (Monday 00:00 UTC)
 - Uses `security-extended` query suite
-- Excludes: `node_modules`, `dist`, `coverage`, test files, `apps/firecrawl`
-- Results appear in GitHub Security tab
+- Excludes: node_modules, dist, coverage, tests, apps/firecrawl
 
-### 3. Revert on CI Failure (`.github/workflows/revert-on-ci-failure.yml`) ⚠️ CRITICAL
+**Results**: Appear in GitHub Security tab
 
-**Purpose**: Automatically reverts commits that break CI after merging to main.
+---
 
-**Why this is critical for rebase strategy**:
+### Revert on CI Failure (`revert-on-ci-failure.yml`) ⚠️ CRITICAL
 
-- Rebase strategy requires clean main at all times
-- If CI fails after merge, main is broken and blocks everyone
-- Auto-revert prevents team from being blocked
-- Creates audit trail with PR and issue
+Automatically reverts commits that break CI after merging to main.
 
-**What it does**:
+**Why Critical**: Essential for rebase strategy - keeps main clean at all times.
 
-1. Detects CI failure after push to main/master
-2. Creates revert branch automatically
-3. Opens revert PR with detailed information
-4. Comments on original PR (if exists)
-5. Assigns to original author
-6. Creates issue if auto-revert fails
+**Features**:
 
-**Triggers**: After CI workflow completes with failure on main/master
+- Triggers when CI workflow fails on main/master
+- Auto-creates revert branch and PR
+- Comments on original PR (if exists)
+- Assigns to original author
+- Creates issue if auto-revert fails
+- Lists failed jobs in PR description
 
-### 4. Validate PR Source Branch (`.github/workflows/validate-pr-source.yml`)
+**Prevents**: Broken main from blocking entire team
 
-**Purpose**: Enforces branch naming conventions for PRs.
+---
 
-**Allowed branch patterns**:
+### Validate PR Source (`validate-pr-source.yml`)
 
-- `feat/*` or `feature/*` - New features
+Enforces branch naming conventions for pull requests.
+
+**Allowed Patterns**:
+
+- `feat/*`, `feature/*` - New features
 - `fix/*` - Bug fixes
 - `refactor/*` - Code refactoring
 - `test/*` - Test additions/changes
@@ -93,152 +80,207 @@ Automated security vulnerability scanning:
 - `hotfix/*` - Urgent fixes
 - `release/*` - Release branches
 
-**Blocks**: PRs from branches that don't follow naming convention
+**Blocks**: PRs from branches that don't follow convention
 
-### 5. Dependabot Auto-Merge (`.github/workflows/dependabot-auto-merge.yml`)
+**Error Message**: Clear instructions with examples
 
-**Purpose**: Automatically merges safe dependency updates.
+---
 
-**Auto-merges**:
+### Dependabot Auto-Merge (`dependabot-auto-merge.yml`)
 
-- Patch updates (e.g., 1.2.3 → 1.2.4)
-- Minor updates (e.g., 1.2.0 → 1.3.0)
+Automatically merges safe dependency updates.
 
-**Requires**:
+**Auto-Merges**:
 
-- All CI checks must pass
-- Waits up to 20 minutes for checks
+- Patch updates (1.0.0 → 1.0.1)
+- Minor updates (1.0.0 → 1.1.0)
 
-**Manual review required**:
+**Manual Review**:
 
-- Major updates (e.g., 1.0.0 → 2.0.0)
-- Adds comment requesting manual review
+- Major updates (1.0.0 → 2.0.0) - Comments on PR
 
-## Features
+**Safety**:
 
-### Concurrency Control
+- Waits up to 20 minutes for CI checks
+- Only merges if all checks pass
+- Uses squash merge
 
-- Cancels in-progress runs for the same workflow and branch
-- Saves CI minutes and provides faster feedback
+---
 
-### Caching
+## Enforcement Level
 
-- Node.js dependencies are cached automatically
-- Speeds up subsequent runs
+**Current**: 🔒🔒🔒🔒 (4/5) - High automation with safety nets
 
-### Artifacts
+**Phase 1**: ✅ Complete
 
-- Test results and coverage reports (7 days retention)
-- Build artifacts (7 days retention)
+- CodeQL Security Analysis
+- Revert on CI Failure (CRITICAL)
+- Validate PR Source Branch
+- Dependabot Auto-Merge
 
-### Timeouts
+**Phase 2**: ✅ Complete
 
-- Each job has a timeout to prevent hanging builds
-- Ensures fast feedback on issues
+- Enhanced CI with 11 jobs
+- License checking
+- Secret scanning (TruffleHog)
+- Coverage threshold enforcement (70%)
+- Format check with git diff
+- Security audit with jq parsing
 
-## Local Development
+**Phase 3**: 🚧 Future
 
-Before pushing, ensure your code passes all checks:
+- Dependabot Auto-Fix (lockfile sync)
+- Auto-Merge for authorized users
+
+---
+
+## Required Secrets
+
+### CodeQL
+
+- No secrets required (uses GitHub token automatically)
+
+### Revert on CI Failure
+
+- `GITHUB_TOKEN` - Automatically provided by GitHub Actions
+
+### Dependabot Auto-Merge
+
+- `GITHUB_TOKEN` - Automatically provided by GitHub Actions
+
+### CI Pipeline (Optional)
+
+- `CODECOV_TOKEN` - For coverage reporting (optional, fails gracefully)
+
+---
+
+## Branch Protection Rules (Recommended)
+
+Configure in GitHub Settings → Branches → Add rule:
+
+**Branch name pattern**: `main`, `master`
+
+**Settings**:
+
+- ✅ Require a pull request before merging
+- ✅ Require approvals: 1
+- ✅ Require status checks to pass before merging
+  - ✅ Require branches to be up to date before merging
+  - Status checks: `CI Success`, `CodeQL`, `Validate PR Source`
+- ✅ Require conversation resolution before merging
+- ✅ Require linear history (CRITICAL for rebase strategy)
+- ✅ Do not allow bypassing the above settings
+- ✅ Restrict who can push to matching branches
+
+---
+
+## Testing Workflows
+
+### Test Phase 1 Workflows
+
+See `test-phase1-workflows.md` for detailed test scenarios.
+
+### Test CI Pipeline
 
 ```bash
-# Install dependencies
-npm ci
+# Trigger CI on push
+git push origin feature/test-ci
 
-# Run linting
-npm run lint:check
-
-# Check formatting
-npm run format:check
-
-# Type check
-npm run typecheck
-
-# Run tests
-npm test
-
-# Run tests with coverage
-npm run test:cov
-
-# Build project
-npm run build
+# Or create PR
+gh pr create --base main --title "test: CI pipeline"
 ```
 
-## Branch Protection (Recommended)
+### Test CodeQL
 
-Configure branch protection rules for `main`/`master`:
+CodeQL runs automatically on:
 
-1. Go to **Settings** → **Branches** → **Add rule**
-2. Branch name pattern: `main` (or `master`)
-3. Enable:
-   - ✅ Require a pull request before merging
-   - ✅ Require status checks to pass before merging
-     - Required checks: `CI Success`, `Validate Source Branch`, `CodeQL`
-   - ✅ Require branches to be up to date before merging
-   - ✅ Require conversation resolution before merging
-   - ✅ Require linear history (CRITICAL for rebase strategy)
-   - ✅ Do not allow bypassing the above settings
+- Push to main/master
+- Pull requests
+- Weekly schedule (Monday 00:00 UTC)
 
-**Note**: The "Revert on CI Failure" workflow provides an additional safety net even if CI passes initially but fails after merge.
+View results in: GitHub Security tab
 
-## Codecov Integration (Optional)
+### Test Revert on CI Failure
 
-To enable coverage reporting:
+1. Create PR with intentional failure (e.g., failing test)
+2. Merge PR to main
+3. CI fails on main
+4. Revert workflow triggers automatically
+5. Check for revert PR and issue
 
-1. Sign up at [codecov.io](https://codecov.io)
-2. Add your repository
-3. Add `CODECOV_TOKEN` to repository secrets:
-   - Go to **Settings** → **Secrets and variables** → **Actions**
-   - Add new secret: `CODECOV_TOKEN`
+### Test Validate PR Source
+
+```bash
+# Should PASS
+git checkout -b feat/test-validation
+gh pr create --base main
+
+# Should FAIL
+git checkout -b invalid-branch-name
+gh pr create --base main
+```
+
+### Test Dependabot Auto-Merge
+
+1. Wait for Dependabot PR (patch/minor update)
+2. CI runs automatically
+3. After CI passes, PR auto-merges
+4. Check PR comments for merge confirmation
+
+---
 
 ## Troubleshooting
 
-### CI Failing on Lint
+### CI Fails with "Coverage threshold not met"
+
+**Solution**: Add more tests to increase coverage above 70%
 
 ```bash
-npm run lint
+npm run test:cov
+# Check coverage report in apps/backend/coverage/
 ```
 
-### CI Failing on Format
+### Secret Scan Fails
+
+**Solution**: Remove secrets from code, use environment variables
 
 ```bash
-npm run format
+# Check TruffleHog output for detected secrets
+# Move secrets to .env files (already in .gitignore)
 ```
 
-### CI Failing on Type Check
+### License Check Fails
+
+**Solution**: Review dependency licenses, remove incompatible packages
 
 ```bash
-npm run typecheck
+npx license-checker --production --summary
+# Check for non-allowed licenses
 ```
 
-### CI Failing on Tests
+### Revert Workflow Doesn't Trigger
 
-```bash
-npm test
-```
+**Possible causes**:
 
-### Security Audit Issues
+- CI didn't actually fail on main
+- Workflow file has syntax errors
+- GitHub Actions disabled
 
-```bash
-npm audit
-npm audit fix
-```
+**Check**: Actions tab → Revert on CI Failure workflow
 
-## CI Performance
+---
 
-- **Average run time**: ~5-8 minutes
-- **Parallel jobs**: Quality, Build, and Security run in parallel after Quality passes
-- **Caching**: Dependencies cached between runs
-- **Artifacts**: Stored for 7 days
+## Related Files
 
-## Future Enhancements
+- `.github/workflows/ci.yml` - CI pipeline
+- `.github/workflows/codeql.yml` - Security analysis
+- `.github/workflows/revert-on-ci-failure.yml` - Auto-revert
+- `.github/workflows/validate-pr-source.yml` - Branch validation
+- `.github/workflows/dependabot-auto-merge.yml` - Auto-merge
+- `.kiro/steering/63-github-workflows-comparison.md` - Comparison and adoption plan
 
-Potential improvements for the CI pipeline:
+---
 
-- [ ] Add E2E tests job
-- [ ] Add integration tests job
-- [ ] Matrix testing (multiple Node.js versions)
-- [ ] Performance benchmarking
-- [ ] Docker image building
-- [ ] Deployment workflows (CD)
-- [ ] Automated dependency updates (Dependabot)
-- [ ] Code quality metrics (SonarCloud)
+**Last Updated**: 2025-01-12  
+**Status**: Phase 2 Complete  
+**Next**: Test workflows, then consider Phase 3
