@@ -12,10 +12,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  quality:
-    name: Code Quality
+  setup:
+    name: Setup & Cache
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
+    outputs:
+      cache-hit: ${{ steps.cache-deps.outputs.cache-hit }}
 
     steps:
       - name: Checkout code
@@ -30,23 +32,171 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
+      - name: Cache dependencies
+        id: cache-deps
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            apps/backend/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
       - name: Install dependencies
+        if: steps.cache-deps.outputs.cache-hit != 'true'
         run: npm ci
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: setup
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Restore dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            apps/backend/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
 
       - name: Lint check
         run: npm run lint:check
 
-      - name: Format check
-        run: npm run format:check
+  format:
+    name: Format
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: setup
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Restore dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            apps/backend/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+
+      - name: Format check with git diff
+        run: |
+          npm run format:check
+          if ! git diff --exit-code; then
+            echo "❌ Code is not formatted. Run 'npm run format' locally."
+            exit 1
+          fi
+
+  typecheck:
+    name: Type Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: setup
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Restore dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            apps/backend/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
 
       - name: Type check
         run: npm run typecheck
+
+  license-check:
+    name: License Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: setup
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Restore dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            apps/backend/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+
+      - name: Install license-checker
+        run: npm install -g license-checker
+
+      - name: Check licenses
+        run: |
+          license-checker --production --onlyAllow "MIT;Apache-2.0;BSD-2-Clause;BSD-3-Clause;ISC;0BSD;CC0-1.0;Unlicense;Python-2.0" --summary
+
+  secret-scan:
+    name: Secret Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Full history for secret scanning
+          submodules: recursive
+
+      - name: TruffleHog OSS
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --debug --only-verified
 
   test:
     name: Tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: quality
+    needs: [setup, lint, typecheck]
 
     services:
       postgres:
@@ -75,8 +225,13 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Restore dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            apps/backend/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
 
       - name: Run all tests with coverage
         run: npm run test:cov
@@ -108,11 +263,71 @@ jobs:
             apps/backend/test-results/
           retention-days: 7
 
+  coverage-check:
+    name: Coverage Threshold
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: test-results
+          path: apps/backend/
+
+      - name: Check coverage thresholds
+        run: |
+          # Extract coverage percentages from coverage-summary.json
+          STATEMENTS=$(jq '.total.statements.pct' apps/backend/coverage/coverage-summary.json)
+          BRANCHES=$(jq '.total.branches.pct' apps/backend/coverage/coverage-summary.json)
+          FUNCTIONS=$(jq '.total.functions.pct' apps/backend/coverage/coverage-summary.json)
+          LINES=$(jq '.total.lines.pct' apps/backend/coverage/coverage-summary.json)
+
+          echo "Coverage Report:"
+          echo "  Statements: ${STATEMENTS}%"
+          echo "  Branches: ${BRANCHES}%"
+          echo "  Functions: ${FUNCTIONS}%"
+          echo "  Lines: ${LINES}%"
+
+          # Define thresholds
+          THRESHOLD=70
+
+          # Check thresholds
+          FAILED=0
+          if (( $(echo "$STATEMENTS < $THRESHOLD" | bc -l) )); then
+            echo "❌ Statements coverage (${STATEMENTS}%) is below threshold (${THRESHOLD}%)"
+            FAILED=1
+          fi
+          if (( $(echo "$BRANCHES < $THRESHOLD" | bc -l) )); then
+            echo "❌ Branches coverage (${BRANCHES}%) is below threshold (${THRESHOLD}%)"
+            FAILED=1
+          fi
+          if (( $(echo "$FUNCTIONS < $THRESHOLD" | bc -l) )); then
+            echo "❌ Functions coverage (${FUNCTIONS}%) is below threshold (${THRESHOLD}%)"
+            FAILED=1
+          fi
+          if (( $(echo "$LINES < $THRESHOLD" | bc -l) )); then
+            echo "❌ Lines coverage (${LINES}%) is below threshold (${THRESHOLD}%)"
+            FAILED=1
+          fi
+
+          if [ $FAILED -eq 1 ]; then
+            echo ""
+            echo "Coverage thresholds not met. Please add more tests."
+            exit 1
+          fi
+
+          echo "✅ All coverage thresholds met!"
+
   build:
     name: Build
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: quality
+    needs: [setup, lint, typecheck]
 
     steps:
       - name: Checkout code
@@ -126,8 +341,13 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Restore dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            apps/backend/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
 
       - name: Build project
         run: npm run build
@@ -144,6 +364,7 @@ jobs:
     name: Security Audit
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    needs: setup
 
     steps:
       - name: Checkout code
@@ -157,11 +378,39 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Restore dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            apps/backend/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
 
-      - name: Run npm audit
-        run: npm audit --audit-level=moderate
+      - name: Run npm audit with jq parsing
+        run: |
+          # Run audit and capture output
+          npm audit --json > audit-results.json || true
+
+          # Parse results with jq
+          CRITICAL=$(jq '.metadata.vulnerabilities.critical // 0' audit-results.json)
+          HIGH=$(jq '.metadata.vulnerabilities.high // 0' audit-results.json)
+          MODERATE=$(jq '.metadata.vulnerabilities.moderate // 0' audit-results.json)
+          LOW=$(jq '.metadata.vulnerabilities.low // 0' audit-results.json)
+
+          echo "Security Audit Results:"
+          echo "  Critical: $CRITICAL"
+          echo "  High: $HIGH"
+          echo "  Moderate: $MODERATE"
+          echo "  Low: $LOW"
+
+          # Fail if critical or high vulnerabilities found
+          if [ "$CRITICAL" -gt 0 ] || [ "$HIGH" -gt 0 ]; then
+            echo "❌ Critical or High vulnerabilities found!"
+            npm audit --audit-level=high
+            exit 1
+          fi
+
+          echo "✅ No critical or high vulnerabilities found"
 
       - name: Check for known vulnerabilities
         run: npx audit-ci --moderate
@@ -170,18 +419,39 @@ jobs:
   ci-success:
     name: CI Success
     runs-on: ubuntu-latest
-    needs: [quality, test, build, security]
+    needs:
+      [lint, format, typecheck, license-check, secret-scan, test, coverage-check, build, security]
     if: always()
 
     steps:
       - name: Check all jobs
         run: |
-          if [[ "${{ needs.quality.result }}" != "success" ]]; then
-            echo "❌ Quality checks failed"
+          if [[ "${{ needs.lint.result }}" != "success" ]]; then
+            echo "❌ Lint checks failed"
+            exit 1
+          fi
+          if [[ "${{ needs.format.result }}" != "success" ]]; then
+            echo "❌ Format checks failed"
+            exit 1
+          fi
+          if [[ "${{ needs.typecheck.result }}" != "success" ]]; then
+            echo "❌ Type checks failed"
+            exit 1
+          fi
+          if [[ "${{ needs.license-check.result }}" != "success" ]]; then
+            echo "❌ License check failed"
+            exit 1
+          fi
+          if [[ "${{ needs.secret-scan.result }}" != "success" ]]; then
+            echo "❌ Secret scan failed"
             exit 1
           fi
           if [[ "${{ needs.test.result }}" != "success" ]]; then
             echo "❌ Tests failed"
+            exit 1
+          fi
+          if [[ "${{ needs.coverage-check.result }}" != "success" ]]; then
+            echo "❌ Coverage threshold not met"
             exit 1
           fi
           if [[ "${{ needs.build.result }}" != "success" ]]; then
