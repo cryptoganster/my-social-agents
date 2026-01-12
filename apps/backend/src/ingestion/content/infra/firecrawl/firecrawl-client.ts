@@ -7,6 +7,33 @@ import {
 } from '@/ingestion/content/domain/interfaces/external/firecrawl-client';
 
 /**
+ * Firecrawl API Response Types
+ */
+interface FirecrawlMetadata {
+  title?: string;
+  description?: string;
+  ogImage?: string;
+  sourceURL?: string;
+  statusCode?: number;
+  contentType?: string;
+}
+
+interface FirecrawlData {
+  markdown?: string;
+  html?: string;
+  rawHtml?: string;
+  metadata?: FirecrawlMetadata;
+}
+
+interface FirecrawlApiResponse {
+  data?: FirecrawlData;
+  markdown?: string;
+  html?: string;
+  rawHtml?: string;
+  metadata?: FirecrawlMetadata;
+}
+
+/**
  * FirecrawlClient
  *
  * HTTP adapter for self-hosted Firecrawl service.
@@ -177,21 +204,33 @@ export class FirecrawlClient implements IFirecrawlClient {
     }
   }
 
-  private mapToScrapeResult(data: any): ScrapeResult {
+  private mapToScrapeResult(data: unknown): ScrapeResult {
+    // Type guard for Firecrawl API response
+    const isValidResponse = (obj: unknown): obj is FirecrawlApiResponse => {
+      return (
+        typeof obj === 'object' &&
+        obj !== null &&
+        ('data' in obj || 'markdown' in obj || 'html' in obj)
+      );
+    };
+
+    if (!isValidResponse(data)) {
+      throw new Error('Invalid Firecrawl API response format');
+    }
+
+    const responseData = 'data' in data ? data.data : data;
+
     return {
-      markdown: data.data?.markdown || data.markdown,
-      html: data.data?.html || data.html,
-      rawHtml: data.data?.rawHtml || data.rawHtml,
+      markdown: responseData?.markdown || '',
+      html: responseData?.html || '',
+      rawHtml: responseData?.rawHtml || '',
       metadata: {
-        title: data.data?.metadata?.title || data.metadata?.title,
-        description:
-          data.data?.metadata?.description || data.metadata?.description,
-        ogImage: data.data?.metadata?.ogImage || data.metadata?.ogImage,
-        sourceURL: data.data?.metadata?.sourceURL || data.metadata?.sourceURL,
-        statusCode:
-          data.data?.metadata?.statusCode || data.metadata?.statusCode,
-        contentType:
-          data.data?.metadata?.contentType || data.metadata?.contentType,
+        title: responseData?.metadata?.title || '',
+        description: responseData?.metadata?.description || '',
+        ogImage: responseData?.metadata?.ogImage || '',
+        sourceURL: responseData?.metadata?.sourceURL || '',
+        statusCode: responseData?.metadata?.statusCode || 0,
+        contentType: responseData?.metadata?.contentType || '',
       },
     };
   }

@@ -1,0 +1,19 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Pre-clean hook: Warn before destructive git clean operations
+# This hook is triggered by git clean -fd or similar commands
+
+echo "⚠️  WARNING: git clean will permanently delete untracked files!"
+echo ""
+echo "Untracked files that will be deleted:"
+git clean -n
+echo ""
+echo "❌ BLOCKED: Please commit or stash your changes first."
+echo ""
+echo "To save your work:"
+echo "  git add . && git commit -m 'WIP: save work in progress'"
+echo "  OR"
+echo "  git stash -u  (includes untracked files)"
+echo ""
+exit 1
