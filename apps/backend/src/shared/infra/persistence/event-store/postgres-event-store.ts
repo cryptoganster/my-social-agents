@@ -332,7 +332,10 @@ export class PostgresEventStore implements IEventStore {
   private serializeEventData(event: DomainEvent): Record<string, unknown> {
     // Remove eventType and occurredAt (stored separately)
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { eventType, occurredAt, ...data } = event as Record<string, unknown>;
+    const { eventType, occurredAt, ...data } = event as unknown as Record<
+      string,
+      unknown
+    >;
     return data as Record<string, unknown>;
   }
 
@@ -341,7 +344,7 @@ export class PostgresEventStore implements IEventStore {
    */
   private extractMetadata(event: DomainEvent): EventMetadata {
     // TODO: Extract from event if it has metadata properties
-    const eventWithMetadata = event as Record<string, unknown>;
+    const eventWithMetadata = event as unknown as Record<string, unknown>;
     return {
       correlationId:
         (eventWithMetadata.correlationId as string) || event.aggregateId,

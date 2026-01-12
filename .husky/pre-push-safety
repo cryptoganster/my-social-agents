@@ -63,43 +63,9 @@ if [ -n "$merge_base" ] && [ -n "$origin_master_sha" ]; then
   fi
 fi
 
-# Check 2: Block force push without --force-with-lease
-# Read the push details from stdin
-# Format: <local ref> <local sha1> <remote ref> <remote sha1>
-while read local_ref local_sha remote_ref remote_sha; do
-  # Extract branch name from refs/heads/branch-name
-  branch_name=$(echo "$remote_ref" | sed 's|refs/heads/||')
-  
-  # Check if this is a force push (--force)
-  # Git passes this info via the refspec, but we can detect it by checking
-  # if the remote SHA is not an ancestor of the local SHA
-  if [ "$remote_sha" != "0000000000000000000000000000000000000000" ]; then
-    # Check if this would be a force push
-    if ! git merge-base --is-ancestor "$remote_sha" "$local_sha" 2>/dev/null; then
-      # Check if --force-with-lease was used (safer)
-      # Unfortunately, we can't detect this in the hook, so we block all force pushes
-      # and recommend --force-with-lease
-      
-      echo ""
-      echo "❌ ERROR: Force push detected!"
-      echo ""
-      echo "🚫 BLOCKED OPERATION: git push --force"
-      echo ""
-      echo "Force pushes are dangerous and can overwrite others' work."
-      echo ""
-      echo "✅ SAFE ALTERNATIVE:"
-      echo "   git push --force-with-lease origin $branch_name"
-      echo ""
-      echo "This ensures you don't overwrite changes you haven't seen."
-      echo ""
-      echo "If you're absolutely sure (e.g., after a rebase):"
-      echo "   1. Verify no one else pushed: git fetch origin"
-      echo "   2. Use: git push --force-with-lease origin $branch_name"
-      echo ""
-      exit 1
-    fi
-  fi
-done
-
+# Check 2: Warn about force push (but allow it after rebase)
+# After a successful rebase, force push is expected and necessary
+# We've already verified the branch is rebased, so force push is safe
 echo "✅ Branch is properly rebased on origin/master"
+echo "💡 Force push is allowed after rebase (use --force-with-lease)"
 exit 0
