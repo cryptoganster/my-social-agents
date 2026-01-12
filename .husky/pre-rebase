@@ -1,0 +1,30 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Pre-rebase hook - Prevents data loss during rebase
+
+echo "🔍 Pre-rebase checks..."
+
+# Check for uncommitted changes
+if [ -n "$(git status --porcelain)" ]; then
+    echo ""
+    echo "❌ ERROR: You have uncommitted changes!"
+    echo ""
+    echo "Uncommitted files:"
+    git status --short
+    echo ""
+    echo "⚠️  Rebasing with uncommitted changes can cause data loss."
+    echo ""
+    echo "✅ Options:"
+    echo "   1. Commit changes: git add -A && git commit -m 'WIP: save before rebase'"
+    echo "   2. Stash changes: git stash -u"
+    echo "   3. Use safe alias: git-save-before-rebase"
+    echo ""
+    exit 1
+fi
+
+echo "✅ No uncommitted changes"
+echo ""
+echo "💡 Remember: After rebase, push with --force-with-lease"
+echo "   git push --force-with-lease origin <branch-name>"
+echo ""
