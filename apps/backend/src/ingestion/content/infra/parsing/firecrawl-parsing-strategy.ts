@@ -154,9 +154,23 @@ export class FirecrawlParsingStrategy implements IParsingStrategy {
     }
 
     // Try options.metadata.url (if available)
-    const metadata = (options as any)?.metadata;
-    if (metadata?.url && this.isValidUrl(metadata.url)) {
-      return metadata.url;
+    // Type guard for metadata with url
+    const hasMetadataUrl = (
+      obj: unknown,
+    ): obj is { metadata: { url: string } } => {
+      return (
+        typeof obj === 'object' &&
+        obj !== null &&
+        'metadata' in obj &&
+        typeof obj.metadata === 'object' &&
+        obj.metadata !== null &&
+        'url' in obj.metadata &&
+        typeof obj.metadata.url === 'string'
+      );
+    };
+
+    if (hasMetadataUrl(options) && this.isValidUrl(options.metadata.url)) {
+      return options.metadata.url;
     }
 
     return null;
