@@ -3,6 +3,7 @@ import { GetJobHistoryQueryHandler } from '../handler';
 import { GetJobHistoryQuery } from '../query';
 import { IIngestionJobReadRepository } from '@/ingestion/job/app/queries/repositories/ingestion-job-read';
 import { IngestionJobReadModel } from '@/ingestion/job/app/queries/read-models/ingestion-job';
+import { JobHistoryItemResponse } from '../response';
 
 describe('GetJobHistoryQueryHandler', () => {
   let handler: GetJobHistoryQueryHandler;
@@ -37,7 +38,7 @@ describe('GetJobHistoryQueryHandler', () => {
     it('should return jobs ordered by executedAt DESC', async () => {
       // Arrange
       const sourceId = 'source-123';
-      const mockJobs: IngestionJobReadModel[] = [
+      const mockReadModels: IngestionJobReadModel[] = [
         {
           jobId: 'job-3',
           sourceId: 'source-123',
@@ -118,7 +119,56 @@ describe('GetJobHistoryQueryHandler', () => {
         },
       ];
 
-      mockJobReadRepository.findBySourceId.mockResolvedValue(mockJobs);
+      // Expected Response (mapped from ReadModel)
+      const expectedResponse: JobHistoryItemResponse[] = [
+        {
+          jobId: 'job-3',
+          sourceId: 'source-123',
+          status: 'COMPLETED',
+          scheduledAt: new Date('2024-01-03T00:00:00Z'),
+          executedAt: new Date('2024-01-03T00:01:00Z'),
+          completedAt: new Date('2024-01-03T00:05:00Z'),
+          itemsCollected: 15,
+          duplicatesDetected: 3,
+          errorsEncountered: 0,
+          bytesProcessed: 2048,
+          durationMs: 240000,
+          createdAt: new Date('2024-01-03T00:00:00Z'),
+          updatedAt: new Date('2024-01-03T00:05:00Z'),
+        },
+        {
+          jobId: 'job-2',
+          sourceId: 'source-123',
+          status: 'COMPLETED',
+          scheduledAt: new Date('2024-01-02T00:00:00Z'),
+          executedAt: new Date('2024-01-02T00:01:00Z'),
+          completedAt: new Date('2024-01-02T00:05:00Z'),
+          itemsCollected: 10,
+          duplicatesDetected: 2,
+          errorsEncountered: 0,
+          bytesProcessed: 1024,
+          durationMs: 240000,
+          createdAt: new Date('2024-01-02T00:00:00Z'),
+          updatedAt: new Date('2024-01-02T00:05:00Z'),
+        },
+        {
+          jobId: 'job-1',
+          sourceId: 'source-123',
+          status: 'COMPLETED',
+          scheduledAt: new Date('2024-01-01T00:00:00Z'),
+          executedAt: new Date('2024-01-01T00:01:00Z'),
+          completedAt: new Date('2024-01-01T00:05:00Z'),
+          itemsCollected: 5,
+          duplicatesDetected: 1,
+          errorsEncountered: 0,
+          bytesProcessed: 512,
+          durationMs: 240000,
+          createdAt: new Date('2024-01-01T00:00:00Z'),
+          updatedAt: new Date('2024-01-01T00:05:00Z'),
+        },
+      ];
+
+      mockJobReadRepository.findBySourceId.mockResolvedValue(mockReadModels);
 
       const query = new GetJobHistoryQuery(sourceId);
 
@@ -126,7 +176,7 @@ describe('GetJobHistoryQueryHandler', () => {
       const result = await handler.execute(query);
 
       // Assert
-      expect(result.jobs).toEqual(mockJobs);
+      expect(result.jobs).toEqual(expectedResponse);
       expect(result.total).toBe(3);
       expect(mockJobReadRepository.findBySourceId).toHaveBeenCalledWith(
         sourceId,
@@ -148,7 +198,7 @@ describe('GetJobHistoryQueryHandler', () => {
       // Arrange
       const sourceId = 'source-456';
       const limit = 5;
-      const mockJobs: IngestionJobReadModel[] = [
+      const mockReadModels: IngestionJobReadModel[] = [
         {
           jobId: 'job-5',
           sourceId: 'source-456',
@@ -177,7 +227,26 @@ describe('GetJobHistoryQueryHandler', () => {
         },
       ];
 
-      mockJobReadRepository.findBySourceId.mockResolvedValue(mockJobs);
+      // Expected Response (mapped from ReadModel)
+      const expectedResponse: JobHistoryItemResponse[] = [
+        {
+          jobId: 'job-5',
+          sourceId: 'source-456',
+          status: 'COMPLETED',
+          scheduledAt: new Date('2024-01-05T00:00:00Z'),
+          executedAt: new Date('2024-01-05T00:01:00Z'),
+          completedAt: new Date('2024-01-05T00:05:00Z'),
+          itemsCollected: 8,
+          duplicatesDetected: 1,
+          errorsEncountered: 0,
+          bytesProcessed: 800,
+          durationMs: 240000,
+          createdAt: new Date('2024-01-05T00:00:00Z'),
+          updatedAt: new Date('2024-01-05T00:05:00Z'),
+        },
+      ];
+
+      mockJobReadRepository.findBySourceId.mockResolvedValue(mockReadModels);
 
       const query = new GetJobHistoryQuery(sourceId, limit);
 
@@ -185,7 +254,7 @@ describe('GetJobHistoryQueryHandler', () => {
       const result = await handler.execute(query);
 
       // Assert
-      expect(result.jobs).toEqual(mockJobs);
+      expect(result.jobs).toEqual(expectedResponse);
       expect(result.total).toBe(1);
       expect(mockJobReadRepository.findBySourceId).toHaveBeenCalledWith(
         sourceId,
