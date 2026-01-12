@@ -1,0 +1,263 @@
+name: Auto Rebase PR
+
+on:
+  # Trigger when PR is opened or updated
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [master, main]
+
+  # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to rebase'
+        required: true
+        type: number
+
+  # Trigger when master is updated (to rebase all open PRs)
+  push:
+    branches: [master, main]
+
+  # Allow triggering via comment
+  issue_comment:
+    types: [created]
+
+env:
+  # Lista de usuarios autorizados para auto-rebase
+  AUTHORIZED_AUTHORS: 'cryptoganster'
+
+jobs:
+  auto-rebase:
+    name: Auto Rebase PR on Master
+    runs-on: ubuntu-latest
+
+    # Only run for PRs, not for master pushes (unless manually triggered)
+    if: |
+      (github.event_name == 'pull_request') ||
+      (github.event_name == 'workflow_dispatch') ||
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '/rebase'))
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Get PR Info
+        id: pr-info
+        uses: actions/github-script@v7
+        with:
+          script: |
+            let prNumber;
+            let pr;
+
+            // Get PR number from different event types
+            if (context.payload.pull_request) {
+              prNumber = context.payload.pull_request.number;
+              pr = context.payload.pull_request;
+            } else if (context.payload.inputs?.pr_number) {
+              prNumber = parseInt(context.payload.inputs.pr_number);
+              const { data } = await github.rest.pulls.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber
+              });
+              pr = data;
+            } else if (context.payload.issue?.pull_request) {
+              prNumber = context.payload.issue.number;
+              const { data } = await github.rest.pulls.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber
+              });
+              pr = data;
+            } else {
+              core.setOutput('should_rebase', 'false');
+              return;
+            }
+
+            // Check if author is authorized
+            const authorizedAuthors = process.env.AUTHORIZED_AUTHORS.split(',').map(a => a.trim().toLowerCase());
+            const prAuthor = pr.user.login.toLowerCase();
+            const isAuthorized = authorizedAuthors.includes(prAuthor);
+
+            // Check if PR is draft
+            const isDraft = pr.draft === true;
+
+            core.setOutput('pr_number', prNumber);
+            core.setOutput('pr_author', pr.user.login);
+            core.setOutput('pr_branch', pr.head.ref);
+            core.setOutput('pr_sha', pr.head.sha);
+            core.setOutput('base_branch', pr.base.ref);
+            core.setOutput('is_authorized', isAuthorized.toString());
+            core.setOutput('is_draft', isDraft.toString());
+            core.setOutput('should_rebase', (isAuthorized && !isDraft).toString());
+
+            console.log(`PR #${prNumber} by ${pr.user.login}`);
+            console.log(`Branch: ${pr.head.ref}`);
+            console.log(`Base: ${pr.base.ref}`);
+            console.log(`Authorized: ${isAuthorized}`);
+            console.log(`Draft: ${isDraft}`);
+
+      - name: Checkout PR branch
+        if: steps.pr-info.outputs.should_rebase == 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.pr-info.outputs.pr_branch }}
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        if: steps.pr-info.outputs.should_rebase == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Check if rebase is needed
+        if: steps.pr-info.outputs.should_rebase == 'true'
+        id: check-rebase
+        run: |
+          # Fetch latest base branch
+          git fetch origin ${{ steps.pr-info.outputs.base_branch }}
+
+          # Get merge base
+          merge_base=$(git merge-base HEAD origin/${{ steps.pr-info.outputs.base_branch }})
+          base_sha=$(git rev-parse origin/${{ steps.pr-info.outputs.base_branch }})
+
+          echo "Merge base: $merge_base"
+          echo "Base SHA: $base_sha"
+
+          if [ "$merge_base" = "$base_sha" ]; then
+            echo "✅ PR is already up to date with ${{ steps.pr-info.outputs.base_branch }}"
+            echo "needs_rebase=false" >> $GITHUB_OUTPUT
+          else
+            commits_behind=$(git rev-list --count $merge_base..origin/${{ steps.pr-info.outputs.base_branch }})
+            echo "📊 PR is $commits_behind commits behind ${{ steps.pr-info.outputs.base_branch }}"
+            echo "needs_rebase=true" >> $GITHUB_OUTPUT
+            echo "commits_behind=$commits_behind" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Rebase on base branch
+        if: steps.pr-info.outputs.should_rebase == 'true' && steps.check-rebase.outputs.needs_rebase == 'true'
+        id: rebase
+        run: |
+          echo "🔄 Rebasing PR #${{ steps.pr-info.outputs.pr_number }} on ${{ steps.pr-info.outputs.base_branch }}..."
+
+          # Attempt rebase
+          if git rebase origin/${{ steps.pr-info.outputs.base_branch }}; then
+            echo "✅ Rebase successful!"
+            echo "rebase_success=true" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Rebase failed with conflicts"
+            echo "rebase_success=false" >> $GITHUB_OUTPUT
+            
+            # Abort the rebase
+            git rebase --abort
+            
+            # Create a comment on the PR
+            exit 1
+          fi
+
+      - name: Push rebased branch
+        if: steps.pr-info.outputs.should_rebase == 'true' && steps.check-rebase.outputs.needs_rebase == 'true' && steps.rebase.outputs.rebase_success == 'true'
+        run: |
+          echo "📤 Pushing rebased branch..."
+          git push --force-with-lease origin ${{ steps.pr-info.outputs.pr_branch }}
+          echo "✅ PR #${{ steps.pr-info.outputs.pr_number }} rebased successfully!"
+
+      - name: Comment on PR - Success
+        if: steps.pr-info.outputs.should_rebase == 'true' && steps.check-rebase.outputs.needs_rebase == 'true' && steps.rebase.outputs.rebase_success == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: ${{ steps.pr-info.outputs.pr_number }},
+              body: `✅ **Auto-rebase successful!**\n\nThis PR has been automatically rebased on \`${{ steps.pr-info.outputs.base_branch }}\`.\n\n📊 Commits behind: ${{ steps.check-rebase.outputs.commits_behind }}\n\n🤖 Rebased by GitHub Actions`
+            });
+
+      - name: Comment on PR - Conflicts
+        if: steps.pr-info.outputs.should_rebase == 'true' && steps.check-rebase.outputs.needs_rebase == 'true' && steps.rebase.outputs.rebase_success == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: ${{ steps.pr-info.outputs.pr_number }},
+              body: `❌ **Auto-rebase failed with conflicts**\n\nThis PR cannot be automatically rebased on \`${{ steps.pr-info.outputs.base_branch }}\` due to conflicts.\n\n**Manual rebase required:**\n\`\`\`bash\ngit fetch origin\ngit rebase origin/${{ steps.pr-info.outputs.base_branch }}\n# Resolve conflicts\ngit add <resolved-files>\ngit rebase --continue\ngit push --force-with-lease origin ${{ steps.pr-info.outputs.pr_branch }}\n\`\`\`\n\n🤖 Attempted by GitHub Actions`
+            });
+
+      - name: Skip - Not Authorized or Draft
+        if: steps.pr-info.outputs.should_rebase == 'false' && steps.pr-info.outputs.pr_author != ''
+        run: |
+          if [ "${{ steps.pr-info.outputs.is_draft }}" = "true" ]; then
+            echo "⏭️ Skipping auto-rebase for draft PR"
+          else
+            echo "⏭️ Skipping auto-rebase for PR by ${{ steps.pr-info.outputs.pr_author }}"
+            echo "Only authorized authors can auto-rebase: ${{ env.AUTHORIZED_AUTHORS }}"
+          fi
+
+  rebase-all-open-prs:
+    name: Rebase All Open PRs
+    runs-on: ubuntu-latest
+
+    # Only run when master is updated
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Get all open PRs
+        id: get-prs
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: prs } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              base: context.ref.replace('refs/heads/', '')
+            });
+
+            const authorizedAuthors = process.env.AUTHORIZED_AUTHORS.split(',').map(a => a.trim().toLowerCase());
+
+            const eligiblePrs = prs.filter(pr => 
+              !pr.draft && 
+              authorizedAuthors.includes(pr.user.login.toLowerCase())
+            );
+
+            console.log(`Found ${eligiblePrs.length} eligible PRs to rebase`);
+            eligiblePrs.forEach(pr => console.log(`  - PR #${pr.number}: ${pr.title}`));
+
+            core.setOutput('pr_numbers', JSON.stringify(eligiblePrs.map(pr => pr.number)));
+            core.setOutput('has_prs', eligiblePrs.length > 0 ? 'true' : 'false');
+
+      - name: Trigger rebase for each PR
+        if: steps.get-prs.outputs.has_prs == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumbers = JSON.parse('${{ steps.get-prs.outputs.pr_numbers }}');
+
+            for (const prNumber of prNumbers) {
+              console.log(`Triggering rebase for PR #${prNumber}...`);
+              
+              try {
+                await github.rest.actions.createWorkflowDispatch({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  workflow_id: 'auto-rebase-pr.yml',
+                  ref: 'master',
+                  inputs: {
+                    pr_number: prNumber.toString()
+                  }
+                });
+                
+                console.log(`✅ Rebase triggered for PR #${prNumber}`);
+              } catch (error) {
+                console.log(`❌ Failed to trigger rebase for PR #${prNumber}: ${error.message}`);
+              }
+            }

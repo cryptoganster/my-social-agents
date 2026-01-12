@@ -1,7 +1,10 @@
 #!/bin/sh
 . "$(dirname "$0")/_/husky.sh"
 
-# CRITICAL: Run safety checks first (blocks push without rebase + force push)
+# STEP 1: Auto-rebase (optional, asks user)
+bash .husky/pre-push-auto-rebase "$@"
+
+# STEP 2: Safety checks (blocks push without rebase + force push)
 bash .husky/pre-push-safety "$@"
 
 # Run fast checks only - tests run in CI

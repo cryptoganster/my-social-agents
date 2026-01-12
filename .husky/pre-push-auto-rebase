@@ -1,0 +1,133 @@
+#!/usr/bin/env bash
+
+# Pre-push auto-rebase hook - Automatically rebases branch on origin/master before push
+# This runs BEFORE pre-push-safety and pre-push hooks
+
+set -e
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Get current branch
+current_branch=$(git rev-parse --abbrev-ref HEAD)
+
+# Skip for master branch
+if [ "$current_branch" = "master" ]; then
+  exit 0
+fi
+
+echo -e "${BLUE}🔄 Auto-rebase: Checking if rebase is needed...${NC}"
+
+# Fetch latest master silently
+git fetch origin master --quiet 2>/dev/null || {
+  echo -e "${YELLOW}⚠️  Could not fetch origin/master, continuing without rebase${NC}"
+  exit 0
+}
+
+# Get merge base between current branch and origin/master
+merge_base=$(git merge-base HEAD origin/master 2>/dev/null || echo "")
+origin_master_sha=$(git rev-parse origin/master 2>/dev/null || echo "")
+
+if [ -z "$merge_base" ] || [ -z "$origin_master_sha" ]; then
+  echo -e "${YELLOW}⚠️  Could not determine merge base, skipping auto-rebase${NC}"
+  exit 0
+fi
+
+# Check if rebase is needed
+if [ "$merge_base" = "$origin_master_sha" ]; then
+  echo -e "${GREEN}✅ Branch is already up to date with origin/master${NC}"
+  exit 0
+fi
+
+# Calculate commits behind
+commits_behind=$(git rev-list --count $merge_base..origin/master)
+commits_ahead=$(git rev-list --count origin/master..HEAD)
+
+echo ""
+echo -e "${YELLOW}📊 Branch status:${NC}"
+echo -e "   Current branch: ${BLUE}$current_branch${NC}"
+echo -e "   Commits behind master: ${RED}$commits_behind${NC}"
+echo -e "   Commits ahead of master: ${GREEN}$commits_ahead${NC}"
+echo ""
+
+# Check for uncommitted changes
+if ! git diff-index --quiet HEAD --; then
+  echo -e "${RED}❌ ERROR: You have uncommitted changes${NC}"
+  echo ""
+  echo "Please commit or stash your changes before pushing:"
+  echo "  git add -A"
+  echo "  git commit -m 'your message'"
+  echo ""
+  echo "Or stash them:"
+  echo "  git stash"
+  echo ""
+  exit 1
+fi
+
+# Ask user for confirmation
+echo -e "${YELLOW}🤔 Your branch needs to be rebased on origin/master${NC}"
+echo ""
+echo -e "${BLUE}Options:${NC}"
+echo "  1. Auto-rebase now (recommended)"
+echo "  2. Skip and push anyway (will fail in pre-push-safety)"
+echo "  3. Cancel push"
+echo ""
+read -p "Choose option (1/2/3): " choice
+
+case $choice in
+  1)
+    echo ""
+    echo -e "${BLUE}🔄 Starting automatic rebase...${NC}"
+    echo ""
+    
+    # Perform rebase
+    if git rebase origin/master; then
+      echo ""
+      echo -e "${GREEN}✅ Rebase completed successfully!${NC}"
+      echo ""
+      echo -e "${YELLOW}📝 Next steps:${NC}"
+      echo "  Your branch has been rebased on origin/master"
+      echo "  The push will continue automatically"
+      echo ""
+      echo -e "${BLUE}💡 Note: You'll need to use --force-with-lease for the push${NC}"
+      echo ""
+      exit 0
+    else
+      echo ""
+      echo -e "${RED}❌ Rebase failed with conflicts${NC}"
+      echo ""
+      echo -e "${YELLOW}To resolve conflicts:${NC}"
+      echo "  1. Fix conflicts in the files listed above"
+      echo "  2. Stage resolved files: git add <file>"
+      echo "  3. Continue rebase: git rebase --continue"
+      echo "  4. Or abort: git rebase --abort"
+      echo ""
+      echo "After resolving conflicts, try pushing again"
+      echo ""
+      exit 1
+    fi
+    ;;
+  2)
+    echo ""
+    echo -e "${YELLOW}⚠️  Skipping auto-rebase${NC}"
+    echo "The pre-push-safety hook will block this push"
+    echo ""
+    exit 0
+    ;;
+  3)
+    echo ""
+    echo -e "${BLUE}🚫 Push cancelled${NC}"
+    echo ""
+    exit 1
+    ;;
+  *)
+    echo ""
+    echo -e "${RED}❌ Invalid option${NC}"
+    echo ""
+    exit 1
+    ;;
+esac
