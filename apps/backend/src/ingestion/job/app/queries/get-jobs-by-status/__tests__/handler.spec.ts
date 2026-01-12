@@ -3,6 +3,7 @@ import { GetJobsByStatusQueryHandler } from '../handler';
 import { GetJobsByStatusQuery } from '../query';
 import { IIngestionJobReadRepository } from '@/ingestion/job/app/queries/repositories/ingestion-job-read';
 import { IngestionJobReadModel } from '@/ingestion/job/app/queries/read-models/ingestion-job';
+import { JobByStatusItemResponse } from '../response';
 
 describe('GetJobsByStatusQueryHandler', () => {
   let handler: GetJobsByStatusQueryHandler;
@@ -42,7 +43,7 @@ describe('GetJobsByStatusQueryHandler', () => {
       const limit = 10;
       const offset = 0;
 
-      const mockJobs: IngestionJobReadModel[] = [
+      const mockReadModels: IngestionJobReadModel[] = [
         {
           jobId: 'job-1',
           sourceId: 'source-1',
@@ -97,7 +98,40 @@ describe('GetJobsByStatusQueryHandler', () => {
         },
       ];
 
-      mockJobReadRepository.findByStatus.mockResolvedValue(mockJobs);
+      const expectedJobs: JobByStatusItemResponse[] = [
+        {
+          jobId: 'job-1',
+          sourceId: 'source-1',
+          status: 'COMPLETED',
+          scheduledAt: new Date('2024-01-01T00:00:00Z'),
+          executedAt: new Date('2024-01-01T00:01:00Z'),
+          completedAt: new Date('2024-01-01T00:05:00Z'),
+          itemsCollected: 10,
+          duplicatesDetected: 2,
+          errorsEncountered: 0,
+          bytesProcessed: 1024,
+          durationMs: 240000,
+          createdAt: new Date('2024-01-01T00:00:00Z'),
+          updatedAt: new Date('2024-01-01T00:05:00Z'),
+        },
+        {
+          jobId: 'job-2',
+          sourceId: 'source-2',
+          status: 'COMPLETED',
+          scheduledAt: new Date('2024-01-02T00:00:00Z'),
+          executedAt: new Date('2024-01-02T00:01:00Z'),
+          completedAt: new Date('2024-01-02T00:05:00Z'),
+          itemsCollected: 5,
+          duplicatesDetected: 1,
+          errorsEncountered: 0,
+          bytesProcessed: 512,
+          durationMs: 120000,
+          createdAt: new Date('2024-01-02T00:00:00Z'),
+          updatedAt: new Date('2024-01-02T00:05:00Z'),
+        },
+      ];
+
+      mockJobReadRepository.findByStatus.mockResolvedValue(mockReadModels);
       mockJobReadRepository.countByStatus.mockResolvedValue(25);
 
       const query = new GetJobsByStatusQuery(status, limit, offset);
@@ -106,7 +140,7 @@ describe('GetJobsByStatusQueryHandler', () => {
       const result = await handler.execute(query);
 
       // Assert
-      expect(result.jobs).toEqual(mockJobs);
+      expect(result.jobs).toEqual(expectedJobs);
       expect(result.total).toBe(25);
       expect(mockJobReadRepository.findByStatus).toHaveBeenCalledWith(
         status,
@@ -119,7 +153,7 @@ describe('GetJobsByStatusQueryHandler', () => {
     it('should handle different statuses', async () => {
       // Arrange
       const status = 'FAILED';
-      const mockJobs: IngestionJobReadModel[] = [
+      const mockReadModels: IngestionJobReadModel[] = [
         {
           jobId: 'job-3',
           sourceId: 'source-3',
@@ -157,7 +191,25 @@ describe('GetJobsByStatusQueryHandler', () => {
         },
       ];
 
-      mockJobReadRepository.findByStatus.mockResolvedValue(mockJobs);
+      const expectedJobs: JobByStatusItemResponse[] = [
+        {
+          jobId: 'job-3',
+          sourceId: 'source-3',
+          status: 'FAILED',
+          scheduledAt: new Date('2024-01-03T00:00:00Z'),
+          executedAt: new Date('2024-01-03T00:01:00Z'),
+          completedAt: null,
+          itemsCollected: 0,
+          duplicatesDetected: 0,
+          errorsEncountered: 1,
+          bytesProcessed: 0,
+          durationMs: 5000,
+          createdAt: new Date('2024-01-03T00:00:00Z'),
+          updatedAt: new Date('2024-01-03T00:01:05Z'),
+        },
+      ];
+
+      mockJobReadRepository.findByStatus.mockResolvedValue(mockReadModels);
       mockJobReadRepository.countByStatus.mockResolvedValue(3);
 
       const query = new GetJobsByStatusQuery(status);
@@ -166,7 +218,7 @@ describe('GetJobsByStatusQueryHandler', () => {
       const result = await handler.execute(query);
 
       // Assert
-      expect(result.jobs).toEqual(mockJobs);
+      expect(result.jobs).toEqual(expectedJobs);
       expect(result.total).toBe(3);
       expect(mockJobReadRepository.findByStatus).toHaveBeenCalledWith(
         status,
