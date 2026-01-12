@@ -261,6 +261,12 @@ Steering files use **inclusion modes** to determine when they are loaded into co
 - **Contains**: Common issues, migration steps, FAQ, workflow comparison, safe aliases
 - **When to reference**: Resolving Git issues, migrating to rebase workflow, learning safe aliases
 
+#### 63-github-workflows-comparison.md
+- **Inclusion**: `always`
+- **Purpose**: GitHub Actions workflows comparison and adoption recommendations
+- **Contains**: Detailed comparison between bookings-bot and my-social-agents workflows, implementation priorities, Phase 1-3 plan
+- **When to reference**: Understanding CI/CD capabilities, planning workflow improvements, implementing new GitHub Actions
+
 ## FileMatch Patterns Explained
 
 FileMatch patterns use glob syntax to match file paths:
@@ -433,7 +439,7 @@ See `MIGRATION.md` for detailed mapping.
 
 ## Summary
 
-- **20 steering files** organized by category
+- **21 steering files** organized by category
 - **3 inclusion modes**: always, fileMatch, manual
 - **FileMatch patterns** load guidance when working on specific file types
 - **File references** avoid duplication and maintain consistency
