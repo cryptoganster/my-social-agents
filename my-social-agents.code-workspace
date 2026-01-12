@@ -7,6 +7,9 @@
     {
       "name": "firecrawl",
       "path": "apps/firecrawl"
+    },
+    {
+      "path": "../dev/bookings-bot"
     }
   ],
   "settings": {}
