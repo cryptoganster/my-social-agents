@@ -60,18 +60,8 @@ export class AggregateVersion extends ValueObject<AggregateVersionProps> {
   }
 }
 
-/**
- * ConcurrencyException
- *
- * Thrown when optimistic locking detects a concurrent modification.
- */
-export class ConcurrencyException extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'ConcurrencyException';
-    Object.setPrototypeOf(this, ConcurrencyException.prototype);
-  }
-}
+// Re-export ConcurrencyException for backward compatibility
+export { ConcurrencyException } from './concurrency-exception';
 
 /**
  * AggregateRoot<TId>

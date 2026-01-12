@@ -9,7 +9,10 @@ import { IngestionJobEntity } from '../entities/ingestion-job';
  * TypeORM IngestionJobReadRepository Implementation
  *
  * Implements read operations for querying ingestion jobs using TypeORM and PostgreSQL.
- * Returns read models (plain objects) optimized for queries.
+ * Returns ReadModel types (plain objects) optimized for queries.
+ *
+ * Note: Repositories return generic ReadModels that can be used by multiple queries.
+ * Query handlers then map these to query-specific Response types if needed.
  *
  * Requirements: 4.2, 4.3
  */

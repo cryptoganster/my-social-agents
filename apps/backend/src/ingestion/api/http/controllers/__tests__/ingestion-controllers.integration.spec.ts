@@ -1,8 +1,8 @@
 import { QueryBus } from '@nestjs/cqrs';
 import { IngestionJobsController } from '../ingestion-jobs.controller';
 import { SourcesController } from '../sources.controller';
-import { GetJobsByStatusResult } from '@/ingestion/job/app/queries/get-jobs-by-status/query';
-import { GetJobHistoryResult } from '@/ingestion/job/app/queries/get-job-history/query';
+import { GetJobsByStatusResponse } from '@/ingestion/job/app/queries/get-jobs-by-status/query';
+import { GetJobHistoryResponse } from '@/ingestion/job/app/queries/get-job-history/query';
 import { IIngestionJobReadRepository } from '@/ingestion/job/app/queries/repositories/ingestion-job-read';
 import { ISourceConfigurationReadRepository } from '@/ingestion/source/app/queries/repositories/source-configuration-read';
 import { IngestionJobReadModel } from '@/ingestion/job/app/queries/read-models/ingestion-job';
@@ -73,7 +73,7 @@ describe('HTTP Query Endpoints Integration Tests', () => {
         },
       ];
 
-      const expectedResult: GetJobsByStatusResult = {
+      const expectedResult: GetJobsByStatusResponse = {
         jobs: expectedJobs,
         total: 1,
       };
@@ -97,7 +97,7 @@ describe('HTTP Query Endpoints Integration Tests', () => {
       const limit = '10';
       const offset = '20';
 
-      const expectedResult: GetJobsByStatusResult = {
+      const expectedResult: GetJobsByStatusResponse = {
         jobs: [],
         total: 50,
       };
@@ -217,7 +217,7 @@ describe('HTTP Query Endpoints Integration Tests', () => {
         },
       ];
 
-      const expectedResult: GetJobHistoryResult = {
+      const expectedResult: GetJobHistoryResponse = {
         jobs: expectedJobs,
         total: 2,
       };
@@ -240,7 +240,7 @@ describe('HTTP Query Endpoints Integration Tests', () => {
       const sourceId = 'source-456';
       const limit = '5';
 
-      const expectedResult: GetJobHistoryResult = {
+      const expectedResult: GetJobHistoryResponse = {
         jobs: [],
         total: 20,
       };
@@ -261,7 +261,7 @@ describe('HTTP Query Endpoints Integration Tests', () => {
     it('should return empty history for source with no jobs', async () => {
       const sourceId = 'source-789';
 
-      const expectedResult: GetJobHistoryResult = {
+      const expectedResult: GetJobHistoryResponse = {
         jobs: [],
         total: 0,
       };

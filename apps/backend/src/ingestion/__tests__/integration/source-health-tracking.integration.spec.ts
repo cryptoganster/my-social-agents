@@ -22,12 +22,12 @@ import { CreateSourceResult } from '@/ingestion/source/app/commands/create-sourc
 import { UpdateSourceHealthCommand } from '@/ingestion/source/app/commands/update-source-health/command';
 import {
   GetSourceByIdQuery,
-  GetSourceByIdResult,
+  GetSourceByIdResponse,
 } from '@/ingestion/source/app/queries/get-source-by-id/query';
 import { ScheduleJobCommand } from '@/ingestion/job/app/commands/schedule-job/command';
 import {
   GetJobByIdQuery,
-  GetJobByIdResult,
+  GetJobByIdResponse,
 } from '@/ingestion/job/app/queries/get-job-by-id/query';
 import { SharedModule } from '@/shared/shared.module';
 import { IngestionSourceModule } from '@/ingestion/source/ingestion-source.module';
@@ -185,10 +185,10 @@ describe('Integration: Source Health Tracking', () => {
       );
 
       // Wait and poll for health metrics to be updated
-      let source = await pollUntil<GetSourceByIdResult>(
+      let source = await pollUntil<GetSourceByIdResponse>(
         queryBus,
         new GetSourceByIdQuery(sourceId),
-        (s): s is GetSourceByIdResult =>
+        (s): s is GetSourceByIdResponse =>
           s !== null && s.healthMetrics.consecutiveFailures >= 1,
         { interval: 200, timeout: 5000 },
       );
@@ -201,10 +201,10 @@ describe('Integration: Source Health Tracking', () => {
         { maxRetries: 3, retryDelay: 100 },
       );
 
-      source = await pollUntil<GetSourceByIdResult>(
+      source = await pollUntil<GetSourceByIdResponse>(
         queryBus,
         new GetSourceByIdQuery(sourceId),
-        (s): s is GetSourceByIdResult =>
+        (s): s is GetSourceByIdResponse =>
           s !== null && s.healthMetrics.consecutiveFailures >= 2,
         { interval: 200, timeout: 5000 },
       );
@@ -217,10 +217,10 @@ describe('Integration: Source Health Tracking', () => {
         { maxRetries: 3, retryDelay: 100 },
       );
 
-      source = await pollUntil<GetSourceByIdResult>(
+      source = await pollUntil<GetSourceByIdResponse>(
         queryBus,
         new GetSourceByIdQuery(sourceId),
-        (s): s is GetSourceByIdResult =>
+        (s): s is GetSourceByIdResponse =>
           s !== null && s.healthMetrics.consecutiveFailures >= 3,
         { interval: 200, timeout: 5000 },
       );
@@ -259,10 +259,10 @@ describe('Integration: Source Health Tracking', () => {
         { maxRetries: 3, retryDelay: 100 },
       );
 
-      let source = await pollUntil<GetSourceByIdResult>(
+      let source = await pollUntil<GetSourceByIdResponse>(
         queryBus,
         new GetSourceByIdQuery(sourceId),
-        (s): s is GetSourceByIdResult =>
+        (s): s is GetSourceByIdResponse =>
           s !== null && s.healthMetrics.consecutiveFailures >= 2,
         { interval: 200, timeout: 5000 },
       );
@@ -279,10 +279,10 @@ describe('Integration: Source Health Tracking', () => {
       );
 
       // 4. Verify consecutive failures reset
-      source = await pollUntil<GetSourceByIdResult>(
+      source = await pollUntil<GetSourceByIdResponse>(
         queryBus,
         new GetSourceByIdQuery(sourceId),
-        (s): s is GetSourceByIdResult =>
+        (s): s is GetSourceByIdResponse =>
           s !== null && s.healthMetrics.consecutiveFailures === 0,
         { interval: 200, timeout: 5000 },
       );
@@ -341,10 +341,10 @@ describe('Integration: Source Health Tracking', () => {
       );
 
       // 3. Wait and poll for health metrics to be updated
-      const source = await pollUntil<GetSourceByIdResult>(
+      const source = await pollUntil<GetSourceByIdResponse>(
         queryBus,
         new GetSourceByIdQuery(sourceId),
-        (s): s is GetSourceByIdResult =>
+        (s): s is GetSourceByIdResponse =>
           s !== null && s.healthMetrics.totalJobs >= 4,
         { interval: 200, timeout: 5000 },
       );
@@ -460,10 +460,10 @@ describe('Integration: Source Health Tracking', () => {
       );
 
       // 4. Poll for source to be disabled (event handler should disable it)
-      source = await pollUntil<GetSourceByIdResult>(
+      source = await pollUntil<GetSourceByIdResponse>(
         queryBus,
         new GetSourceByIdQuery(sourceId),
-        (s): s is GetSourceByIdResult =>
+        (s): s is GetSourceByIdResponse =>
           s !== null &&
           (!s.isActive || s.healthMetrics.consecutiveFailures >= 5),
         { interval: 200, timeout: 5000 },
@@ -529,10 +529,10 @@ describe('Integration: Source Health Tracking', () => {
 
       // 3. Poll for job completion (auto-executed by event handler)
       // Using improved pollUntil with exponential backoff
-      const job = await pollUntil<GetJobByIdResult>(
+      const job = await pollUntil<GetJobByIdResponse>(
         queryBus,
         new GetJobByIdQuery(scheduleResult.jobId),
-        (j): j is NonNullable<GetJobByIdResult> =>
+        (j): j is NonNullable<GetJobByIdResponse> =>
           j !== null && ['COMPLETED', 'FAILED'].includes(j.status),
         { interval: 50, maxInterval: 500, timeout: 15000 },
       );
@@ -541,10 +541,10 @@ describe('Integration: Source Health Tracking', () => {
       expect(['COMPLETED', 'FAILED']).toContain(job!.status);
 
       // 4. Poll for source health to be updated
-      const source = await pollUntil<GetSourceByIdResult>(
+      const source = await pollUntil<GetSourceByIdResponse>(
         queryBus,
         new GetSourceByIdQuery(sourceId),
-        (s): s is GetSourceByIdResult =>
+        (s): s is GetSourceByIdResponse =>
           s !== null && s.healthMetrics.totalJobs >= 1,
         { interval: 50, maxInterval: 500, timeout: 10000 },
       );
@@ -604,10 +604,10 @@ describe('Integration: Source Health Tracking', () => {
 
         // Poll for this job to complete before starting next
         // Using improved pollUntil with exponential backoff
-        await pollUntil<GetJobByIdResult>(
+        await pollUntil<GetJobByIdResponse>(
           queryBus,
           new GetJobByIdQuery(scheduleResult.jobId),
-          (j): j is NonNullable<GetJobByIdResult> =>
+          (j): j is NonNullable<GetJobByIdResponse> =>
             j !== null && ['COMPLETED', 'FAILED'].includes(j.status),
           { interval: 50, maxInterval: 500, timeout: 15000 },
         );
@@ -624,10 +624,10 @@ describe('Integration: Source Health Tracking', () => {
       }
 
       // 4. Poll for source health to reflect all executions
-      const source = await pollUntil<GetSourceByIdResult>(
+      const source = await pollUntil<GetSourceByIdResponse>(
         queryBus,
         new GetSourceByIdQuery(sourceId),
-        (s): s is GetSourceByIdResult =>
+        (s): s is GetSourceByIdResponse =>
           s !== null && s.healthMetrics.totalJobs >= 3,
         { interval: 50, maxInterval: 500, timeout: 10000 },
       );

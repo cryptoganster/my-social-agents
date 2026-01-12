@@ -1,18 +1,18 @@
 import { Query } from '@nestjs/cqrs';
-import { IngestionJobReadModel } from '@/ingestion/job/app/queries/read-models/ingestion-job';
+import { GetJobsByStatusResponse } from './response';
 
 /**
  * GetJobsByStatusQuery
  *
  * Query to retrieve ingestion jobs filtered by status with pagination support.
- * Returns a paginated list of read models optimized for API responses.
+ * Returns a paginated list of jobs optimized for API responses.
  *
- * Extends Query<GetJobsByStatusResult> for automatic type inference.
+ * Extends Query<GetJobsByStatusResponse> for automatic type inference.
  *
  * Requirements: 6.3
  * Design: Queries - Job Queries
  */
-export class GetJobsByStatusQuery extends Query<GetJobsByStatusResult> {
+export class GetJobsByStatusQuery extends Query<GetJobsByStatusResponse> {
   constructor(
     public readonly status: string,
     public readonly limit?: number,
@@ -22,13 +22,5 @@ export class GetJobsByStatusQuery extends Query<GetJobsByStatusResult> {
   }
 }
 
-/**
- * GetJobsByStatusResult
- *
- * Result interface for GetJobsByStatusQuery.
- * Returns paginated job read models with total count.
- */
-export interface GetJobsByStatusResult {
-  jobs: IngestionJobReadModel[];
-  total: number;
-}
+// Re-export Response for convenience
+export { GetJobsByStatusResponse } from './response';

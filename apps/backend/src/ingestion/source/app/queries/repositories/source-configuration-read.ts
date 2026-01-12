@@ -1,5 +1,4 @@
 import { SourceConfigurationReadModel } from '../read-models/source-configuration';
-import { GetSourceByIdResult } from '@/ingestion/source/app/queries/get-source-by-id/query';
 
 /**
  * Read Repository Interface for Source Configurations
@@ -8,6 +7,9 @@ import { GetSourceByIdResult } from '@/ingestion/source/app/queries/get-source-b
  * - Returns ReadModels (application concern, not domain)
  * - Used by Query handlers (application layer)
  * - Part of CQRS read side (not domain logic)
+ *
+ * Note: Repositories return generic ReadModels that can be used by multiple queries.
+ * Query handlers then map these to query-specific Response types.
  *
  * Requirements: All
  */
@@ -24,7 +26,9 @@ export interface ISourceConfigurationReadRepository {
    * @param sourceId - Source identifier
    * @returns Source read model with health metrics or null if not found
    */
-  findByIdWithHealth(sourceId: string): Promise<GetSourceByIdResult | null>;
+  findByIdWithHealth(
+    sourceId: string,
+  ): Promise<SourceConfigurationReadModel | null>;
 
   /**
    * Find all active sources
@@ -44,5 +48,5 @@ export interface ISourceConfigurationReadRepository {
    * @param threshold - Minimum consecutive failures to be considered unhealthy
    * @returns Array of unhealthy source read models with health metrics
    */
-  findUnhealthy(threshold: number): Promise<GetSourceByIdResult[]>;
+  findUnhealthy(threshold: number): Promise<SourceConfigurationReadModel[]>;
 }
