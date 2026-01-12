@@ -3,6 +3,7 @@ import { GetSourceByIdQueryHandler } from '../handler';
 import { GetSourceByIdQuery } from '../query';
 import { ISourceConfigurationReadRepository } from '@/ingestion/source/app/queries/repositories/source-configuration-read';
 import { SourceConfigurationReadModel } from '@/ingestion/source/app/queries/read-models/source-configuration';
+import { GetSourceByIdResponse } from '../response';
 
 describe('GetSourceByIdQueryHandler', () => {
   let handler: GetSourceByIdQueryHandler;
@@ -57,7 +58,25 @@ describe('GetSourceByIdQueryHandler', () => {
         version: 1,
       };
 
-      mockRepository.findByIdWithHealth.mockResolvedValue(readModel);
+      const expectedResponse: GetSourceByIdResponse = {
+        sourceId: 'source-123',
+        name: 'Test Source',
+        sourceType: 'RSS_FEED',
+        isActive: true,
+        config: {
+          url: 'https://example.com/feed',
+          interval: 3600,
+        },
+        healthMetrics: {
+          successRate: 95.5,
+          consecutiveFailures: 0,
+          totalJobs: 20,
+          lastSuccessAt: new Date('2024-01-15T10:00:00Z'),
+          lastFailureAt: null,
+        },
+      };
+
+      mockRepository.findById.mockResolvedValue(readModel);
 
       const query = new GetSourceByIdQuery(sourceId);
 
@@ -65,17 +84,15 @@ describe('GetSourceByIdQueryHandler', () => {
       const result = await handler.execute(query);
 
       // Assert
-      expect(result).toBeDefined();
-      expect(result?.sourceId).toBe('source-123');
-      expect(result?.healthMetrics.successRate).toBe(95.5);
-      expect(mockRepository.findByIdWithHealth).toHaveBeenCalledWith(sourceId);
-      expect(mockRepository.findByIdWithHealth).toHaveBeenCalledTimes(1);
+      expect(result).toEqual(expectedResponse);
+      expect(mockRepository.findById).toHaveBeenCalledWith(sourceId);
+      expect(mockRepository.findById).toHaveBeenCalledTimes(1);
     });
 
     it('should return null when source does not exist', async () => {
       // Arrange
       const sourceId = 'non-existent-source';
-      mockRepository.findByIdWithHealth.mockResolvedValue(null);
+      mockRepository.findById.mockResolvedValue(null);
 
       const query = new GetSourceByIdQuery(sourceId);
 
@@ -84,8 +101,8 @@ describe('GetSourceByIdQueryHandler', () => {
 
       // Assert
       expect(result).toBeNull();
-      expect(mockRepository.findByIdWithHealth).toHaveBeenCalledWith(sourceId);
-      expect(mockRepository.findByIdWithHealth).toHaveBeenCalledTimes(1);
+      expect(mockRepository.findById).toHaveBeenCalledWith(sourceId);
+      expect(mockRepository.findById).toHaveBeenCalledTimes(1);
     });
 
     it('should include health metrics in the result', async () => {
@@ -110,7 +127,25 @@ describe('GetSourceByIdQueryHandler', () => {
         version: 1,
       };
 
-      mockRepository.findByIdWithHealth.mockResolvedValue(readModel);
+      const expectedResponse: GetSourceByIdResponse = {
+        sourceId: 'source-456',
+        name: 'Unhealthy Source',
+        sourceType: 'WEB_SCRAPER',
+        isActive: false,
+        config: {
+          url: 'https://example.com/page',
+          selector: '.content',
+        },
+        healthMetrics: {
+          successRate: 45.2,
+          consecutiveFailures: 5,
+          totalJobs: 10,
+          lastSuccessAt: new Date('2024-01-10T08:00:00Z'),
+          lastFailureAt: new Date('2024-01-15T12:00:00Z'),
+        },
+      };
+
+      mockRepository.findById.mockResolvedValue(readModel);
 
       const query = new GetSourceByIdQuery(sourceId);
 
@@ -118,16 +153,7 @@ describe('GetSourceByIdQueryHandler', () => {
       const result = await handler.execute(query);
 
       // Assert
-      expect(result).not.toBeNull();
-      expect(result?.healthMetrics).toBeDefined();
-      expect(result?.healthMetrics.successRate).toBe(45.2);
-      expect(result?.healthMetrics.consecutiveFailures).toBe(5);
-      expect(result?.healthMetrics.lastSuccessAt).toEqual(
-        new Date('2024-01-10T08:00:00Z'),
-      );
-      expect(result?.healthMetrics.lastFailureAt).toEqual(
-        new Date('2024-01-15T12:00:00Z'),
-      );
+      expect(result).toEqual(expectedResponse);
     });
 
     it('should handle sources with null health metric dates', async () => {
@@ -152,7 +178,25 @@ describe('GetSourceByIdQueryHandler', () => {
         version: 1,
       };
 
-      mockRepository.findByIdWithHealth.mockResolvedValue(readModel);
+      const expectedResponse: GetSourceByIdResponse = {
+        sourceId: 'source-789',
+        name: 'New Source',
+        sourceType: 'SOCIAL_MEDIA',
+        isActive: true,
+        config: {
+          platform: 'twitter',
+          username: 'testuser',
+        },
+        healthMetrics: {
+          successRate: 0,
+          consecutiveFailures: 0,
+          totalJobs: 0,
+          lastSuccessAt: null,
+          lastFailureAt: null,
+        },
+      };
+
+      mockRepository.findById.mockResolvedValue(readModel);
 
       const query = new GetSourceByIdQuery(sourceId);
 
@@ -160,9 +204,7 @@ describe('GetSourceByIdQueryHandler', () => {
       const result = await handler.execute(query);
 
       // Assert
-      expect(result).not.toBeNull();
-      expect(result?.healthMetrics.lastSuccessAt).toBeNull();
-      expect(result?.healthMetrics.lastFailureAt).toBeNull();
+      expect(result).toEqual(expectedResponse);
     });
   });
 });
