@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ConfigService } from '@nestjs/config';
 import { SharedModule } from '@/shared/shared.module';
 import { IngestionSourceModule } from '@/ingestion/source/ingestion-source.module';
 
@@ -30,6 +31,7 @@ import { ContentNormalizationService } from './domain/services/content-normaliza
 import { DuplicateDetectionService } from './domain/services/duplicate-detection';
 import { ContentHashGenerator } from './domain/services/content-hash-generator';
 import { ContentParser } from './domain/services/content-parser';
+import { JsRenderingDetector } from './domain/services/js-rendering-detector';
 
 // Infrastructure - Persistence
 import { ContentItemEntity } from './infra/persistence/entities/content-item';
@@ -40,6 +42,16 @@ import { TypeOrmContentItemFactory } from './infra/persistence/factories/content
 // Infrastructure - Parsing Strategies
 import { HtmlParsingStrategy } from './infra/parsing/html-parsing-strategy';
 import { RssParsingStrategy } from './infra/parsing/rss-parsing-strategy';
+import { FirecrawlParsingStrategy } from './infra/parsing/firecrawl-parsing-strategy';
+
+// Infrastructure - Firecrawl
+import { FirecrawlClient } from './infra/firecrawl/firecrawl-client';
+
+// Configuration
+import {
+  loadFirecrawlConfig,
+  validateFirecrawlConfig,
+} from '@/ingestion/config/firecrawl.config';
 
 /**
  * IngestionContentModule
@@ -57,7 +69,12 @@ import { RssParsingStrategy } from './infra/parsing/rss-parsing-strategy';
  * Each step is a separate command/query with single responsibility.
  * Event handlers are thin adapters that trigger commands/queries and publish events.
  *
- * Requirements: 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 3.3
+ * Firecrawl Integration:
+ * - Firecrawl is conditionally registered based on FIRECRAWL_ENABLED config
+ * - When enabled, provides fallback parsing for JavaScript-heavy websites
+ * - JsRenderingDetector determines when to use Firecrawl fallback
+ *
+ * Requirements: 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 3.3, 6.1, 6.2
  */
 @Module({
   imports: [
@@ -111,6 +128,48 @@ import { RssParsingStrategy } from './infra/parsing/rss-parsing-strategy';
       provide: 'IRssParsingStrategy',
       useClass: RssParsingStrategy,
     },
+
+    // ===== Firecrawl Integration (Conditional) =====
+    // FirecrawlClient - conditionally registered based on config
+    {
+      provide: 'IFirecrawlClient',
+      useFactory: (configService: ConfigService) => {
+        const config = loadFirecrawlConfig(configService);
+        if (config.enabled) {
+          validateFirecrawlConfig(config);
+          return new FirecrawlClient(configService);
+        }
+        return null; // Disabled - ContentParser will handle gracefully
+      },
+      inject: [ConfigService],
+    },
+
+    // FirecrawlParsingStrategy - conditionally registered based on config
+    {
+      provide: 'IFirecrawlParsingStrategy',
+      useFactory: (firecrawlClient: FirecrawlClient | null) => {
+        if (firecrawlClient) {
+          return new FirecrawlParsingStrategy(firecrawlClient);
+        }
+        return null; // Disabled - ContentParser will handle gracefully
+      },
+      inject: ['IFirecrawlClient'],
+    },
+
+    // JsRenderingDetector - conditionally registered based on config
+    {
+      provide: 'IJsRenderingDetector',
+      useFactory: (configService: ConfigService) => {
+        const config = loadFirecrawlConfig(configService);
+        if (config.enabled && config.fallbackEnabled) {
+          return new JsRenderingDetector();
+        }
+        return null; // Disabled - ContentParser will handle gracefully
+      },
+      inject: [ConfigService],
+    },
+
+    // ContentParser - with optional Firecrawl dependencies
     {
       provide: 'IContentParser',
       useClass: ContentParser,
@@ -157,6 +216,9 @@ import { RssParsingStrategy } from './infra/parsing/rss-parsing-strategy';
 
     // Parsing Services
     'IContentParser',
+    'IFirecrawlClient',
+    'IFirecrawlParsingStrategy',
+    'IJsRenderingDetector',
 
     // Infrastructure
     'IContentItemReadRepository',

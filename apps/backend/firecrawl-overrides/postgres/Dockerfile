@@ -1,20 +1,28 @@
-# Custom PostgreSQL image for Firecrawl with pg_cron support
-# This extends the base PostgreSQL image without modifying the Firecrawl submodule
+# Custom PostgreSQL 17 with pg_cron extension
+# Extends Firecrawl's PostgreSQL setup with pg_cron support
+# Uses Debian-based image (same as Firecrawl) for proper pg_cron compatibility
 
-FROM postgres:17-alpine
+ARG PG_MAJOR=17
+FROM postgres:${PG_MAJOR}
 
-# Install pg_cron extension
-# Note: pg_cron is available in Alpine's community repository
-RUN apk add --no-cache --repository=http://dl-cdn.alpinelinux.org/alpine/edge/community pg_cron
+# Install pg_cron extension for PostgreSQL 17
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends \
+        postgresql-${PG_MAJOR}-cron; \
+    rm -rf /var/lib/apt/lists/*
 
-# Configure PostgreSQL to load pg_cron
-# Set cron.database_name to 'firecrawl' so pg_cron works in the firecrawl database
-RUN echo "shared_preload_libraries = 'pg_cron'" >> /usr/share/postgresql/postgresql.conf.sample && \
-    echo "cron.database_name = 'firecrawl'" >> /usr/share/postgresql/postgresql.conf.sample
+# Pre-configure pg_cron in postgresql.conf.sample (BEFORE first startup)
+# This is critical - shared_preload_libraries must be set before PostgreSQL initializes
+RUN set -eux; \
+    conf_sample="/usr/share/postgresql/${PG_MAJOR}/postgresql.conf.sample"; \
+    sed -ri "s/^#?shared_preload_libraries\s*=.*/shared_preload_libraries = 'pg_cron'/" "$conf_sample"; \
+    printf "\n# Added for pg_cron\ncron.database_name = 'firecrawl'\n" >> "$conf_sample"
 
-# Copy Firecrawl's original init scripts from the submodule
-# These will be mounted via docker-compose volumes
+# Copy initialization scripts
+# 000-enable-pg_cron.sql runs first to create the extension
+# 001-nuq.sql runs second (copied from Firecrawl submodule)
+COPY init-scripts/*.sql /docker-entrypoint-initdb.d/
 
-# Note: Custom init scripts in init-scripts/ will be copied via docker-compose
-# and will run AFTER Firecrawl's scripts (numbered 999-*)
-
+# Ensure scripts are executable
+RUN chmod 644 /docker-entrypoint-initdb.d/*.sql

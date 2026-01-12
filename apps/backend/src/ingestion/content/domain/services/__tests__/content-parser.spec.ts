@@ -5,11 +5,14 @@ import {
   SourceTypeEnum,
 } from '@/ingestion/source/domain/value-objects/source-type';
 import { ContentMetadata } from '../../value-objects/content-metadata';
+import { IJsRenderingDetector } from '../../interfaces/services/js-rendering-detector';
 
 describe('ContentParser', () => {
   let contentParser: ContentParser;
   let mockHtmlStrategy: jest.Mocked<IParsingStrategy>;
   let mockRssStrategy: jest.Mocked<IParsingStrategy>;
+  let mockFirecrawlStrategy: jest.Mocked<IParsingStrategy>;
+  let mockJsDetector: jest.Mocked<IJsRenderingDetector>;
 
   beforeEach(() => {
     mockHtmlStrategy = {
@@ -28,7 +31,24 @@ describe('ContentParser', () => {
       }),
     };
 
-    contentParser = new ContentParser(mockHtmlStrategy, mockRssStrategy);
+    mockFirecrawlStrategy = {
+      parse: jest.fn().mockResolvedValue('# Firecrawl Parsed Content'),
+      extractMetadata: jest.fn().mockResolvedValue({
+        title: 'Firecrawl Title',
+        author: 'Firecrawl Author',
+      }),
+    };
+
+    mockJsDetector = {
+      needsJsRendering: jest.fn().mockReturnValue(false),
+    };
+
+    contentParser = new ContentParser(
+      mockHtmlStrategy,
+      mockRssStrategy,
+      null,
+      null,
+    );
   });
 
   describe('strategy selection', () => {
@@ -258,6 +278,241 @@ describe('ContentParser', () => {
       // Should always use HTML strategy
       expect(mockHtmlStrategy.parse).toHaveBeenCalledTimes(3);
       expect(mockRssStrategy.parse).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Firecrawl fallback', () => {
+    beforeEach(() => {
+      // Create parser with Firecrawl dependencies
+      contentParser = new ContentParser(
+        mockHtmlStrategy,
+        mockRssStrategy,
+        mockFirecrawlStrategy,
+        mockJsDetector,
+      );
+    });
+
+    it('should trigger fallback when content is minimal and JS rendering is needed', async () => {
+      const sourceType = SourceType.fromEnum(SourceTypeEnum.WEB);
+      const metadata = ContentMetadata.create({
+        title: 'Test',
+        sourceUrl: 'https://tradingview.com/chart',
+      });
+
+      // Primary parsing yields minimal content
+      mockHtmlStrategy.parse.mockResolvedValue('Short');
+      mockJsDetector.needsJsRendering.mockReturnValue(true);
+
+      const result = await contentParser.parse(
+        '<html></html>',
+        sourceType,
+        metadata,
+      );
+
+      expect(mockJsDetector.needsJsRendering).toHaveBeenCalledWith(
+        '<html></html>',
+        'https://tradingview.com/chart',
+      );
+      expect(mockFirecrawlStrategy.parse).toHaveBeenCalled();
+      expect(result.markdown).toBe('# Firecrawl Parsed Content');
+    });
+
+    it('should not trigger fallback when content is sufficient', async () => {
+      const sourceType = SourceType.fromEnum(SourceTypeEnum.WEB);
+      const metadata = ContentMetadata.create({
+        title: 'Test',
+        sourceUrl: 'https://example.com',
+      });
+
+      // Primary parsing yields sufficient content (>= 200 chars)
+      mockHtmlStrategy.parse.mockResolvedValue('A'.repeat(200));
+
+      const result = await contentParser.parse(
+        '<html></html>',
+        sourceType,
+        metadata,
+      );
+
+      expect(mockJsDetector.needsJsRendering).not.toHaveBeenCalled();
+      expect(mockFirecrawlStrategy.parse).not.toHaveBeenCalled();
+      expect(result.markdown).toBe('A'.repeat(200));
+    });
+
+    it('should not trigger fallback for non-WEB source types', async () => {
+      const sourceType = SourceType.fromEnum(SourceTypeEnum.RSS);
+      const metadata = ContentMetadata.create({
+        title: 'Test',
+        sourceUrl: 'https://example.com/feed',
+      });
+
+      // Primary parsing yields minimal content
+      mockRssStrategy.parse.mockResolvedValue('Short');
+      mockJsDetector.needsJsRendering.mockReturnValue(true);
+
+      const result = await contentParser.parse(
+        '<rss></rss>',
+        sourceType,
+        metadata,
+      );
+
+      expect(mockJsDetector.needsJsRendering).not.toHaveBeenCalled();
+      expect(mockFirecrawlStrategy.parse).not.toHaveBeenCalled();
+      expect(result.markdown).toBe('Short');
+    });
+
+    it('should not trigger fallback when JS rendering is not needed', async () => {
+      const sourceType = SourceType.fromEnum(SourceTypeEnum.WEB);
+      const metadata = ContentMetadata.create({
+        title: 'Test',
+        sourceUrl: 'https://example.com',
+      });
+
+      // Primary parsing yields minimal content but JS not needed
+      mockHtmlStrategy.parse.mockResolvedValue('Short');
+      mockJsDetector.needsJsRendering.mockReturnValue(false);
+
+      const result = await contentParser.parse(
+        '<html></html>',
+        sourceType,
+        metadata,
+      );
+
+      expect(mockJsDetector.needsJsRendering).toHaveBeenCalled();
+      expect(mockFirecrawlStrategy.parse).not.toHaveBeenCalled();
+      expect(result.markdown).toBe('Short');
+    });
+
+    it('should handle Firecrawl fallback failure gracefully', async () => {
+      const sourceType = SourceType.fromEnum(SourceTypeEnum.WEB);
+      const metadata = ContentMetadata.create({
+        title: 'Test',
+        sourceUrl: 'https://tradingview.com/chart',
+      });
+
+      // Primary parsing yields minimal content
+      mockHtmlStrategy.parse.mockResolvedValue('Short');
+      mockJsDetector.needsJsRendering.mockReturnValue(true);
+      mockFirecrawlStrategy.parse.mockRejectedValue(
+        new Error('Firecrawl failed'),
+      );
+
+      const result = await contentParser.parse(
+        '<html></html>',
+        sourceType,
+        metadata,
+      );
+
+      expect(mockFirecrawlStrategy.parse).toHaveBeenCalled();
+      // Should return original markdown on fallback failure
+      expect(result.markdown).toBe('Short');
+    });
+
+    it('should use Firecrawl metadata when fallback succeeds', async () => {
+      const sourceType = SourceType.fromEnum(SourceTypeEnum.WEB);
+      const metadata = ContentMetadata.create({
+        title: 'Test',
+        sourceUrl: 'https://tradingview.com/chart',
+      });
+
+      mockHtmlStrategy.parse.mockResolvedValue('Short');
+      mockHtmlStrategy.extractMetadata.mockResolvedValue({
+        title: 'HTML Title',
+      });
+      mockJsDetector.needsJsRendering.mockReturnValue(true);
+      mockFirecrawlStrategy.extractMetadata.mockResolvedValue({
+        title: 'Firecrawl Title',
+        author: 'Firecrawl Author',
+      });
+
+      const result = await contentParser.parse(
+        '<html></html>',
+        sourceType,
+        metadata,
+      );
+
+      expect(result.extractedMetadata.title).toBe('Firecrawl Title');
+      expect(result.extractedMetadata.author).toBe('Firecrawl Author');
+    });
+  });
+
+  describe('Firecrawl fallback disabled', () => {
+    it('should work normally when Firecrawl dependencies are not provided', async () => {
+      // Parser without Firecrawl dependencies
+      const parserWithoutFirecrawl = new ContentParser(
+        mockHtmlStrategy,
+        mockRssStrategy,
+        null,
+        null,
+      );
+
+      const sourceType = SourceType.fromEnum(SourceTypeEnum.WEB);
+      const metadata = ContentMetadata.create({
+        title: 'Test',
+        sourceUrl: 'https://tradingview.com/chart',
+      });
+
+      mockHtmlStrategy.parse.mockResolvedValue('Short');
+
+      const result = await parserWithoutFirecrawl.parse(
+        '<html></html>',
+        sourceType,
+        metadata,
+      );
+
+      // Should not attempt fallback
+      expect(result.markdown).toBe('Short');
+    });
+
+    it('should not trigger fallback when only Firecrawl strategy is missing', async () => {
+      const parserWithoutFirecrawl = new ContentParser(
+        mockHtmlStrategy,
+        mockRssStrategy,
+        null,
+        mockJsDetector,
+      );
+
+      const sourceType = SourceType.fromEnum(SourceTypeEnum.WEB);
+      const metadata = ContentMetadata.create({
+        title: 'Test',
+        sourceUrl: 'https://tradingview.com/chart',
+      });
+
+      mockHtmlStrategy.parse.mockResolvedValue('Short');
+
+      const result = await parserWithoutFirecrawl.parse(
+        '<html></html>',
+        sourceType,
+        metadata,
+      );
+
+      expect(mockJsDetector.needsJsRendering).not.toHaveBeenCalled();
+      expect(result.markdown).toBe('Short');
+    });
+
+    it('should not trigger fallback when only JS detector is missing', async () => {
+      const parserWithoutDetector = new ContentParser(
+        mockHtmlStrategy,
+        mockRssStrategy,
+        mockFirecrawlStrategy,
+        null,
+      );
+
+      const sourceType = SourceType.fromEnum(SourceTypeEnum.WEB);
+      const metadata = ContentMetadata.create({
+        title: 'Test',
+        sourceUrl: 'https://tradingview.com/chart',
+      });
+
+      mockHtmlStrategy.parse.mockResolvedValue('Short');
+
+      const result = await parserWithoutDetector.parse(
+        '<html></html>',
+        sourceType,
+        metadata,
+      );
+
+      expect(mockFirecrawlStrategy.parse).not.toHaveBeenCalled();
+      expect(result.markdown).toBe('Short');
     });
   });
 });
