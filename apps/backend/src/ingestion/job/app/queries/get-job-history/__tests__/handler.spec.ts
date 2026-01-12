@@ -1,8 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { GetJobHistoryQueryHandler } from '../handler';
-import { GetJobHistoryQuery } from '../query';
+// Bounded context imports
 import { IIngestionJobReadRepository } from '@/ingestion/job/app/queries/repositories/ingestion-job-read';
 import { IngestionJobReadModel } from '@/ingestion/job/app/queries/read-models/ingestion-job';
+
+// Relative imports (same query folder)
+import { GetJobHistoryQueryHandler } from '../handler';
+import { GetJobHistoryQuery } from '../query';
 import { JobHistoryItemResponse } from '../response';
 
 describe('GetJobHistoryQueryHandler', () => {
