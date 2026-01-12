@@ -2,11 +2,11 @@
 
 ## Overview
 
-This repository uses GitHub Actions for Continuous Integration (CI). The CI pipeline ensures code quality, runs tests, and performs security checks on every push and pull request.
+This repository uses GitHub Actions for Continuous Integration (CI) and automated safety mechanisms. The workflows ensure code quality, run tests, perform security checks, and automatically protect the main branch from broken code.
 
 ## Workflows
 
-### CI Pipeline (`.github/workflows/ci.yml`)
+### 1. CI Pipeline (`.github/workflows/ci.yml`)
 
 The main CI workflow runs on:
 
@@ -44,6 +44,75 @@ The main CI workflow runs on:
    - Summary job that verifies all required checks passed
    - Required for branch protection
    - Depends on: `quality`, `test`, `build`, `security`
+
+### 2. CodeQL Security Analysis (`.github/workflows/codeql.yml`)
+
+Automated security vulnerability scanning:
+
+- Runs on push to `main`/`master`
+- Runs on pull requests
+- Scheduled weekly (Monday 00:00 UTC)
+- Uses `security-extended` query suite
+- Excludes: `node_modules`, `dist`, `coverage`, test files, `apps/firecrawl`
+- Results appear in GitHub Security tab
+
+### 3. Revert on CI Failure (`.github/workflows/revert-on-ci-failure.yml`) ⚠️ CRITICAL
+
+**Purpose**: Automatically reverts commits that break CI after merging to main.
+
+**Why this is critical for rebase strategy**:
+
+- Rebase strategy requires clean main at all times
+- If CI fails after merge, main is broken and blocks everyone
+- Auto-revert prevents team from being blocked
+- Creates audit trail with PR and issue
+
+**What it does**:
+
+1. Detects CI failure after push to main/master
+2. Creates revert branch automatically
+3. Opens revert PR with detailed information
+4. Comments on original PR (if exists)
+5. Assigns to original author
+6. Creates issue if auto-revert fails
+
+**Triggers**: After CI workflow completes with failure on main/master
+
+### 4. Validate PR Source Branch (`.github/workflows/validate-pr-source.yml`)
+
+**Purpose**: Enforces branch naming conventions for PRs.
+
+**Allowed branch patterns**:
+
+- `feat/*` or `feature/*` - New features
+- `fix/*` - Bug fixes
+- `refactor/*` - Code refactoring
+- `test/*` - Test additions/changes
+- `docs/*` - Documentation changes
+- `chore/*` - Maintenance tasks
+- `hotfix/*` - Urgent fixes
+- `release/*` - Release branches
+
+**Blocks**: PRs from branches that don't follow naming convention
+
+### 5. Dependabot Auto-Merge (`.github/workflows/dependabot-auto-merge.yml`)
+
+**Purpose**: Automatically merges safe dependency updates.
+
+**Auto-merges**:
+
+- Patch updates (e.g., 1.2.3 → 1.2.4)
+- Minor updates (e.g., 1.2.0 → 1.3.0)
+
+**Requires**:
+
+- All CI checks must pass
+- Waits up to 20 minutes for checks
+
+**Manual review required**:
+
+- Major updates (e.g., 1.0.0 → 2.0.0)
+- Adds comment requesting manual review
 
 ## Features
 
@@ -103,10 +172,13 @@ Configure branch protection rules for `main`/`master`:
 3. Enable:
    - ✅ Require a pull request before merging
    - ✅ Require status checks to pass before merging
-     - Required checks: `CI Success`
+     - Required checks: `CI Success`, `Validate Source Branch`, `CodeQL`
    - ✅ Require branches to be up to date before merging
    - ✅ Require conversation resolution before merging
+   - ✅ Require linear history (CRITICAL for rebase strategy)
    - ✅ Do not allow bypassing the above settings
+
+**Note**: The "Revert on CI Failure" workflow provides an additional safety net even if CI passes initially but fails after merge.
 
 ## Codecov Integration (Optional)
 
