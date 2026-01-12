@@ -107,9 +107,64 @@ Automatically merges safe dependency updates.
 
 ---
 
+### Dependabot Auto-Fix (`dependabot-auto-fix.yml`)
+
+Automatically fixes package-lock.json sync issues in Dependabot PRs.
+
+**Features**:
+
+- Detects lockfile out of sync with package.json
+- Regenerates package-lock.json automatically
+- Commits and pushes fix to PR
+- Comments on PR with fix details
+
+**Triggers**:
+
+- Pull requests that modify package.json or package-lock.json
+- Only runs for Dependabot PRs
+
+**Benefits**:
+
+- Reduces manual intervention for lockfile issues
+- Keeps Dependabot PRs passing CI
+- Automatic fix and commit
+
+---
+
+### Auto-Merge PRs (`auto-merge.yml`)
+
+Automatically merges PRs from authorized users after CI passes.
+
+**Features**:
+
+- Auto-merges PRs from authorized authors
+- Waits up to 10 minutes for CI checks
+- Uses rebase merge method (aligns with rebase strategy)
+- Auto-deletes merged branch
+- Skips draft PRs
+
+**Configuration**:
+
+- Edit `AUTHORIZED_AUTHORS` env var in workflow file
+- Add trusted team members (comma-separated)
+
+**Safety**:
+
+- Verifies all CI checks pass
+- Checks for merge conflicts
+- Only authorized users
+
+**Benefits**:
+
+- Faster workflow for trusted contributors
+- Enforces rebase merge method
+- Reduces manual merge clicks
+
+---
+
 ## Enforcement Level
 
-**Current**: 🔒🔒🔒🔒 (4/5) - High automation with safety nets
+**Current**: 🔒🔒🔒🔒🔒 (5/5) - Maximum automation
 
 **Phase 1**: ✅ Complete
 
@@ -127,10 +182,10 @@ Automatically merges safe dependency updates.
 - Format check with git diff
 - Security audit with jq parsing
 
-**Phase 3**: 🚧 Future
+**Phase 3**: ✅ Complete
 
-- Dependabot Auto-Fix (lockfile sync)
-- Auto-Merge for authorized users
+- Dependabot Auto-Fix (lockfile sync for npm)
+- Auto-Merge for authorized users (rebase method)
 
 ---
 
@@ -227,6 +282,22 @@ gh pr create --base main
 3. After CI passes, PR auto-merges
 4. Check PR comments for merge confirmation
 
+### Test Dependabot Auto-Fix
+
+1. Wait for Dependabot PR with lockfile sync issue
+2. Workflow detects issue automatically
+3. Regenerates package-lock.json
+4. Commits fix to PR
+5. Check PR comments for fix confirmation
+
+### Test Auto-Merge
+
+1. Add your GitHub username to `AUTHORIZED_AUTHORS` in `auto-merge.yml`
+2. Create PR from authorized account
+3. Wait for CI to pass
+4. PR auto-merges with rebase method
+5. Branch auto-deletes
+
 ---
 
 ## Troubleshooting
@@ -276,11 +347,13 @@ npx license-checker --production --summary
 - `.github/workflows/codeql.yml` - Security analysis
 - `.github/workflows/revert-on-ci-failure.yml` - Auto-revert
 - `.github/workflows/validate-pr-source.yml` - Branch validation
-- `.github/workflows/dependabot-auto-merge.yml` - Auto-merge
+- `.github/workflows/dependabot-auto-merge.yml` - Auto-merge dependencies
+- `.github/workflows/dependabot-auto-fix.yml` - Auto-fix lockfile
+- `.github/workflows/auto-merge.yml` - Auto-merge for authorized users
 - `.kiro/steering/63-github-workflows-comparison.md` - Comparison and adoption plan
 
 ---
 
 **Last Updated**: 2025-01-12  
-**Status**: Phase 2 Complete  
-**Next**: Test workflows, then consider Phase 3
+**Status**: Phase 3 Complete ✅  
+**Enforcement Level**: 🔒🔒🔒🔒🔒 (5/5) - Maximum automation
