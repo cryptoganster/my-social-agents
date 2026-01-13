@@ -104,11 +104,13 @@ describe('HtmlParsingStrategy - Property-Based Tests', () => {
             const markdown = await strategy.parse(html);
 
             // All headers should appear in the markdown in order
-            // Normalize markdown whitespace for comparison
+            // Normalize both markdown and search text for comparison
             const normalizedMarkdown = markdown.replace(/\s+/g, ' ');
             let lastIndex = -1;
             for (const [, text] of validHeaders) {
-              const index = normalizedMarkdown.indexOf(text);
+              // Normalize the search text the same way
+              const normalizedText = text.replace(/\s+/g, ' ');
+              const index = normalizedMarkdown.indexOf(normalizedText);
               expect(index).toBeGreaterThan(lastIndex);
               lastIndex = index;
             }
