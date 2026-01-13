@@ -49,13 +49,12 @@ resource "github_branch_protection" "master_protection" {
   }
 
   # Require status checks to pass before merging
+  # Only require "CI Success" which aggregates all CI jobs:
+  # - Setup & Cache, Lint, Format, Type Check, License Check
+  # - Secret Scan, Security Audit, Tests, Coverage Threshold, Build
   required_status_checks {
     strict   = true # Require branches to be up to date before merging
     contexts = [
-      "Code Quality",
-      "Security Audit",
-      "Tests",
-      "Build",
       "CI Success"
     ]
   }
@@ -63,11 +62,12 @@ resource "github_branch_protection" "master_protection" {
   # Enforce restrictions for administrators
   enforce_admins = true # Set to true if you want admins to also follow these rules
 
-  # Require signed commits (optional)
-  require_signed_commits = true
+  # Require signed commits (disabled to allow auto-merge with rebase)
+  # GitHub cannot automatically sign commits during rebase merge
+  require_signed_commits = false
 
-  # Require linear history (optional)
-  require_linear_history = false
+  # Require linear history (aligns with rebase workflow)
+  required_linear_history = true
 
   # Allow force pushes (not recommended for protected branches)
   allows_force_pushes = false
