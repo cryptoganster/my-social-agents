@@ -78,18 +78,20 @@ describe('HtmlParsingStrategy - Property-Based Tests', () => {
             const validHeaders: Array<[number, string]> = [];
 
             for (const [level, text] of headers) {
-              const trimmed = text.trim();
-              if (trimmed.length === 0) continue;
+              // Normalize whitespace: trim and replace multiple spaces with single space
+              const normalized = text.trim().replace(/\s+/g, ' ');
+              if (normalized.length === 0) continue;
 
               // Check if this text is a substring of any existing text or vice versa
               const hasOverlap = validTexts.some(
                 (existing) =>
-                  existing.includes(trimmed) || trimmed.includes(existing),
+                  existing.includes(normalized) ||
+                  normalized.includes(existing),
               );
               if (hasOverlap) continue;
 
-              validTexts.push(trimmed);
-              validHeaders.push([level, trimmed]);
+              validTexts.push(normalized);
+              validHeaders.push([level, normalized]);
             }
 
             if (validHeaders.length < 2) return;
@@ -102,9 +104,11 @@ describe('HtmlParsingStrategy - Property-Based Tests', () => {
             const markdown = await strategy.parse(html);
 
             // All headers should appear in the markdown in order
+            // Normalize markdown whitespace for comparison
+            const normalizedMarkdown = markdown.replace(/\s+/g, ' ');
             let lastIndex = -1;
             for (const [, text] of validHeaders) {
-              const index = markdown.indexOf(text);
+              const index = normalizedMarkdown.indexOf(text);
               expect(index).toBeGreaterThan(lastIndex);
               lastIndex = index;
             }
