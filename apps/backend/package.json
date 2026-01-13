@@ -120,6 +120,12 @@
       "**/*.(t|j)s"
     ],
     "coverageDirectory": "../coverage",
+    "coverageReporters": [
+      "text",
+      "lcov",
+      "clover",
+      "json-summary"
+    ],
     "testEnvironment": "node",
     "maxWorkers": 1,
     "moduleNameMapper": {
