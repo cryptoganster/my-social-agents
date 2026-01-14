@@ -20,8 +20,10 @@ import { ConfigModule } from '@nestjs/config';
 import { DataSource } from 'typeorm';
 import { ScheduleJobCommand } from '@/ingestion/job/app/commands/schedule-job/command';
 import { ScheduleJobResult } from '@/ingestion/job/app/commands/schedule-job/result';
-import { GetJobByIdQuery } from '@/ingestion/job/app/queries/get-job-by-id/query';
-import { IngestionJobReadModel } from '@/ingestion/job/app/queries/read-models/ingestion-job';
+import {
+  GetJobByIdQuery,
+  GetJobByIdResponse,
+} from '@/ingestion/job/app/queries/get-job-by-id/query';
 import { GetSourceByIdQuery } from '@/ingestion/source/app/queries/get-source-by-id/query';
 import { CreateSourceCommand } from '@/ingestion/source/app/commands/create-source/command';
 import { CreateSourceResult } from '@/ingestion/source/app/commands/create-source/result';
@@ -161,7 +163,7 @@ describe('Integration: Job Execution Flow', () => {
       // 4. Wait for automatic job execution to complete
       // StartJobOnJobScheduled automatically triggers execution
       // Using improved pollUntil with exponential backoff
-      const jobAfterExecution = await pollUntil<IngestionJobReadModel>(
+      const jobAfterExecution = await pollUntil<GetJobByIdResponse>(
         queryBus,
         new GetJobByIdQuery(scheduleResult.jobId),
         (job) => job !== null && ['COMPLETED', 'FAILED'].includes(job.status),
@@ -237,7 +239,7 @@ describe('Integration: Job Execution Flow', () => {
 
       // 3. Wait for automatic job execution (triggered by StartJobOnJobScheduled)
       // Using improved pollUntil with exponential backoff
-      const jobAfterExecution = await pollUntil<IngestionJobReadModel>(
+      const jobAfterExecution = await pollUntil<GetJobByIdResponse>(
         queryBus,
         new GetJobByIdQuery(scheduleResult.jobId),
         (job) => job !== null && ['COMPLETED', 'FAILED'].includes(job.status),
@@ -368,7 +370,7 @@ describe('Integration: Job Execution Flow', () => {
 
       // Wait for automatic execution and event processing
       // Using improved pollUntil with exponential backoff
-      await pollUntil<IngestionJobReadModel>(
+      await pollUntil<GetJobByIdResponse>(
         queryBus,
         new GetJobByIdQuery(scheduleResult.jobId),
         (job) => job !== null && ['COMPLETED', 'FAILED'].includes(job.status),
