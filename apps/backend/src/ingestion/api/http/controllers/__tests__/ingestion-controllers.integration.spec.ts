@@ -3,7 +3,6 @@ import { IngestionJobsController } from '../ingestion-jobs.controller';
 import { SourcesController } from '../sources.controller';
 import { GetJobsByStatusResponse } from '@/ingestion/job/app/queries/get-jobs-by-status/query';
 import { GetJobHistoryResponse } from '@/ingestion/job/app/queries/get-job-history/query';
-import { IIngestionJobReadRepository } from '@/ingestion/job/app/queries/repositories/ingestion-job-read';
 import { ISourceConfigurationReadRepository } from '@/ingestion/source/app/queries/repositories/source-configuration-read';
 import { IngestionJobReadModel } from '@/ingestion/job/app/queries/read-models/ingestion-job';
 
@@ -21,24 +20,15 @@ describe('HTTP Query Endpoints Integration Tests', () => {
   describe('IngestionJobsController - GET /ingestion/jobs', () => {
     let controller: IngestionJobsController;
     let mockQueryBus: jest.Mocked<QueryBus>;
-    let mockJobReadRepo: jest.Mocked<IIngestionJobReadRepository>;
 
     beforeEach(() => {
       mockQueryBus = {
         execute: jest.fn(),
       } as unknown as jest.Mocked<QueryBus>;
 
-      mockJobReadRepo = {
-        findById: jest.fn(),
-        findByStatus: jest.fn(),
-        findBySourceId: jest.fn(),
-        countByStatus: jest.fn(),
-      };
-
       controller = new IngestionJobsController(
         {} as any, // CommandBus not needed for these tests
         mockQueryBus,
-        mockJobReadRepo,
       );
     });
 
@@ -149,9 +139,7 @@ describe('HTTP Query Endpoints Integration Tests', () => {
         findById: jest.fn(),
         findActive: jest.fn(),
         findByType: jest.fn(),
-        findByIdWithHealth: jest.fn(),
-        findUnhealthy: jest.fn(),
-      };
+      } as any;
 
       controller = new SourcesController(
         {} as any, // CommandBus not needed for these tests
@@ -296,12 +284,7 @@ describe('HTTP Query Endpoints Integration Tests', () => {
         execute: jest.fn().mockResolvedValue({ jobs: [], total: 0 }),
       } as unknown as jest.Mocked<QueryBus>;
 
-      jobsController = new IngestionJobsController({} as any, mockQueryBus, {
-        findById: jest.fn(),
-        findByStatus: jest.fn(),
-        findBySourceId: jest.fn(),
-        countByStatus: jest.fn(),
-      });
+      jobsController = new IngestionJobsController({} as any, mockQueryBus);
     });
 
     it('should parse limit and offset as integers', async () => {

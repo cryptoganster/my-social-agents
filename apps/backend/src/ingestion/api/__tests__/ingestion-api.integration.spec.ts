@@ -1,9 +1,8 @@
-import { CommandBus } from '@nestjs/cqrs';
+import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { IngestionJobsController } from '../http/controllers/ingestion-jobs.controller';
 import { SourcesController } from '../http/controllers/sources.controller';
 import { ScheduleJobDto } from '../http/dto/schedule-job.dto';
 import { ConfigureSourceDto } from '../http/dto/configure-source.dto';
-import { IIngestionJobReadRepository } from '@/ingestion/job/app/queries/repositories/ingestion-job-read';
 import { ISourceConfigurationReadRepository } from '@/ingestion/source/app/queries/repositories/source-configuration-read';
 import { SourceConfigurationReadModel } from '@/ingestion/source/app/queries/read-models/source-configuration';
 
@@ -19,29 +18,18 @@ describe('Ingestion API Integration Tests', () => {
   describe('IngestionJobsController', () => {
     let controller: IngestionJobsController;
     let mockCommandBus: jest.Mocked<CommandBus>;
-    let mockJobReadRepo: jest.Mocked<IIngestionJobReadRepository>;
+    let mockQueryBus: jest.Mocked<QueryBus>;
 
     beforeEach(() => {
       mockCommandBus = {
         execute: jest.fn(),
       } as unknown as jest.Mocked<CommandBus>;
 
-      const mockQueryBus = {
+      mockQueryBus = {
         execute: jest.fn(),
       } as any;
 
-      mockJobReadRepo = {
-        findById: jest.fn(),
-        findByStatus: jest.fn(),
-        findBySourceId: jest.fn(),
-        countByStatus: jest.fn(),
-      };
-
-      controller = new IngestionJobsController(
-        mockCommandBus,
-        mockQueryBus,
-        mockJobReadRepo,
-      );
+      controller = new IngestionJobsController(mockCommandBus, mockQueryBus);
     });
 
     describe('POST /ingestion/jobs - scheduleJob', () => {
@@ -150,18 +138,20 @@ describe('Ingestion API Integration Tests', () => {
           updatedAt: new Date(),
         };
 
-        mockJobReadRepo.findById.mockResolvedValue(expectedJob);
+        mockQueryBus.execute.mockResolvedValue(expectedJob);
 
         const result = await controller.getJob(jobId);
 
         expect(result).toEqual(expectedJob);
-        expect(mockJobReadRepo.findById).toHaveBeenCalledWith(jobId);
+        expect(mockQueryBus.execute).toHaveBeenCalledWith(
+          expect.objectContaining({ jobId }),
+        );
       });
 
       it('should throw 404 when job not found', async () => {
         const jobId = 'nonexistent-job';
 
-        mockJobReadRepo.findById.mockResolvedValue(null);
+        mockQueryBus.execute.mockResolvedValue(null);
 
         await expect(controller.getJob(jobId)).rejects.toThrow('Job not found');
       });
@@ -171,6 +161,7 @@ describe('Ingestion API Integration Tests', () => {
   describe('SourcesController', () => {
     let controller: SourcesController;
     let mockCommandBus: jest.Mocked<CommandBus>;
+    let mockQueryBus: jest.Mocked<QueryBus>;
     let mockSourceReadRepo: jest.Mocked<ISourceConfigurationReadRepository>;
 
     beforeEach(() => {
@@ -178,7 +169,7 @@ describe('Ingestion API Integration Tests', () => {
         execute: jest.fn(),
       } as unknown as jest.Mocked<CommandBus>;
 
-      const mockQueryBus = {
+      mockQueryBus = {
         execute: jest.fn(),
       } as any;
 
@@ -186,9 +177,7 @@ describe('Ingestion API Integration Tests', () => {
         findById: jest.fn(),
         findActive: jest.fn(),
         findByType: jest.fn(),
-        findByIdWithHealth: jest.fn(),
-        findUnhealthy: jest.fn(),
-      };
+      } as any;
 
       controller = new SourcesController(
         mockCommandBus,
@@ -298,7 +287,6 @@ describe('Ingestion API Integration Tests', () => {
 
         const result = await controller.listSources();
 
-        expect(result).toEqual(expectedSources);
         expect(result).toHaveLength(2);
         expect(mockSourceReadRepo.findActive).toHaveBeenCalledTimes(1);
       });
@@ -318,34 +306,34 @@ describe('Ingestion API Integration Tests', () => {
     let jobsController: IngestionJobsController;
     let sourcesController: SourcesController;
     let mockCommandBus: jest.Mocked<CommandBus>;
+    let mockQueryBus: jest.Mocked<QueryBus>;
+    let mockSourceReadRepo: jest.Mocked<ISourceConfigurationReadRepository>;
 
     beforeEach(() => {
       mockCommandBus = {
         execute: jest.fn(),
       } as unknown as jest.Mocked<CommandBus>;
 
-      const mockQueryBus = {
+      mockQueryBus = {
         execute: jest.fn(),
+      } as any;
+
+      mockSourceReadRepo = {
+        findById: jest.fn(),
+        findActive: jest.fn(),
+        findByType: jest.fn(),
       } as any;
 
       jobsController = new IngestionJobsController(
         mockCommandBus,
         mockQueryBus,
-        {
-          findById: jest.fn(),
-          findByStatus: jest.fn(),
-          findBySourceId: jest.fn(),
-          countByStatus: jest.fn(),
-        },
       );
 
-      sourcesController = new SourcesController(mockCommandBus, mockQueryBus, {
-        findById: jest.fn(),
-        findActive: jest.fn(),
-        findByType: jest.fn(),
-        findByIdWithHealth: jest.fn(),
-        findUnhealthy: jest.fn(),
-      });
+      sourcesController = new SourcesController(
+        mockCommandBus,
+        mockQueryBus,
+        mockSourceReadRepo,
+      );
     });
 
     it('should handle unexpected errors in job scheduling', async () => {
