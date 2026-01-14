@@ -8,7 +8,6 @@ import {
   HttpException,
   HttpStatus,
   Logger,
-  Inject,
 } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { ScheduleJobCommand } from '@/ingestion/job/app/commands/schedule-job/command';
@@ -16,8 +15,8 @@ import {
   GetJobsByStatusQuery,
   GetJobsByStatusResponse,
 } from '@/ingestion/job/app/queries/get-jobs-by-status/query';
-import { IIngestionJobReadRepository } from '@/ingestion/job/app/queries/repositories/ingestion-job-read';
-import { IngestionJobReadModel } from '@/ingestion/job/app/queries/read-models/ingestion-job';
+import { GetJobByIdQuery } from '@/ingestion/job/app/queries/get-job-by-id/query';
+import { GetJobByIdResponse } from '@/ingestion/job/app/queries/get-job-by-id/response';
 import { ScheduleJobDto } from '../dto/schedule-job.dto';
 
 /**
@@ -42,8 +41,6 @@ export class IngestionJobsController {
   constructor(
     private readonly commandBus: CommandBus,
     private readonly queryBus: QueryBus,
-    @Inject('IIngestionJobReadRepository')
-    private readonly jobReadRepo: IIngestionJobReadRepository,
   ) {}
 
   /**
@@ -165,11 +162,16 @@ export class IngestionJobsController {
    * Retrieve job details by ID
    */
   @Get(':id')
-  async getJob(@Param('id') jobId: string): Promise<IngestionJobReadModel> {
+  async getJob(@Param('id') jobId: string): Promise<GetJobByIdResponse | null> {
     try {
       this.logger.debug(`Retrieving job: ${jobId}`);
 
-      const job = await this.jobReadRepo.findById(jobId);
+      const query = new GetJobByIdQuery(jobId);
+
+      const job = await this.queryBus.execute<
+        GetJobByIdQuery,
+        GetJobByIdResponse | null
+      >(query);
 
       if (!job) {
         throw new HttpException('Job not found', HttpStatus.NOT_FOUND);

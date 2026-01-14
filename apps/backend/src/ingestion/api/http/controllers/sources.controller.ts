@@ -20,9 +20,9 @@ import {
   GetJobHistoryQuery,
   GetJobHistoryResponse,
 } from '@/ingestion/job/app/queries/get-job-history/query';
-import { SourceTypeEnum } from '@/ingestion/source/domain/value-objects/source-type';
+import { GetSourceByIdResponse } from '@/ingestion/source/app/queries/get-source-by-id/response';
 import { ISourceConfigurationReadRepository } from '@/ingestion/source/app/queries/repositories/source-configuration-read';
-import { SourceConfigurationReadModel } from '@/ingestion/source/app/queries/read-models/source-configuration';
+import { SourceTypeEnum } from '@/ingestion/source/domain/value-objects/source-type';
 import { ConfigureSourceDto } from '../dto/configure-source.dto';
 
 /**
@@ -172,13 +172,29 @@ export class SourcesController {
    * List all active sources
    */
   @Get()
-  async listSources(): Promise<SourceConfigurationReadModel[]> {
+  async listSources(): Promise<GetSourceByIdResponse[]> {
     try {
       this.logger.debug('Listing active sources');
 
+      // TODO: This should use a dedicated query (e.g., GetActiveSourcesQuery)
+      // For now, we're using the repository directly
       const sources = await this.sourceReadRepo.findActive();
 
-      return sources;
+      // Map ReadModel to Response (temporary until repository is updated)
+      return sources.map((source) => ({
+        sourceId: source.sourceId,
+        name: source.name,
+        sourceType: source.sourceType,
+        isActive: source.isActive,
+        config: source.config,
+        healthMetrics: {
+          successRate: source.successRate,
+          consecutiveFailures: source.consecutiveFailures,
+          totalJobs: source.totalJobs,
+          lastSuccessAt: source.lastSuccessAt,
+          lastFailureAt: source.lastFailureAt,
+        },
+      }));
     } catch (error) {
       this.logger.error(
         `Failed to list sources: ${error instanceof Error ? error.message : 'Unknown error'}`,
